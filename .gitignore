@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Manwon ###
+/uploads/
+application-local.yaml
+application-local.yml
+application-local.properties
