@@ -1,7 +1,7 @@
-package com.hjson.manwon.common.exception;
+package com.hjson.tenk.common.exception;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.common.api.ApiResponse.ApiError;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.common.api.ApiResponse.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

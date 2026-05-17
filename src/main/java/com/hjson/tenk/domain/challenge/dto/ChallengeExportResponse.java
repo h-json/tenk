@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.challenge.dto;
+package com.hjson.tenk.domain.challenge.dto;
 
-import com.hjson.manwon.domain.challenge.ChallengeResult;
+import com.hjson.tenk.domain.challenge.ChallengeResult;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

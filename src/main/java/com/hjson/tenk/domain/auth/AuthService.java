@@ -1,13 +1,13 @@
-package com.hjson.manwon.domain.auth;
+package com.hjson.tenk.domain.auth;
 
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.domain.user.AuthProvider;
-import com.hjson.manwon.domain.user.User;
-import com.hjson.manwon.domain.user.UserRepository;
-import com.hjson.manwon.security.JwtTokenProvider;
-import com.hjson.manwon.security.KakaoTokenVerifier;
-import com.hjson.manwon.security.KakaoTokenVerifier.KakaoUser;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.user.AuthProvider;
+import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.user.UserRepository;
+import com.hjson.tenk.security.JwtTokenProvider;
+import com.hjson.tenk.security.KakaoTokenVerifier;
+import com.hjson.tenk.security.KakaoTokenVerifier.KakaoUser;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
 spring:
   application:
-    name: manwon
+    name: tenk
 
   profiles:
     active: local
@@ -24,16 +24,16 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-manwon:
+tenk:
   upload:
-    base-dir: ${MANWON_UPLOAD_DIR:./uploads}
+    base-dir: ${TENK_UPLOAD_DIR:./uploads}
   auth:
     jwt:
       # HS256 비밀키 (Base64 권장, 256bit 이상). 로컬 전용.
-      secret: bWFud29uLWxvY2FsLWp3dC1zZWNyZXQta2V5LWZvci1kZXZlbG9wbWVudC0xMjM0NTY3OA==
+      secret: dGVuay1sb2NhbC1qd3Qtc2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtMTIzNDU2Nzg=
       access-token-ttl: PT1H
       refresh-token-ttl: P14D
-      issuer: manwon
+      issuer: tenk
     kakao:
       # 카카오 디벨로퍼스의 REST API 키 = app client_id (access_token_info.app_id와 매칭 검증용)
       app-id: ${KAKAO_APP_ID:0}

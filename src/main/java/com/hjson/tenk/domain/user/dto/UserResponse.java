@@ -1,7 +1,7 @@
-package com.hjson.manwon.domain.user.dto;
+package com.hjson.tenk.domain.user.dto;
 
-import com.hjson.manwon.domain.user.AuthProvider;
-import com.hjson.manwon.domain.user.User;
+import com.hjson.tenk.domain.user.AuthProvider;
+import com.hjson.tenk.domain.user.User;
 
 public record UserResponse(
         Long userId,

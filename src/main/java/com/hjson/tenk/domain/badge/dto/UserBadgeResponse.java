@@ -1,7 +1,7 @@
-package com.hjson.manwon.domain.badge.dto;
+package com.hjson.tenk.domain.badge.dto;
 
-import com.hjson.manwon.domain.badge.BadgeType;
-import com.hjson.manwon.domain.badge.UserBadge;
+import com.hjson.tenk.domain.badge.BadgeType;
+import com.hjson.tenk.domain.badge.UserBadge;
 import java.time.LocalDateTime;
 
 public record UserBadgeResponse(

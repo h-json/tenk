@@ -1,4 +1,4 @@
-# Handoff — Manwon 백엔드
+# Handoff — Tenk 백엔드
 
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
@@ -16,7 +16,7 @@
    - https://developers.kakao.com → 내 애플리케이션 추가
    - 제품 설정 → **카카오 로그인 활성화**. (모바일 SDK가 토큰을 받아오므로 Redirect URI는 백엔드와 무관)
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
-   - 앱 키의 **앱 ID(숫자)**를 `application.yaml`의 `manwon.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
+   - 앱 키의 **앱 ID(숫자)**를 `application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. `./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
 6. Claude 세션 시작: `claude` (CLAUDE.md 자동 로딩됨). 첫 메시지로 *"docs/handoff.md 읽고 이어서 진행해줘"* 라고 말하면 컨텍스트 빠르게 복구.
 
@@ -33,19 +33,19 @@
 - [x] 챌린지 결과 내보내기 (JSON: 일별/카테고리별 집계)
 - [x] Swagger UI (`/swagger-ui.html`)
 - [x] `./gradlew.bat compileJava` 통과 확인 (런타임은 아직 미검증)
-- [x] DB 연결: `manwon` 로컬 계정 + `docs/schema.sql` 적용 완료 (모든 테이블 비어 있음)
+- [x] DB 연결: `Tenk` 로컬 계정 + `docs/schema.sql` 적용 완료 (모든 테이블 비어 있음)
 
 ## 남은 일 (우선순위 순)
 
 ### 1. 카카오 앱 ID 박고 실제 로그인 흐름 검증
-- `application.yaml`의 `manwon.auth.kakao.app-id`를 실제 카카오 앱 ID(숫자)로 교체.
+- `application.yaml`의 `tenk.auth.kakao.app-id`를 실제 카카오 앱 ID(숫자)로 교체.
 - 부팅 후 모바일에서(또는 카카오 디벨로퍼스 도구로) access token 받아서 `POST /api/auth/kakao/login` → AT/RT 응답 확인.
 - `Authorization: Bearer <AT>` 헤더로 `GET /api/users/me` 200 확인.
 - `POST /api/auth/refresh`로 RT 회전 확인 (기존 RT가 두 번째 호출에서 401 되는지).
 - `POST /api/auth/logout` 후 기존 RT가 401 되는지.
 
 ### 2. JWT secret 운영 키로 교체
-- `manwon.auth.jwt.secret`은 현재 로컬용 더미 값. prod profile에서 별도 키 사용. **secret 노출 시 모든 발급 토큰 무효화 + 회전 필요**.
+- `tenk.auth.jwt.secret`은 현재 로컬용 더미 값. prod profile에서 별도 키 사용. **secret 노출 시 모든 발급 토큰 무효화 + 회전 필요**.
 
 ### 3. 챌린지 → 지출(영상 업로드) → 배지 흐름 E2E
 - multipart 요청 형식: `request`(application/json) + `video`(video/*) part 2개. Swagger UI에서 직접 시도 가능 (Authorize 버튼에 Bearer 토큰 입력 후).

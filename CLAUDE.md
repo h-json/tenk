@@ -1,4 +1,4 @@
-# Manwon — Claude 작업 가이드
+# Tenk — Claude 작업 가이드
 
 이 문서는 새 세션이 시작될 때 Claude가 자동으로 읽는 프로젝트 컨텍스트야.
 다른 컴퓨터에서 작업을 이어갈 때 가장 먼저 이 파일을 참고할 것.
@@ -44,7 +44,7 @@
 
 ### 영상
 - "저화질·2초" 변환은 **클라이언트 책임**. 백엔드는 업로드받은 파일을 그대로 저장.
-- 저장소는 로컬 파일 시스템 (`manwon.upload.base-dir`, 기본 `./uploads`). `.gitignore`에 등록됨.
+- 저장소는 로컬 파일 시스템 (`tenk.upload.base-dir`, 기본 `./uploads`). `.gitignore`에 등록됨.
 
 ### 챌린지
 - 한 사용자가 **여러 챌린지 동시 진행 가능**.
@@ -73,8 +73,8 @@
 ## 패키지 구조
 
 ```
-com.hjson.manwon
-├── ManwonApplication.java          # @EnableScheduling, @ConfigurationPropertiesScan
+com.hjson.tenk
+├── TenkApplication.java          # @EnableScheduling, @ConfigurationPropertiesScan
 ├── common
 │   ├── api/ApiResponse.java        # 공통 응답 포맷 {success, data, error}
 │   ├── config/                     # JpaAuditing, OpenApi, *Properties
@@ -105,20 +105,20 @@ com.hjson.manwon
 - **프로파일 분리**: `application.yaml`(공통) + `application-local.yaml`(로컬 DB 자격증명) + `application-prod.yaml`(prod placeholder).
 - **기본 active 프로파일은 `local`** — `application.yaml`의 `spring.profiles.active: local` 기본값. prod 실행은 `--spring.profiles.active=prod`.
 - **자격증명은 환경변수 대신 yaml에 직접 박는다.** private 레포 전제. `.gitignore`에서 `application-*.yaml` 라인을 제거해 둘 다 git 추적함.
-- **`manwon.auth.jwt`** (secret, accessTokenTtl, refreshTokenTtl, issuer) / **`manwon.auth.kakao.app-id`** — `AuthProperties` 레코드로 바인딩. `secret`은 Base64 인코딩된 HS256 키.
-- 카카오 REST API 키(=`app-id`, 숫자)는 `manwon.auth.kakao.app-id`에 실제 값 박을 예정. 모바일 SDK가 토큰 발급을 담당하므로 server-side `client-secret`은 사실상 불필요.
+- **`tenk.auth.jwt`** (secret, accessTokenTtl, refreshTokenTtl, issuer) / **`tenk.auth.kakao.app-id`** — `AuthProperties` 레코드로 바인딩. `secret`은 Base64 인코딩된 HS256 키.
+- 카카오 REST API 키(=`app-id`, 숫자)는 `tenk.auth.kakao.app-id`에 실제 값 박을 예정. 모바일 SDK가 토큰 발급을 담당하므로 server-side `client-secret`은 사실상 불필요.
 
 ## 로컬 실행 방법
 
 ```powershell
 # 1. DB 준비 (MariaDB)
 mysql -u root -p
-> CREATE DATABASE manwon DEFAULT CHARACTER SET utf8mb4;
-> CREATE USER 'manwon'@'localhost' IDENTIFIED BY '<your-pw>';
-> GRANT ALL ON manwon.* TO 'manwon'@'localhost';
+> CREATE DATABASE tenk DEFAULT CHARACTER SET utf8mb4;
+> CREATE USER 'tenk'@'localhost' IDENTIFIED BY '<your-pw>';
+> GRANT ALL ON tenk.* TO 'tenk'@'localhost';
 
 # 2. 스키마 적용 (ddl-auto=validate 이므로 필수)
-mysql -u manwon -p manwon < docs/schema.sql
+mysql -u tenk -p tenk < docs/schema.sql
 
 # 3. application-local.yaml의 datasource.username/password를 본인 DB 계정으로 수정
 

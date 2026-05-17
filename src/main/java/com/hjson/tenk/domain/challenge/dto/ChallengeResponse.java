@@ -1,7 +1,7 @@
-package com.hjson.manwon.domain.challenge.dto;
+package com.hjson.tenk.domain.challenge.dto;
 
-import com.hjson.manwon.domain.challenge.Challenge;
-import com.hjson.manwon.domain.challenge.ChallengeResult;
+import com.hjson.tenk.domain.challenge.Challenge;
+import com.hjson.tenk.domain.challenge.ChallengeResult;
 import java.time.LocalDateTime;
 
 public record ChallengeResponse(

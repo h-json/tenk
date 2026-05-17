@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
-import com.hjson.manwon.domain.user.User;
+import com.hjson.tenk.domain.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

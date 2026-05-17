@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.auth;
+package com.hjson.tenk.domain.auth;
 
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

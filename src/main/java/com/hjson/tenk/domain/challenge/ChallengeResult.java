@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.challenge;
+package com.hjson.tenk.domain.challenge;
 
 public enum ChallengeResult {
     SUCCESS,

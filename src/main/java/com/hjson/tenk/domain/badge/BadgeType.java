@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
 public enum BadgeType {
     STREAK,

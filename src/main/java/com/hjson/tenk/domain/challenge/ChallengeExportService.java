@@ -1,13 +1,13 @@
-package com.hjson.manwon.domain.challenge;
+package com.hjson.tenk.domain.challenge;
 
-import com.hjson.manwon.domain.amount.Amount;
-import com.hjson.manwon.domain.amount.AmountRepository;
-import com.hjson.manwon.domain.challenge.dto.ChallengeExportResponse;
-import com.hjson.manwon.domain.challenge.dto.ChallengeExportResponse.AmountItem;
-import com.hjson.manwon.domain.challenge.dto.ChallengeExportResponse.CategorySummary;
-import com.hjson.manwon.domain.challenge.dto.ChallengeExportResponse.DailySummary;
-import com.hjson.manwon.domain.media.MediaFile;
-import com.hjson.manwon.domain.media.MediaFileRepository;
+import com.hjson.tenk.domain.amount.Amount;
+import com.hjson.tenk.domain.amount.AmountRepository;
+import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse;
+import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse.AmountItem;
+import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse.CategorySummary;
+import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse.DailySummary;
+import com.hjson.tenk.domain.media.MediaFile;
+import com.hjson.tenk.domain.media.MediaFileRepository;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.LinkedHashMap;

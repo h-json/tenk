@@ -1,7 +1,7 @@
-package com.hjson.manwon.domain.amount.dto;
+package com.hjson.tenk.domain.amount.dto;
 
-import com.hjson.manwon.domain.amount.Amount;
-import com.hjson.manwon.domain.media.MediaFile;
+import com.hjson.tenk.domain.amount.Amount;
+import com.hjson.tenk.domain.media.MediaFile;
 import java.time.LocalDateTime;
 import java.util.List;
 

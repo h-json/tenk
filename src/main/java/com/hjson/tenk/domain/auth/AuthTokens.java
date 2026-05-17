@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.auth;
+package com.hjson.tenk.domain.auth;
 
 public record AuthTokens(
         String accessToken,

@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.auth.dto;
+package com.hjson.tenk.domain.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

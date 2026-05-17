@@ -1,10 +1,10 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
-import com.hjson.manwon.domain.amount.Amount;
-import com.hjson.manwon.domain.amount.AmountRepository;
-import com.hjson.manwon.domain.challenge.ChallengeResult;
-import com.hjson.manwon.domain.user.User;
-import com.hjson.manwon.domain.user.UserRepository;
+import com.hjson.tenk.domain.amount.Amount;
+import com.hjson.tenk.domain.amount.AmountRepository;
+import com.hjson.tenk.domain.challenge.ChallengeResult;
+import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.user.UserRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;

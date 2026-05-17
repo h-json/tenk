@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.user;
+package com.hjson.tenk.domain.user;
 
 public enum AuthProvider {
     GOOGLE,

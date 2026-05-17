@@ -1,10 +1,10 @@
-package com.hjson.manwon.domain.challenge;
+package com.hjson.tenk.domain.challenge;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.domain.challenge.dto.ChallengeCreateRequest;
-import com.hjson.manwon.domain.challenge.dto.ChallengeExportResponse;
-import com.hjson.manwon.domain.challenge.dto.ChallengeResponse;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.domain.challenge.dto.ChallengeCreateRequest;
+import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse;
+import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

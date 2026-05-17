@@ -1,13 +1,13 @@
-package com.hjson.manwon.domain.challenge;
+package com.hjson.tenk.domain.challenge;
 
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.domain.amount.AmountRepository;
-import com.hjson.manwon.domain.challenge.dto.ChallengeCreateRequest;
-import com.hjson.manwon.domain.challenge.dto.ChallengeResponse;
-import com.hjson.manwon.domain.challenge.event.ChallengeFinishedEvent;
-import com.hjson.manwon.domain.user.User;
-import com.hjson.manwon.domain.user.UserService;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.amount.AmountRepository;
+import com.hjson.tenk.domain.challenge.dto.ChallengeCreateRequest;
+import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
+import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
+import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.user.UserService;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:mariadb://localhost:3306/manwon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
-    username: manwon
+    url: jdbc:mariadb://localhost:3306/tenk?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+    username: tenk
     password: gmlwns12!@

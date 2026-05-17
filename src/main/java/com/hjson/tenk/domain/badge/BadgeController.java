@@ -1,12 +1,12 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.domain.badge.dto.UserBadgeResponse;
-import com.hjson.manwon.domain.user.User;
-import com.hjson.manwon.domain.user.UserRepository;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.badge.dto.UserBadgeResponse;
+import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.user.UserRepository;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;

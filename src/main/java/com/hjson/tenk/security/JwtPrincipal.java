@@ -1,4 +1,4 @@
-package com.hjson.manwon.security;
+package com.hjson.tenk.security;
 
 public record JwtPrincipal(Long userId) {
 

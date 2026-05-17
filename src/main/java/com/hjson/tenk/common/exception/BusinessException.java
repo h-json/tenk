@@ -1,4 +1,4 @@
-package com.hjson.manwon.common.exception;
+package com.hjson.tenk.common.exception;
 
 import lombok.Getter;
 

@@ -1,4 +1,4 @@
-package com.hjson.manwon.common.config;
+package com.hjson.tenk.common.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;

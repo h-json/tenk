@@ -1,4 +1,4 @@
-package com.hjson.manwon.common.api;
+package com.hjson.tenk.common.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

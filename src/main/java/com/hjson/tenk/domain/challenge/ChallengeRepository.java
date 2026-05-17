@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.challenge;
+package com.hjson.tenk.domain.challenge;
 
-import com.hjson.manwon.domain.user.User;
+import com.hjson.tenk.domain.user.User;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

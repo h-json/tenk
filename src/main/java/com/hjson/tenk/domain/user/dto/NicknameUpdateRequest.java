@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.user.dto;
+package com.hjson.tenk.domain.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

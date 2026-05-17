@@ -1,7 +1,7 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
-import com.hjson.manwon.domain.amount.event.AmountRecordedEvent;
-import com.hjson.manwon.domain.challenge.event.ChallengeFinishedEvent;
+import com.hjson.tenk.domain.amount.event.AmountRecordedEvent;
+import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -1,9 +1,9 @@
-package com.hjson.manwon.domain.amount;
+package com.hjson.tenk.domain.amount;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.domain.amount.dto.AmountCreateRequest;
-import com.hjson.manwon.domain.amount.dto.AmountResponse;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.domain.amount.dto.AmountCreateRequest;
+import com.hjson.tenk.domain.amount.dto.AmountResponse;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Encoding;

@@ -1,10 +1,10 @@
-package com.hjson.manwon.security;
+package com.hjson.tenk.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.common.api.ApiResponse.ApiError;
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.common.api.ApiResponse.ApiError;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

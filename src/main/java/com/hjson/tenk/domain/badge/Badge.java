@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

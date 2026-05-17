@@ -1,5 +1,5 @@
 -- ============================================================
--- Manwon 백엔드 DDL
+-- Tenk 백엔드 DDL
 -- ddl-auto=validate 이므로 운영 전 이 스크립트를 수동 적용해야 함.
 -- ERD 대비 변경 사항:
 --   user          : password 제거, provider/provider_user_id/email 추가

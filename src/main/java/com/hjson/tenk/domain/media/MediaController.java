@@ -1,9 +1,9 @@
-package com.hjson.manwon.domain.media;
+package com.hjson.tenk.domain.media;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;

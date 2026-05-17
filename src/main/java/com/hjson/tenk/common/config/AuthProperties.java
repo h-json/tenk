@@ -1,9 +1,9 @@
-package com.hjson.manwon.common.config;
+package com.hjson.tenk.common.config;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "manwon.auth")
+@ConfigurationProperties(prefix = "tenk.auth")
 public record AuthProperties(Jwt jwt, Kakao kakao) {
 
     public record Jwt(

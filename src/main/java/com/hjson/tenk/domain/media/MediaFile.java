@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.media;
+package com.hjson.tenk.domain.media;
 
-import com.hjson.manwon.domain.amount.Amount;
+import com.hjson.tenk.domain.amount.Amount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

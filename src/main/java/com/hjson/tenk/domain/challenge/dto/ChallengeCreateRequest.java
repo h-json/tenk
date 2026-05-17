@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.challenge.dto;
+package com.hjson.tenk.domain.challenge.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

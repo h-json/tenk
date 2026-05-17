@@ -1,8 +1,8 @@
-package com.hjson.manwon.domain.media;
+package com.hjson.tenk.domain.media;
 
-import com.hjson.manwon.common.config.StorageProperties;
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
+import com.hjson.tenk.common.config.StorageProperties;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;

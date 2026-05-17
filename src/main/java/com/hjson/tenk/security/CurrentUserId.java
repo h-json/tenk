@@ -1,4 +1,4 @@
-package com.hjson.manwon.security;
+package com.hjson.tenk.security;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;

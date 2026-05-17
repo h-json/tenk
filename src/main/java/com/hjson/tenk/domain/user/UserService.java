@@ -1,8 +1,8 @@
-package com.hjson.manwon.domain.user;
+package com.hjson.tenk.domain.user;
 
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.domain.auth.RefreshTokenRepository;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.auth.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

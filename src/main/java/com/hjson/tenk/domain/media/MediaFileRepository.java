@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.media;
+package com.hjson.tenk.domain.media;
 
-import com.hjson.manwon.domain.amount.Amount;
+import com.hjson.tenk.domain.amount.Amount;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

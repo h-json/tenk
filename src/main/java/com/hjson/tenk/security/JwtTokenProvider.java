@@ -1,8 +1,8 @@
-package com.hjson.manwon.security;
+package com.hjson.tenk.security;
 
-import com.hjson.manwon.common.config.AuthProperties;
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
+import com.hjson.tenk.common.config.AuthProperties;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;

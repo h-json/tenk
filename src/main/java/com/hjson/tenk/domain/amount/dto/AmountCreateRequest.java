@@ -1,4 +1,4 @@
-package com.hjson.manwon.domain.amount.dto;
+package com.hjson.tenk.domain.amount.dto;
 
 public record AmountCreateRequest(
         String category,

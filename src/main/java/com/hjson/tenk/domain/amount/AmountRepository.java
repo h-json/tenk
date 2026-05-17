@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.amount;
+package com.hjson.tenk.domain.amount;
 
-import com.hjson.manwon.domain.challenge.Challenge;
+import com.hjson.tenk.domain.challenge.Challenge;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

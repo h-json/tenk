@@ -1,6 +1,6 @@
-package com.hjson.manwon.domain.badge;
+package com.hjson.tenk.domain.badge;
 
-import com.hjson.manwon.domain.challenge.ChallengeService;
+import com.hjson.tenk.domain.challenge.ChallengeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

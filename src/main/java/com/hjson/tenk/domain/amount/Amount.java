@@ -1,8 +1,8 @@
-package com.hjson.manwon.domain.amount;
+package com.hjson.tenk.domain.amount;
 
-import com.hjson.manwon.common.exception.BusinessException;
-import com.hjson.manwon.common.exception.ErrorCode;
-import com.hjson.manwon.domain.challenge.Challenge;
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.challenge.Challenge;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;

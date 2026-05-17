@@ -1,9 +1,9 @@
-package com.hjson.manwon.domain.user;
+package com.hjson.tenk.domain.user;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.domain.user.dto.NicknameUpdateRequest;
-import com.hjson.manwon.domain.user.dto.UserResponse;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.domain.user.dto.NicknameUpdateRequest;
+import com.hjson.tenk.domain.user.dto.UserResponse;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

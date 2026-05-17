@@ -1,7 +1,7 @@
-package com.hjson.manwon.common.config;
+package com.hjson.tenk.common.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "manwon.upload")
+@ConfigurationProperties(prefix = "tenk.upload")
 public record StorageProperties(String baseDir) {
 }

@@ -1,9 +1,9 @@
-package com.hjson.manwon.domain.auth;
+package com.hjson.tenk.domain.auth;
 
-import com.hjson.manwon.common.api.ApiResponse;
-import com.hjson.manwon.domain.auth.dto.KakaoLoginRequest;
-import com.hjson.manwon.domain.auth.dto.RefreshRequest;
-import com.hjson.manwon.security.CurrentUserId;
+import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.domain.auth.dto.KakaoLoginRequest;
+import com.hjson.tenk.domain.auth.dto.RefreshRequest;
+import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
