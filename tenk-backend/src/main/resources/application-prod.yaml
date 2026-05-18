@@ -5,3 +5,11 @@ spring:
     url: jdbc:mariadb://TODO_PROD_HOST:3306/tenk?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
     username: TODO_PROD_USER
     password: TODO_PROD_PASSWORD
+
+tenk:
+  auth:
+    jwt:
+      # `openssl rand -base64 64`로 생성한 512bit HS256 키. 평문 의미 없는 완전 랜덤.
+      # 키 노출/유출 시: 이 값을 새 키로 교체하면 기존에 발급된 모든 AT/RT가 즉시 무효화됨.
+      # private 레포 전제이므로 yaml에 직접 박아 두지만, 리포가 공개로 전환되거나 외부에 새어나가면 즉시 회전(rotate) 필요.
+      secret: WVzjLgcdqToIfIflBfiETuAyrzq1D4N0jjEhe+P1IHnAyKGib5khOKw4kHwBoKLRCPO3N78931f3hJdjRAZgUA==

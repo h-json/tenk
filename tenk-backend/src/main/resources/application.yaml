@@ -29,8 +29,9 @@ tenk:
     base-dir: ${TENK_UPLOAD_DIR:./uploads}
   auth:
     jwt:
-      # HS256 비밀키 (Base64 권장, 256bit 이상). 로컬 전용.
-      secret: dGVuay1sb2NhbC1qd3Qtc2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtMTIzNDU2Nzg=
+      # secret은 환경별 profile(application-{local,prod}.yaml)에서 박는다.
+      # 여기에 공통 fallback을 두면 prod에서 dev 키가 그대로 새어나갈 수 있어 의도적으로 비워둠.
+      # 부팅 시 secret이 없으면 JwtTokenProvider 초기화 단계에서 즉시 실패함.
       access-token-ttl: PT1H
       refresh-token-ttl: P14D
       issuer: tenk

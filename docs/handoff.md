@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-17
+마지막 갱신: 2026-05-18
 
 ---
 
@@ -105,8 +105,11 @@ java.lang.RuntimeException: Unable to instantiate activity
   - `POST /api/auth/refresh`로 RT 회전 — 기존 RT가 두 번째 호출에서 401 되는지.
   - `POST /api/auth/logout` 후 모든 RT 무효화되는지.
 
-### 3. JWT secret 운영 키로 교체
-- `tenk.auth.jwt.secret`은 현재 로컬용 더미 값. prod profile에서 별도 키 사용. **secret 노출 시 모든 발급 토큰 무효화 + 회전 필요**.
+### 3. JWT secret 운영 키 정비 ✅
+- ✅ 공통 `application.yaml`에서 jwt secret 제거 — fallback이 있으면 prod에 dev 키가 새어나갈 위험이라 의도적으로 비움.
+- ✅ `application-local.yaml`에 dev 키 (의미 있는 평문 → Base64). 환경 식별이 쉽고 부담 없이 코드/문서에 등장 가능.
+- ✅ `application-prod.yaml`에 `openssl rand -base64 64`로 생성한 512bit 랜덤 키. **이 키는 git 추적되므로 절대 외부 공유/리포 공개 금지.** 노출 시 즉시 회전(yaml 교체 후 재부팅 → 기존 AT/RT 일괄 무효화).
+- 🟡 키 노출 의심 시 대응: `openssl rand -base64 64`로 새 키 생성 → `application-prod.yaml`의 `tenk.auth.jwt.secret` 교체 → 재부팅. 서명 검증 실패로 기존 AT/RT 즉시 거부됨. 별도 블랙리스트/Redis 필요 없음.
 
 ### 4. 챌린지 → 지출(영상 업로드) → 배지 흐름 E2E
 - multipart 요청 형식: `request`(application/json) + `video`(video/*) part 2개. Swagger UI에서 직접 시도 가능 (Authorize 버튼에 Bearer 토큰 입력 후).
