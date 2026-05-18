@@ -190,6 +190,8 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행
 | 파일 업로드 | 항상 `LocalFileStorage.store(file, subdir)`을 거치기. 경로를 직접 조립하지 말 것 |
 | 환경별로 다른 값 추가 | 공통은 `application.yaml`, 환경별 override는 `application-{local,prod}.yaml`. prod placeholder는 TODO 주석 유지 |
 | 보호된 신규 엔드포인트 추가 | 기본적으로 인증 필요 (`SecurityConfig.PERMIT_ALL`에 없으면 자동 보호). 컨트롤러는 `@CurrentUserId Long userId`로 사용자 식별 |
+| Flutter 새 도메인 추가 | 데이터: `lib/data/<feature>/<feature>.dart`(모델, `fromJson`) + `<feature>_api.dart`(authDio 주입). 화면: `lib/presentation/<feature>/<feature>_screen.dart`. 의존성은 `main.dart`의 `*Scope` InheritedWidget으로. 백엔드 LocalDateTime은 타임존 없는 ISO-8601 문자열로 직접 포맷(toIso8601String의 Z 회피) |
+| Flutter 새 화면의 비동기 로딩 | FutureBuilder 대신 명시적 state 패턴 (`List<T>?`/`Object?`/`bool` + `int _loadGen`). 이유는 [docs/handoff.md](docs/handoff.md) "알려진 주의사항 / 함정 — Flutter" 참고. 에러는 `toApiException(e).message`로 변환해 SnackBar로 노출 |
 
 ## 미해결/다음 단계
 

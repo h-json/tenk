@@ -20,7 +20,12 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. Claude 세션 시작: 리포 루트에서 `claude` (CLAUDE.md 자동 로딩됨). 첫 메시지로 *"docs/handoff.md 읽고 이어서 진행해줘"* 라고 말하면 컨텍스트 빠르게 복구.
+6. **Flutter 앱 셋업** (앱 작업까지 할 거면):
+   - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
+     `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
+   - 출력값을 카카오 디벨로퍼스 → Tenk 앱 → 플랫폼 → Android의 키해시 목록에 **추가** 등록 (기존 머신 키해시는 그대로 두고 추가). 한 플랫폼에 여러 해시 등록 가능.
+   - `cd tenk_app && flutter pub get && flutter run`. 에뮬레이터에서 글자가 안 보이면 [[reference-flutter-android-impeller-text-glitch]] 참고.
+7. Claude 세션 시작: 리포 루트에서 `claude` (CLAUDE.md 자동 로딩됨). 첫 메시지로 *"docs/handoff.md 읽고 이어서 진행해줘"* 라고 말하면 컨텍스트 빠르게 복구.
 
 ## 완료된 것
 
@@ -107,16 +112,25 @@
 
 ## 알려진 주의사항 / 함정
 
+### 백엔드
 - **DDL과 엔티티가 어긋나면 부팅 실패** (`ddl-auto=validate`). 컬럼·인덱스 추가 시 `docs/schema.sql`도 같이 수정 후 DB에 적용해야 함.
 - **`BadgeGrantService.consecutiveStreakEndingOn`은 "오늘 기록이 없으면 어제 기준"** 까지만 봐줌. 이틀 이상 비면 streak=0. 의도된 동작.
 - **`@CurrentUserId`가 비인증 요청에서는 null**. `SecurityConfig.PERMIT_ALL`에 새 경로 추가하는데 그 경로에서 `@CurrentUserId`를 받으면 NPE. 인증 필요 경로면 PERMIT_ALL에 넣지 말 것.
 - **`JwtAuthenticationFilter`에서 토큰 invalid/expired는 401을 직접 응답한다** (Bearer 헤더가 *있을 때만*). 헤더가 아예 없으면 그대로 통과시키고 `AuthenticationEntryPoint`가 401 처리. 보호 자원에서 만료 토큰이 401로 떨어지면 클라이언트는 RT로 refresh를 시도해야 함.
 - **AT는 stateless** — 로그아웃해도 AT 만료 시간까지 유효. 즉시 무효화가 필요하면 RT만 revoke해도 보통은 충분 (다음 갱신 시 거부됨).
 
+### Flutter
+- **목록/상세 화면의 비동기 데이터는 FutureBuilder 대신 명시적 state 패턴 사용** ([ChallengeListScreen](../tenk_app/lib/presentation/challenge/challenge_list_screen.dart) 참고). `List<T>? _items / Object? _loadError / bool _loading + int _loadGen` 4-튜플 + setState. 이유: FutureBuilder가 일부 케이스에서 새 future로 교체돼도 stale snapshot으로 그리는 동작이 있어 챌린지 생성/삭제 후 갱신이 누락됐었음. 새 화면도 같은 패턴 권장.
+- **Navigator push/pop의 generic은 양쪽 모두 명시.** `MaterialPageRoute<T>(builder: ...)`로 T를 박지 않으면 push의 result가 null로 빠지는 경우가 있음. 그리고 push 종료 시점에 무조건 refresh하는 패턴이 안전 (result 의존하지 말 것).
+- **에뮬레이터에서 텍스트가 첫 프레임에 안 보이고 화면을 움직이면 나타나면** [[reference-flutter-android-impeller-text-glitch]] 참고 — Impeller 텍스트 atlas 버그. `flutter run --no-enable-impeller`로 검증.
+- **매니페스트(`AndroidManifest.xml`) 변경은 hot reload로 반영 안 됨.** 항상 콜드 부팅(`q` → `flutter run`) 또는 hot restart(`R`)로 다시 띄울 것.
+- **카카오 키해시는 머신마다 다름.** 새 머신에선 [[reference-kakao-android-keyhash]] 절차로 다시 뽑아 카카오 디벨로퍼스에 추가 등록 필요.
+
 ## 옮겨야 하는 비-git 자산
 
-- 카카오 앱 ID + (필요 시) Client Secret — 둘 다 git에 박는 정책이지만, 새 머신에 카카오 디벨로퍼스 계정 접근이 필요할 수 있음
+- **카카오 디벨로퍼스 계정 접근** — 새 머신에서 debug.keystore가 달라 새 키해시 등록이 필요. 카카오 앱 ID 자체는 yaml에 박혀 있어 git 추적되지만, 콘솔에서 키해시 추가는 사람 작업.
 - DB 비밀번호 (지금은 `application-local.yaml`에 박혀 git 추적 중)
-- JWT secret (prod 환경에서 별도 키 사용 예정)
+- prod JWT secret (현재 `application-prod.yaml`에 박혀 있으나, 실제 prod 배포 전 별도 키로 교체 필요)
 - (선택) MariaDB 데이터 — 새 환경에서 `schema.sql` 다시 적용해도 무방하면 불필요
 - (선택) `tenk-backend/uploads/` 디렉토리 — 이번 머신 영상이 필요 없으면 무시
+- (참고) `~/.android/debug.keystore`는 머신별로 다른 게 정상 — Android Studio가 새로 만들어줌. 새 키스토어 → 새 키해시 → 카카오 디벨로퍼스에 추가 등록.
