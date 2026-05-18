@@ -39,68 +39,34 @@
 - [x] 모노레포 재구조화: 백엔드 → `tenk-backend/`, Flutter 자리 `tenk_app/` 확보 (Flutter 스캐폴딩 전)
 - [x] CORS 비활성화 (Flutter 네이티브 앱만 대상)
 - [x] **백엔드 부팅 검증 (`./gradlew.bat bootRun` 통과)**. Spring Boot 4.0이 Jackson v2→v3로 올라가면서 `ObjectMapper` 패키지가 바뀐 이슈 발견·해결: `com.fasterxml.jackson.databind.ObjectMapper` → `tools.jackson.databind.ObjectMapper` (annotation `com.fasterxml.jackson.annotation.*`는 그대로). [JwtAuthenticationFilter](../tenk-backend/src/main/java/com/hjson/tenk/security/JwtAuthenticationFilter.java) + [SecurityConfig](../tenk-backend/src/main/java/com/hjson/tenk/security/SecurityConfig.java) 임포트만 갱신.
-- [x] Flutter 카카오 로그인 코드/설정 1차 구현 — 아래 "1. Flutter 앱 초기 구성" 참고. **단, 안드로이드 매니페스트의 Kakao 액티비티 클래스명이 틀려서 로그인 탭 시 ClassNotFoundException으로 크래시.** "남은 일 (우선)"의 0번 항목이 다음 세션 시작점.
+- [x] Flutter 카카오 로그인 코드/설정 1차 구현 — 아래 "1. Flutter 앱 초기 구성" 참고.
+- [x] **카카오 로그인 안드로이드 매니페스트 클래스명 수정** — `com.kakao.sdk.flutter.AuthCodeCustomTabsActivity`(존재하지 않는 이름) → `com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity`(SDK 2.x 실제 클래스, 서브패키지 `.auth.` 주의). `tools:node="merge"`로 SDK가 이미 선언한 액티비티에 URL scheme intent-filter만 병합. `<manifest>`에 `xmlns:tools` 추가. [AndroidManifest.xml](../tenk_app/android/app/src/main/AndroidManifest.xml). 펍 캐시 SDK 매니페스트 + `AuthCodeHandlerActivity.kt`의 `onNewIntent` 로직 둘 다 cross-check 함.
 
 ## 남은 일 (우선순위 순)
 
-### 0. 🔥 카카오 로그인 클래스명 버그 (다음 세션 즉시 착수)
-
-**증상**: 앱에서 "카카오로 로그인" 버튼 탭 → 안드로이드 에뮬레이터에서 즉시 크래시.
-```
-java.lang.RuntimeException: Unable to instantiate activity
-  ComponentInfo{com.hjson.tenk_app/com.kakao.sdk.flutter.AuthCodeCustomTabsActivity}:
-  java.lang.ClassNotFoundException: Didn't find class
-  "com.kakao.sdk.flutter.AuthCodeCustomTabsActivity" on path: ...
-```
-
-**원인**: [tenk_app/android/app/src/main/AndroidManifest.xml](../tenk_app/android/app/src/main/AndroidManifest.xml)에 박은 액티비티 클래스명이 `kakao_flutter_sdk_user` 2.x 실제 패키지와 다름.
-
-**조사 결과** (펍 캐시 SDK 소스 직접 확인):
-- 잘못된 이름: `com.kakao.sdk.flutter.AuthCodeCustomTabsActivity` (존재하지 않음)
-- 실제 이름: **`com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity`** (서브패키지 `.auth.` 주의)
-- 위치: `~/AppData/Local/Pub/Cache/hosted/pub.dev/kakao_flutter_sdk_auth-2.0.0+1/android/src/main/AndroidManifest.xml` — SDK가 자체 매니페스트로 `TalkAuthCodeActivity`, `AuthCodeHandlerActivity`, `AppsHandlerActivity` 3개를 이미 선언함.
-
-**수정 방향**:
-1. 우리 매니페스트에서 액티비티를 새로 선언하지 말 것 (SDK가 이미 선언). Manifest merger가 합쳐줌.
-2. URL scheme intent-filter만 동일 클래스명으로 붙여서 merge:
-   ```xml
-   <activity
-       android:name="com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"
-       tools:node="merge">
-       <intent-filter>
-           <action android:name="android.intent.action.VIEW" />
-           <category android:name="android.intent.category.DEFAULT" />
-           <category android:name="android.intent.category.BROWSABLE" />
-           <data android:scheme="kakao${kakaoNativeAppKey}" android:host="oauth" />
-       </intent-filter>
-   </activity>
-   ```
-   - `<manifest>` 루트에 `xmlns:tools="http://schemas.android.com/tools"` 추가 필요.
-3. 실제 카카오 공식 Flutter 가이드(https://developers.kakao.com/docs/latest/ko/kakaologin/flutter)의 "안드로이드 설정" 섹션 또는 `kakao_flutter_sdk` GitHub의 sample 앱 매니페스트로 정확한 패턴 한 번 더 cross-check 권장. SDK 메이저 버전이 2.x로 올라가면서 일부 가이드가 1.x 기준일 수 있음.
-
-**테스트**: 수정 후 에뮬레이터 콜드 부팅(`flutter run` 재실행, hot restart로는 매니페스트 변경 반영 안 됨) → 카카오 로그인 탭 → Chrome Custom Tab으로 카카오 계정 로그인 페이지 → 동의 → 백엔드 교환 → 홈 화면까지 끝까지 도는지 확인.
-
-### 1. Flutter 앱 초기 구성 (tenk_app/) — 거의 완료, 위 0번 버그만 남음
+### 1. Flutter 앱 초기 구성 (tenk_app/) — 거의 완료, E2E 검증만 남음
 - ✅ 스캐폴딩 (`flutter create --org com.hjson --project-name tenk_app --platforms android,ios .`). Android applicationId / iOS bundle ID 모두 `com.hjson.tenk_app`.
 - ✅ 의존성: `kakao_flutter_sdk_user`, `dio`, `flutter_secure_storage`, `camera`.
 - ✅ 카카오 키·앱ID 박힘:
   - Tenk 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` — `lib/config/kakao_config.dart` + `android/app/build.gradle.kts` manifestPlaceholders + `ios/Runner/Info.plist` CFBundleURLSchemes 3곳.
   - 백엔드 `tenk.auth.kakao.app-id = 1459747`.
-- ✅ 카카오 디벨로퍼스 설정: Tenk 키 카드에 Android 패키지 `com.hjson.tenk_app` + 키 해시 `ZahB4Kbdi4ADME+cCOe+PAsx7rI=` (debug.keystore 기준) + iOS Bundle ID 등록 완료. 카카오 로그인 활성화 + 동의항목 설정 완료.
+- ✅ 카카오 디벨로퍼스 설정: Tenk 키 카드에 Android 패키지 `com.hjson.tenk_app` + 키 해시 **`Dt3/ajH81vV0Ex78dS1ACaqelWc=`** (이 머신 `~/.android/debug.keystore` 기준, 2026-05-18 정정) + iOS Bundle ID 등록 완료. 카카오 로그인 활성화 + 동의항목 설정 완료.
+  - 키해시 추출은 반드시 카카오 공식 명령으로: `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 등 다른 방법은 키스토어 파일 자체의 해시를 내서 `kakao_flutter_sdk`가 런타임에 보내는 값과 일치하지 않음 — 과거에 잘못된 값(`ZahB4Kbdi4ADME+cCOe+PAsx7rI=`)을 등록해서 "invalid android key hash"가 났음.
+  - 새 머신에서 빌드하거나 release 키스토어를 만들면 해당 키스토어 기준 해시도 별도로 추가 등록해야 함 (한 플랫폼에 여러 해시 등록 가능).
 - ✅ Android 네이티브: `network_security_config.xml`(10.0.2.2 cleartext 허용) + INTERNET/ACCESS_NETWORK_STATE 권한 + minSdk 21 보장.
 - ✅ iOS 네이티브 (Mac 없어서 빌드 미검증): LSApplicationQueriesSchemes + CFBundleURLSchemes + 카메라/마이크 권한 설명.
 - ✅ Dart 구조: `lib/config/{kakao_config,api_config}.dart` + `lib/data/api/{dio_client,auth_api,auth_interceptor}.dart` + `lib/data/auth/{auth_tokens,token_storage,auth_repository}.dart` + `lib/presentation/{login,home}/*` + `main.dart` 라우팅 (AuthScope InheritedWidget + _SessionGate). 401 시 단일 in-flight refresh + 1회 재시도, refresh 실패 시 자동 로그아웃.
-- ✅ Android 에뮬레이터에서 앱 부팅 + 로그인 화면 진입 확인. **단, 카카오 로그인 버튼 탭 시 위 0번 버그로 크래시.**
+- ✅ Android 에뮬레이터에서 앱 부팅 + 로그인 화면 진입 확인.
+- ✅ 안드로이드 매니페스트 Kakao 액티비티 클래스명 수정 완료 (위 "완료된 것" 마지막 항목).
+- ✅ E2E 통과: 카카오 로그인 → 백엔드 교환 → 홈 진입 (2026-05-18).
 - 🟡 남은 일:
-  - 0번 버그 수정 후 카카오 로그인 → 백엔드 교환 → 홈 진입 E2E 검증.
   - 카메라 권한 Android 매니페스트 추가 (카메라 기능 구현 시).
   - 실기기 테스트: 같은 Wi-Fi의 PC IP를 `--dart-define=API_BASE_URL=http://192.168.x.x:8080`로 주입.
+  - (참고) 동의 화면에 "맞춤형 광고 행태정보 처리" 항목이 보임 — 카카오 플랫폼 강제 항목이라 개발자가 끌 수 없음. 한 번 선택하면 다음 로그인부터 안 뜸. 우리 백엔드는 무관.
 
-### 2. 백엔드 인증 흐름 추가 검증 (0번 통과 후)
+### 2. 백엔드 인증 흐름 추가 검증 (E2E 통과 후)
 - ✅ 앱 ID 박힘 (1459747), 백엔드 부팅 OK.
-- 🟡 0번 버그 통과 후 자연스럽게 검증되는 것:
-  - `POST /api/auth/kakao/login` → AT/RT 응답.
-  - `Authorization: Bearer <AT>` 헤더로 보호 자원 200.
+- ✅ Flutter 카카오 로그인 → 백엔드 교환 → AT/RT 발급 → 홈 진입 동선 통과 (2026-05-18).
 - 🟡 별도 검증 필요 (앱에서 자동 발생하기 어려움, Swagger UI나 curl 권장):
   - `POST /api/auth/refresh`로 RT 회전 — 기존 RT가 두 번째 호출에서 401 되는지.
   - `POST /api/auth/logout` 후 모든 RT 무효화되는지.
