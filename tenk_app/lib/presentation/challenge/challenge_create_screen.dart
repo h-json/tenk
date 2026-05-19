@@ -14,8 +14,8 @@ class ChallengeCreateScreen extends StatefulWidget {
 }
 
 class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
-  /// 최대 윈도우: 백엔드 `Challenge.MAX_DURATION_DAYS = 7`과 일치시킬 것.
-  static const _maxDurationDays = 7;
+  /// 양끝 포함 최대 윈도우 — 백엔드 `Challenge.MAX_DURATION_DAYS = 30`과 일치시킬 것.
+  static const _maxDurationDays = 30;
 
   late DateTime _startDate;
   late DateTime _endDate;
@@ -23,11 +23,15 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
 
+  static DateTime _today() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _startDate = DateTime(now.year, now.month, now.day);
+    _startDate = _today();
     _endDate = _startDate.add(const Duration(days: 2));
   }
 
@@ -37,14 +41,16 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     super.dispose();
   }
 
+  /// 시작·종료일 모두 포함한 총 일수.
   int get _totalDays => _endDate.difference(_startDate).inDays + 1;
 
   Future<void> _pickStart() async {
+    final today = _today();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _startDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: _startDate.isBefore(today) ? today : _startDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
     );
     if (picked == null) return;
     setState(() {
@@ -74,11 +80,10 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     final amount = int.parse(_amountController.text);
     setState(() => _submitting = true);
     try {
-      // endDt는 endDate 다음날 00:00 (해당 날 종일 포함). totalDays와 백엔드 검증 모두 OK.
-      final endDtExclusive = _endDate.add(const Duration(days: 1));
+      // 백엔드는 startDate/endDate를 양끝 포함 날짜로 받는다. 별도 보정 없이 그대로 전달.
       final created = await ChallengeScope.of(context).create(
-        startDt: _startDate,
-        endDt: endDtExclusive,
+        startDate: _startDate,
+        endDate: _endDate,
         targetAmount: amount,
       );
       if (!mounted) return;

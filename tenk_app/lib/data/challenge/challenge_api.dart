@@ -10,15 +10,15 @@ class ChallengeApi {
   final Dio _dio;
 
   Future<Challenge> create({
-    required DateTime startDt,
-    required DateTime endDt,
+    required DateTime startDate,
+    required DateTime endDate,
     required int targetAmount,
   }) async {
     final res = await _dio.post(
       '/api/challenges',
       data: {
-        'startDt': _formatLocal(startDt),
-        'endDt': _formatLocal(endDt),
+        'startDate': _formatDate(startDate),
+        'endDate': _formatDate(endDate),
         'targetAmount': targetAmount,
       },
     );
@@ -49,12 +49,11 @@ class ChallengeApi {
     await _dio.delete('/api/challenges/$challengeId');
   }
 
-  /// 백엔드의 LocalDateTime은 타임존 없는 ISO-8601 string을 기대한다.
-  /// `DateTime.toIso8601String()`은 로컬/UTC 여부에 따라 'Z'를 붙일 수 있어 LocalDateTime 파서가 깨질 수 있음 → 직접 포맷.
-  static String _formatLocal(DateTime dt) {
+  /// 백엔드 `LocalDate`는 `yyyy-MM-dd`를 기대. `DateTime.toIso8601String()`은 시각·타임존이 붙어
+  /// 파서가 깨질 수 있으므로 직접 포맷.
+  static String _formatDate(DateTime dt) {
     final local = dt.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
-    return '${local.year}-${two(local.month)}-${two(local.day)}T'
-        '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
+    return '${local.year}-${two(local.month)}-${two(local.day)}';
   }
 }

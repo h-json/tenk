@@ -7,8 +7,8 @@ import java.util.List;
 
 public record ChallengeExportResponse(
         Long challengeId,
-        LocalDateTime startDt,
-        LocalDateTime endDt,
+        LocalDate startDate,
+        LocalDate endDate,
         int targetAmount,
         long totalSpent,
         long balance,
@@ -20,7 +20,7 @@ public record ChallengeExportResponse(
     public record DailySummary(LocalDate date, long total, boolean noSpendDay) {}
     public record CategorySummary(String category, long total) {}
     public record AmountItem(Long amountId,
-                             LocalDateTime createdDt,
+                             LocalDateTime spentDt,
                              String category,
                              String content,
                              int amount,

@@ -20,3 +20,9 @@ String formatDate(DateTime dt) {
 
 String formatPeriod(DateTime start, DateTime end) =>
     '${formatDate(start)} ~ ${formatDate(end)}';
+
+String formatDateTime(DateTime dt) {
+  final d = dt.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
+}

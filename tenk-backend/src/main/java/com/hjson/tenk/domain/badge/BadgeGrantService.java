@@ -7,7 +7,6 @@ import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -42,15 +41,15 @@ public class BadgeGrantService {
 
         LocalDate today = LocalDate.now();
         LocalDateTime from = today.minusDays(LOOKBACK_DAYS).atStartOfDay();
-        LocalDateTime to = today.plusDays(1).atStartOfDay();
-        List<Amount> records = amountRepository.findUserAmountsBetween(user.getId(), from, to);
+        LocalDateTime toExclusive = today.plusDays(1).atStartOfDay();
+        List<Amount> records = amountRepository.findUserAmountsBetween(user.getId(), from, toExclusive);
 
         Set<LocalDate> daysWithAnyRecord = new TreeSet<>();
         Set<LocalDate> daysWithOnlyNoSpend = new TreeSet<>();
         Set<LocalDate> daysWithSpend = new TreeSet<>();
 
         for (Amount a : records) {
-            LocalDate day = a.getCreatedDt().toLocalDate();
+            LocalDate day = a.getSpentDt().toLocalDate();
             daysWithAnyRecord.add(day);
             if (a.isNoSpend()) {
                 daysWithOnlyNoSpend.add(day);
@@ -125,8 +124,4 @@ public class BadgeGrantService {
         return streak;
     }
 
-    @SuppressWarnings("unused")
-    private static LocalDateTime atEndOfDay(LocalDate date) {
-        return date.atTime(LocalTime.MAX);
-    }
 }

@@ -8,7 +8,7 @@ import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
 import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
 import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserService;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,24 +28,24 @@ public class ChallengeService {
     @Transactional
     public ChallengeResponse create(Long userId, ChallengeCreateRequest request) {
         User user = userService.getActiveUser(userId);
-        Challenge challenge = Challenge.create(user, request.startDt(), request.endDt(), request.targetAmount());
-        return ChallengeResponse.of(challengeRepository.save(challenge), 0L, LocalDateTime.now());
+        Challenge challenge = Challenge.create(user, request.startDate(), request.endDate(), request.targetAmount());
+        return ChallengeResponse.of(challengeRepository.save(challenge), 0L, LocalDate.now());
     }
 
     public ChallengeResponse getOne(Long userId, Long challengeId) {
         Challenge challenge = loadOwned(userId, challengeId);
         long total = amountRepository.sumByChallenge(challenge);
-        return ChallengeResponse.of(challenge, total, LocalDateTime.now());
+        return ChallengeResponse.of(challenge, total, LocalDate.now());
     }
 
     public List<ChallengeResponse> listMine(Long userId, boolean onlyActive) {
         User user = userService.getActiveUser(userId);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         List<Challenge> challenges = onlyActive
-                ? challengeRepository.findByUserAndDeletedFalseAndEndDtAfterOrderByStartDtAsc(user, now)
-                : challengeRepository.findByUserAndDeletedFalseOrderByStartDtDesc(user);
+                ? challengeRepository.findByUserAndDeletedFalseAndEndDateGreaterThanEqualOrderByStartDateAsc(user, today)
+                : challengeRepository.findByUserAndDeletedFalseOrderByStartDateDesc(user);
         return challenges.stream()
-                .map(c -> ChallengeResponse.of(c, amountRepository.sumByChallenge(c), now))
+                .map(c -> ChallengeResponse.of(c, amountRepository.sumByChallenge(c), today))
                 .toList();
     }
 
@@ -60,13 +60,13 @@ public class ChallengeService {
         Challenge challenge = loadOwned(userId, challengeId);
         finalizeInternal(challenge);
         long total = amountRepository.sumByChallenge(challenge);
-        return ChallengeResponse.of(challenge, total, LocalDateTime.now());
+        return ChallengeResponse.of(challenge, total, LocalDate.now());
     }
 
     @Transactional
     public int finalizeAllDue() {
         List<Challenge> dueChallenges = challengeRepository
-                .findByDeletedFalseAndResultIsNullAndEndDtBefore(LocalDateTime.now());
+                .findByDeletedFalseAndResultIsNullAndEndDateBefore(LocalDate.now());
         for (Challenge challenge : dueChallenges) {
             finalizeInternal(challenge);
         }
@@ -86,7 +86,7 @@ public class ChallengeService {
         if (challenge.getResult() != null) {
             return;
         }
-        if (!challenge.isFinished(LocalDateTime.now())) {
+        if (!challenge.isFinished(LocalDate.now())) {
             return;
         }
         long total = amountRepository.sumByChallenge(challenge);

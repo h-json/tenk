@@ -29,7 +29,7 @@ public class ChallengeExportService {
 
     public ChallengeExportResponse export(Long userId, Long challengeId) {
         Challenge challenge = challengeService.loadOwned(userId, challengeId);
-        List<Amount> amounts = amountRepository.findByChallengeOrderByCreatedDtAsc(challenge);
+        List<Amount> amounts = amountRepository.findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge);
 
         long totalSpent = amounts.stream().mapToLong(Amount::getAmount).sum();
 
@@ -37,7 +37,7 @@ public class ChallengeExportService {
         Map<String, Long> perCategory = new LinkedHashMap<>();
         List<AmountItem> items = amounts.stream()
                 .map(a -> {
-                    LocalDate day = a.getCreatedDt().toLocalDate();
+                    LocalDate day = a.getSpentDt().toLocalDate();
                     long[] bucket = perDay.computeIfAbsent(day, d -> new long[]{0, 1});
                     bucket[0] += a.getAmount();
                     if (!a.isNoSpend()) bucket[1] = 0;
@@ -46,7 +46,7 @@ public class ChallengeExportService {
                     }
                     List<Long> mediaIds = mediaFileRepository.findByAmount(a).stream()
                             .map(MediaFile::getId).toList();
-                    return new AmountItem(a.getId(), a.getCreatedDt(), a.getCategory(),
+                    return new AmountItem(a.getId(), a.getSpentDt(), a.getCategory(),
                             a.getContent(), a.getAmount(), a.isNoSpend(), mediaIds);
                 })
                 .toList();
@@ -62,8 +62,8 @@ public class ChallengeExportService {
 
         return new ChallengeExportResponse(
                 challenge.getId(),
-                challenge.getStartDt(),
-                challenge.getEndDt(),
+                challenge.getStartDate(),
+                challenge.getEndDate(),
                 challenge.getTargetAmount(),
                 totalSpent,
                 challenge.getTargetAmount() - totalSpent,

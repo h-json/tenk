@@ -9,7 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface AmountRepository extends JpaRepository<Amount, Long> {
 
-    List<Amount> findByChallengeOrderByCreatedDtAsc(Challenge challenge);
+    /** 챌린지 상세 화면용. 사용자 지정 시각(spentDt) 기준으로 정렬, 동시각이면 입력 순. */
+    List<Amount> findByChallengeOrderBySpentDtAscCreatedDtAsc(Challenge challenge);
 
     @Query("""
             select coalesce(sum(a.amount), 0)
@@ -18,14 +19,18 @@ public interface AmountRepository extends JpaRepository<Amount, Long> {
             """)
     long sumByChallenge(@Param("challenge") Challenge challenge);
 
+    /**
+     * 배지 연속일 계산용. spentDt가 [from, toExclusive) 구간.
+     * 호출자가 날짜 경계를 LocalDateTime(자정 기준)으로 변환해서 넘긴다.
+     */
     @Query("""
             select a from Amount a
             where a.challenge.user.id = :userId
-              and a.createdDt >= :from
-              and a.createdDt < :to
-            order by a.createdDt asc
+              and a.spentDt >= :from
+              and a.spentDt < :toExclusive
+            order by a.spentDt asc
             """)
     List<Amount> findUserAmountsBetween(@Param("userId") Long userId,
                                         @Param("from") LocalDateTime from,
-                                        @Param("to") LocalDateTime to);
+                                        @Param("toExclusive") LocalDateTime toExclusive);
 }

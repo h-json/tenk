@@ -72,8 +72,8 @@ public class AuthService {
     private AuthTokens issueTokens(User user) {
         String accessToken = jwtTokenProvider.issueAccessToken(user.getId());
         String refreshTokenRaw = jwtTokenProvider.issueRefreshTokenRaw();
-        LocalDateTime expiresAt = LocalDateTime.now().plus(jwtTokenProvider.refreshTokenTtl());
-        refreshTokenRepository.save(RefreshToken.issue(user, jwtTokenProvider.hash(refreshTokenRaw), expiresAt));
+        LocalDateTime expiresDt = LocalDateTime.now().plus(jwtTokenProvider.refreshTokenTtl());
+        refreshTokenRepository.save(RefreshToken.issue(user, jwtTokenProvider.hash(refreshTokenRaw), expiresDt));
         return new AuthTokens(
                 accessToken,
                 refreshTokenRaw,

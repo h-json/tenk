@@ -3,10 +3,12 @@
 -- ddl-auto=validate 이므로 운영 전 이 스크립트를 수동 적용해야 함.
 -- ERD 대비 변경 사항:
 --   user          : password 제거, provider/provider_user_id/email 추가
---   amount        : created_dt 추가, is_no_spend 추가, category/content NULL 허용
---   challenge     : result 컬럼 추가 (NULL=진행중 / SUCCESS / FAIL)
+--   challenge     : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
+--   amount        : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
 --   refresh_token : 신설 — JWT 모바일 인증의 RT 보관소
 -- ============================================================
+
+use `tenk`;
 
 -- 외래키 순서를 고려한 드롭
 DROP TABLE IF EXISTS `refresh_token`;
@@ -34,8 +36,8 @@ CREATE TABLE `user` (
 CREATE TABLE `challenge` (
     `challenge_id`      BIGINT AUTO_INCREMENT                            NOT NULL,
     `user_id`           BIGINT                                           NOT NULL,
-    `start_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
-    `end_dt`            DATETIME                                         NOT NULL,
+    `start_date`        DATE                                             NOT NULL,
+    `end_date`          DATE                                             NOT NULL,
     `target_amount`     INT           DEFAULT 10000                      NOT NULL,
     `result`            ENUM('SUCCESS', 'FAIL')                          NULL,
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
@@ -55,10 +57,11 @@ CREATE TABLE `amount` (
     `content`           VARCHAR(255)                                     NULL,
     `amount`            INT                                              NOT NULL,
     `is_no_spend`       TINYINT(1)    DEFAULT 0                          NOT NULL,
+    `spent_dt`          DATETIME                                         NOT NULL,
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
     PRIMARY KEY (`amount_id`),
     KEY `idx_amount_challenge` (`challenge_id`),
-    KEY `idx_amount_challenge_created` (`challenge_id`, `created_dt`),
+    KEY `idx_amount_challenge_spent` (`challenge_id`, `spent_dt`),
     CONSTRAINT `fk_amount_challenge`
         FOREIGN KEY (`challenge_id`) REFERENCES `challenge` (`challenge_id`)
 );
@@ -101,8 +104,8 @@ CREATE TABLE `refresh_token` (
     `refresh_token_id`  BIGINT AUTO_INCREMENT                            NOT NULL,
     `user_id`           BIGINT                                           NOT NULL,
     `token_hash`        VARCHAR(255)                                     NOT NULL,
-    `expires_at`        DATETIME                                         NOT NULL,
-    `revoked`           TINYINT(1)    DEFAULT 0                          NOT NULL,
+    `expires_dt`        DATETIME                                         NOT NULL,
+    `is_revoked`        TINYINT(1)    DEFAULT 0                          NOT NULL,
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
     PRIMARY KEY (`refresh_token_id`),
     UNIQUE KEY `uk_refresh_token_hash` (`token_hash`),

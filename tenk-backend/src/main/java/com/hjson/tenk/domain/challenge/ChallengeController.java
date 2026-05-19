@@ -28,7 +28,7 @@ public class ChallengeController {
     private final ChallengeService challengeService;
     private final ChallengeExportService challengeExportService;
 
-    @Operation(summary = "챌린지 생성 (최대 7일)")
+    @Operation(summary = "챌린지 생성 (시작일 오늘 이후, 최대 30일)")
     @PostMapping
     public ApiResponse<ChallengeResponse> create(@CurrentUserId Long userId,
                                                  @Valid @RequestBody ChallengeCreateRequest request) {

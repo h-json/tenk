@@ -20,6 +20,16 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+/**
+ * 지출/무지출 기록.
+ *
+ * <p>날짜 의미 구분:
+ * <ul>
+ *   <li>{@code spentDt}: 사용자가 고른 "지출이 발생한 일시" (배지·집계의 기준 — 날짜만 추출해서 사용).
+ *       날짜 부분은 챌린지 기간 안이어야 함.</li>
+ *   <li>{@code createdDt}: 서버 자동 기록(JPA Auditing). 감사 용도이며 도메인 로직에서 직접 쓰지 않는다.</li>
+ * </ul>
+ */
 @Getter
 @Entity
 @Table(name = "amount")
@@ -48,30 +58,36 @@ public class Amount {
     @Column(name = "is_no_spend", nullable = false)
     private boolean noSpend;
 
+    @Column(name = "spent_dt", nullable = false)
+    private LocalDateTime spentDt;
+
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
-    private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend) {
+    private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend, LocalDateTime spentDt) {
         this.challenge = challenge;
         this.category = category;
         this.content = content;
         this.amount = amount;
         this.noSpend = noSpend;
+        this.spentDt = spentDt;
     }
 
-    public static Amount spend(Challenge challenge, String category, String content, int amount) {
+    public static Amount spend(Challenge challenge, String category, String content, int amount, LocalDateTime spentDt) {
+        validateDateInChallenge(challenge, spentDt);
         if (amount <= 0) {
             throw new BusinessException(ErrorCode.AMOUNT_INVALID_SPEND_VALUE);
         }
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
-        return new Amount(challenge, category, content, amount, false);
+        return new Amount(challenge, category, content, amount, false, spentDt);
     }
 
-    public static Amount noSpend(Challenge challenge) {
-        return new Amount(challenge, null, null, 0, true);
+    public static Amount noSpend(Challenge challenge, LocalDateTime spentDt) {
+        validateDateInChallenge(challenge, spentDt);
+        return new Amount(challenge, null, null, 0, true, spentDt);
     }
 
     public void update(String category, String content, int amount) {
@@ -93,6 +109,12 @@ public class Amount {
         this.category = category;
         this.content = content;
         this.amount = amount;
+    }
+
+    private static void validateDateInChallenge(Challenge challenge, LocalDateTime dt) {
+        if (dt == null || !challenge.containsDate(dt.toLocalDate())) {
+            throw new BusinessException(ErrorCode.AMOUNT_DATE_OUT_OF_RANGE);
+        }
     }
 
     private static boolean isBlank(String value) {

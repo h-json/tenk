@@ -11,6 +11,7 @@ import com.hjson.tenk.domain.media.LocalFileStorage;
 import com.hjson.tenk.domain.media.LocalFileStorage.StoredFile;
 import com.hjson.tenk.domain.media.MediaFile;
 import com.hjson.tenk.domain.media.MediaFileRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -35,15 +36,22 @@ public class AmountService {
     public AmountResponse record(Long userId, Long challengeId,
                                  AmountCreateRequest request, MultipartFile video) {
         Challenge challenge = challengeService.loadOwned(userId, challengeId);
-        if (challenge.isFinished(LocalDateTime.now())) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+        if (challenge.isFinished(today)) {
             throw new BusinessException(ErrorCode.CHALLENGE_ALREADY_FINISHED);
         }
+        if (!challenge.isStarted(today)) {
+            throw new BusinessException(ErrorCode.CHALLENGE_NOT_STARTED);
+        }
+
+        LocalDateTime spentDt = request.dateTime() != null ? request.dateTime() : now;
 
         boolean noSpend = Boolean.TRUE.equals(request.noSpend());
         Amount amount = noSpend
-                ? Amount.noSpend(challenge)
+                ? Amount.noSpend(challenge, spentDt)
                 : Amount.spend(challenge, request.category(), request.content(),
-                        request.amount() == null ? -1 : request.amount());
+                        request.amount() == null ? -1 : request.amount(), spentDt);
         amountRepository.save(amount);
 
         List<MediaFile> savedFiles = Collections.emptyList();
@@ -68,7 +76,7 @@ public class AmountService {
 
     public List<AmountResponse> listByChallenge(Long userId, Long challengeId) {
         Challenge challenge = challengeService.loadOwned(userId, challengeId);
-        return amountRepository.findByChallengeOrderByCreatedDtAsc(challenge).stream()
+        return amountRepository.findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge).stream()
                 .map(a -> AmountResponse.of(a, mediaFileRepository.findByAmount(a)))
                 .toList();
     }

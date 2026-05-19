@@ -37,25 +37,25 @@ public class RefreshToken {
     @Column(name = "token_hash", nullable = false, length = 255, unique = true)
     private String tokenHash;
 
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "expires_dt", nullable = false)
+    private LocalDateTime expiresDt;
 
-    @Column(name = "revoked", nullable = false)
+    @Column(name = "is_revoked", nullable = false)
     private boolean revoked;
 
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
-    private RefreshToken(User user, String tokenHash, LocalDateTime expiresAt) {
+    private RefreshToken(User user, String tokenHash, LocalDateTime expiresDt) {
         this.user = user;
         this.tokenHash = tokenHash;
-        this.expiresAt = expiresAt;
+        this.expiresDt = expiresDt;
         this.revoked = false;
     }
 
-    public static RefreshToken issue(User user, String tokenHash, LocalDateTime expiresAt) {
-        return new RefreshToken(user, tokenHash, expiresAt);
+    public static RefreshToken issue(User user, String tokenHash, LocalDateTime expiresDt) {
+        return new RefreshToken(user, tokenHash, expiresDt);
     }
 
     public void revoke() {
@@ -63,7 +63,7 @@ public class RefreshToken {
     }
 
     public boolean isExpired(LocalDateTime now) {
-        return now.isAfter(expiresAt);
+        return now.isAfter(expiresDt);
     }
 
     public boolean isUsable(LocalDateTime now) {

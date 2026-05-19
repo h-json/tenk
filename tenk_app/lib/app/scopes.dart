@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/amount/amount_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
 
@@ -45,4 +46,24 @@ class ChallengeScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(ChallengeScope oldWidget) => api != oldWidget.api;
+}
+
+/// 트리 어디서든 [AmountApi]를 꺼내쓰기 위한 단순 InheritedWidget.
+class AmountScope extends InheritedWidget {
+  const AmountScope({
+    super.key,
+    required this.api,
+    required super.child,
+  });
+
+  final AmountApi api;
+
+  static AmountApi of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AmountScope>();
+    assert(scope != null, 'AmountScope not found in widget tree');
+    return scope!.api;
+  }
+
+  @override
+  bool updateShouldNotify(AmountScope oldWidget) => api != oldWidget.api;
 }

@@ -144,7 +144,7 @@ class _ChallengeCard extends StatelessWidget {
                   ChallengeStatusChip(challenge: challenge),
                   const Spacer(),
                   Text(
-                    formatPeriod(challenge.startDt, challenge.endDt),
+                    formatPeriod(challenge.startDate, challenge.endDate),
                     style: theme.textTheme.bodySmall,
                   ),
                 ],

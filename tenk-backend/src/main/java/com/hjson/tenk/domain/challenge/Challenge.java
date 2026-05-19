@@ -14,8 +14,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,7 +33,8 @@ import com.hjson.tenk.domain.user.User;
 @EntityListeners(AuditingEntityListener.class)
 public class Challenge {
 
-    public static final int MAX_DURATION_DAYS = 7;
+    /** 시작일·종료일 포함 최대 30일 (양끝 포함). */
+    public static final int MAX_DURATION_DAYS = 30;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,11 +45,11 @@ public class Challenge {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "start_dt", nullable = false)
-    private LocalDateTime startDt;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
 
-    @Column(name = "end_dt", nullable = false)
-    private LocalDateTime endDt;
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
     @Column(name = "target_amount", nullable = false)
     private int targetAmount;
@@ -70,21 +72,31 @@ public class Challenge {
     @Column(name = "deleted_dt")
     private LocalDateTime deletedDt;
 
-    private Challenge(User user, LocalDateTime startDt, LocalDateTime endDt, int targetAmount) {
-        validatePeriod(startDt, endDt);
+    private Challenge(User user, LocalDate startDate, LocalDate endDate, int targetAmount) {
+        validatePeriod(startDate, endDate);
         this.user = user;
-        this.startDt = startDt;
-        this.endDt = endDt;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.targetAmount = targetAmount;
         this.deleted = false;
     }
 
-    public static Challenge create(User user, LocalDateTime startDt, LocalDateTime endDt, int targetAmount) {
-        return new Challenge(user, startDt, endDt, targetAmount);
+    public static Challenge create(User user, LocalDate startDate, LocalDate endDate, int targetAmount) {
+        return new Challenge(user, startDate, endDate, targetAmount);
     }
 
-    public boolean isFinished(LocalDateTime now) {
-        return !now.isBefore(endDt);
+    /** 종료일이 지난 다음 날부터 "종료"로 본다 (종료일 당일은 아직 진행 중). */
+    public boolean isFinished(LocalDate today) {
+        return today.isAfter(endDate);
+    }
+
+    /** 시작일에 도달하면 시작된 것으로 본다 (시작일 당일 = 진행 중). */
+    public boolean isStarted(LocalDate today) {
+        return !today.isBefore(startDate);
+    }
+
+    public boolean containsDate(LocalDate date) {
+        return !date.isBefore(startDate) && !date.isAfter(endDate);
     }
 
     public void markResult(ChallengeResult result) {
@@ -99,12 +111,18 @@ public class Challenge {
         this.deletedDt = LocalDateTime.now();
     }
 
-    private static void validatePeriod(LocalDateTime startDt, LocalDateTime endDt) {
-        if (startDt == null || endDt == null || !endDt.isAfter(startDt)) {
+    private static void validatePeriod(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
             throw new BusinessException(ErrorCode.CHALLENGE_PERIOD_INVALID);
         }
-        long days = Duration.between(startDt, endDt).toDays();
-        if (days > MAX_DURATION_DAYS) {
+        if (startDate.isBefore(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.CHALLENGE_PERIOD_INVALID);
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new BusinessException(ErrorCode.CHALLENGE_PERIOD_INVALID);
+        }
+        long inclusiveDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        if (inclusiveDays > MAX_DURATION_DAYS) {
             throw new BusinessException(ErrorCode.CHALLENGE_PERIOD_INVALID);
         }
     }

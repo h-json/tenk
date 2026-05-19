@@ -81,17 +81,29 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 ### 영상
 - 저화질·2초 영상은 **클라이언트가 처음부터 저화질·짧게 녹화**하는 방식 (사후 변환·트랜스코딩 아님). Flutter 기준 `camera` 패키지의 `ResolutionPreset.low` + 2초 타이머로 처리. 백엔드는 업로드받은 파일을 그대로 저장.
 - 저장소는 로컬 파일 시스템 (`tenk.upload.base-dir`, 기본 `./uploads`). `.gitignore`에 등록됨.
+- **녹화 시 음성은 꺼둠** (`CameraController(enableAudio: false)`). 사유: `RECORD_AUDIO` 런타임 권한 프롬프트를 한 단계 줄이기 위해. 추후 음성이 필요해지면 매니페스트 `RECORD_AUDIO`는 이미 선언돼 있으니 코드에서 `enableAudio: true`로만 바꾸면 됨.
+- **업로드 형식**: multipart/form-data로 `request`(application/json) + `video`(video/mp4) 2개 part. dio의 `MediaType`은 dio v5.7+에서 `DioMediaType`으로 재익스포트됨 — 따로 `http_parser`를 의존성에 추가하지 말 것.
 
 ### 챌린지
 - 한 사용자가 **여러 챌린지 동시 진행 가능**.
-- 기간은 자유 선택, **최대 7일**. 엔티티 생성 시 검증(`Challenge.MAX_DURATION_DAYS`).
+- 기간 표현: `start_date` / `end_date` **DATE (양끝 포함)**. 시각 정보 없음. (`Challenge.startDate` / `endDate`)
+- 검증 (`Challenge.validatePeriod`): ① `startDate >= today` (오늘 이후만 시작) ② `endDate >= startDate` ③ inclusive 일수 ≤ `MAX_DURATION_DAYS = 30`.
+- 상태:
+  - **시작 전**: `today < startDate` — 기록 불가
+  - **진행 중**: `startDate <= today <= endDate` and `result == null` — 기록 가능
+  - **결과 확정 대기**: `today > endDate` and `result == null` — `finalize` 호출 가능
+  - **성공/실패**: `result` 설정됨
+- 상태 판별 메서드: `isStarted(today)`, `isFinished(today)`, `containsDate(date)`. `ChallengeResponse`는 `started`/`finished` 둘 다 노출.
 - 종료 시점에 `result` 컬럼 확정: `SUCCESS`(총지출 ≤ target_amount) / `FAIL`. `NULL`이면 진행 중.
 - 확정 트리거는 ① 사용자 호출(`POST /api/challenges/{id}/finalize`) ② 매일 새벽 1시 배치(`BadgeScheduler.dailyReconciliation`) 두 가지.
 
 ### 지출(amount)
 - **지출 기록**: `category`, `content` NOT BLANK, `amount > 0`, **영상 1개 필수**.
 - **무지출 기록**: `is_no_spend = true`, `amount = 0`, `category/content` NULL 허용, **영상 선택**.
-- `created_dt`가 곧 "지출/기록 발생일". 별도 `spent_date` 컬럼 없음.
+- **일시 의미**:
+  - `spent_dt` (DATETIME, NOT NULL): 사용자가 고른 "지출이 발생한 일시". **날짜 부분**이 챌린지 기간(`startDate`~`endDate`, 양끝 포함) 안에 있어야 함 (`AMOUNT_DATE_OUT_OF_RANGE`). 기본값은 지금. 배지·집계는 `spentDt.toLocalDate()`를 기준으로 잡는다.
+  - `created_dt` (DATETIME, JPA Auditing): 서버가 자동으로 박는 row 생성 시각. 감사용. 도메인 로직에서 직접 쓰지 않는다.
+- 챌린지가 시작 전이거나(`CHALLENGE_NOT_STARTED`) 종료된 상태(`CHALLENGE_ALREADY_FINISHED`)에서는 기록 불가.
 
 ### 배지
 - 단계: `condition_value` = **3 / 7 / 14 / 30**.
@@ -149,18 +161,22 @@ lib/
 │   │   └── auth_api.dart           # /api/auth/* HTTP 호출만
 │   ├── auth/                     # 도메인 폴더: 모델 + (필요시) repository + storage
 │   │   ├── auth_tokens.dart, token_storage.dart, auth_repository.dart
-│   └── challenge/                # 도메인 폴더: 모델 + api (지금은 repo 불필요)
-│       ├── challenge.dart, challenge_api.dart
+│   ├── challenge/                # 도메인 폴더: 모델 + api (지금은 repo 불필요)
+│   │   ├── challenge.dart, challenge_api.dart
+│   └── amount/                   # 지출/무지출 기록 + multipart 영상 업로드
+│       ├── amount.dart, amount_api.dart
 └── presentation/               # 화면. data 레이어를 Scope로만 호출
     ├── common/                   # 도메인 무관 공용 위젯·헬퍼
     │   ├── async_state.dart        # AsyncStateMixin + AsyncStateView (필수 — 아래 컨벤션 참고)
     │   └── error_view.dart
     ├── login/login_screen.dart
-    └── challenge/
-        ├── _formatters.dart        # 도메인 내부 공유 (외부 노출 X — 언더스코어 prefix)
-        ├── widgets/                # 도메인 전용 공용 위젯
-        │   └── challenge_status.dart
-        └── *_screen.dart
+    ├── challenge/
+    │   ├── _formatters.dart        # 도메인 내부 공유 (외부 노출 X — 언더스코어 prefix)
+    │   ├── widgets/                # 도메인 전용 공용 위젯
+    │   │   └── challenge_status.dart
+    │   └── *_screen.dart
+    └── amount/
+        └── amount_record_screen.dart  # 카메라 프리뷰 + 2초 녹화 + 폼 (지출/무지출 토글)
 ```
 
 ### 레이어 규칙 (반드시 지킬 것)
