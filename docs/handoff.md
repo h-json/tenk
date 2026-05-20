@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-19 (Swagger 인증 시나리오 1·2·3 통과 + 단위 테스트 49개 그린)
+마지막 갱신: 2026-05-20 (배지 이벤트 E2E 통과 + `AFTER_COMMIT` propagation 운영 버그 발견·수정. 단위 49 + 통합 8 + 컨텍스트 1 = **58 그린**)
 
 ---
 
@@ -20,7 +20,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (단위 테스트 49개 그린 상태가 기대값)
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 58개 그린 — 단위 49 + 통합 8 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -55,28 +55,30 @@
   - [AmountServiceTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountServiceTest.java) (6) — 종료/미시작 거부, 영상 필수, happy path
   - [BadgeGrantServiceTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeGrantServiceTest.java) (8) — STREAK 폴백·끊김, NO_SPEND 끊김, CHALLENGE_SUCCESS 분기
   - [AuthServiceTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/auth/AuthServiceTest.java) (9) — kakaoLogin/refresh/logout 전 분기
-  - **결정 1 — invariant 우회**: `LocalDate.now()`가 정적이라 "종료된 챌린지" 상태는 `ReflectionTestUtils.setField(c, "endDate", today.minusDays(1))`로 사후 박음. 도메인 객체는 invariant를 거친 진짜 객체 유지. 두 곳에서만 쓰니 헬퍼화 안 함 (3번째 등장 시 유틸 추출).
+  - **결정 1 — invariant 우회**: `LocalDate.now()`가 정적이라 "종료된 챌린지" 상태는 `ReflectionTestUtils.setField(c, "endDate", today.minusDays(1))`로 사후 박음. 도메인 객체는 invariant를 거친 진짜 객체 유지.
   - **결정 2 — Mockito strictness**: Badge/Auth 테스트는 `@MockitoSettings(strictness = LENIENT)` (케이스별 stub 조합 다양). 나머지는 STRICT 유지.
+
+- ✅ **배지 이벤트 propagation 통합 테스트 8개 그린** (2026-05-20). `@SpringBootTest` + 로컬 MariaDB. 2개 파일:
+  - [BadgeEventIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeEventIntegrationTest.java) (6) — `grantChallengeSuccessDirectCall`(가설 검증), `noSpendThreeDaysGrantsBadge`, `multipleNoSpendOnSameDayCountAsOne`, `spendBreaksNoSpendStreak`, `challengeSuccessGrantsBadge`, `challengeFailDoesNotGrantBadge`. 모두 reflection 으로 startDate/endDate 를 backdate 한 챌린지 위에서 동작 (Challenge.validatePeriod 의 `startDate >= today` 제약을 우회).
+  - [BadgeSchedulerIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeSchedulerIntegrationTest.java) (2) — `batchFinalizesAndGrantsChallengeSuccess` (배치가 미확정 챌린지 확정 + 배지 지급), `batchBackfillsMissedNoSpendBadge` (이벤트 우회로 박힌 amount 도 배치가 보강).
+  - [IntegrationTestBase](../tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) + [application-test.yaml](../tenk-backend/src/test/resources/application-test.yaml): 로컬 `tenk` 스키마 그대로 사용. `@BeforeEach`에서 비-마스터 테이블 DELETE (badge 마스터는 유지). 트랜잭션 롤백 대신 명시적 정리를 쓰는 이유 = `@TransactionalEventListener(AFTER_COMMIT)` 가 실제 커밋 이후에만 발화하므로 테스트가 `@Transactional` 이면 AFTER_COMMIT 이 안 도는 함정.
+  - **🚨 운영 버그 발견·수정**: 통합 테스트 첫 실행에서 `[Badge] granted` 로그는 찍히는데 `user_badge` INSERT 가 전혀 일어나지 않는 현상 발견. 원인은 `@TransactionalEventListener(AFTER_COMMIT)` 콜백 시점에 원본 tx 동기화가 정리 중이라 `BadgeGrantService` 의 단순 `@Transactional(REQUIRED)` 가 새 tx 를 못 열고 쓰기가 사라지는 패턴. 가설 검증으로 [`grantChallengeSuccessDirectCall`](../tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeEventIntegrationTest.java) (이벤트 우회 직접 호출 → 정상 저장) vs `challengeSuccessGrantsBadge` (이벤트 경유 → 미저장) 비교. 수정: [BadgeEventListener](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 리스너 메서드 자체에 `@Transactional(propagation = REQUIRES_NEW)` 추가.
+  - **함정 1 — 챌린지 `validatePeriod`**: 도메인 invariant 가 `startDate >= today` 라서 NO_SPEND 3단계처럼 today-2 ~ today 의 spentDt 가 필요한 시나리오는 API 만으로 재현 불가. `createChallenge(userId, today-2, today+1, ...)` 처럼 invariant 통과 후 reflection 으로 startDate 를 사후에 박는 패턴 사용. BadgeGrantServiceTest 와 동일.
+  - **함정 2 — 통합 테스트가 dev DB 데이터를 비움**: 위에 적은 대로 별도 `tenk_test` 스키마를 만들지 않고 `tenk` 스키마를 공유한다. 매 테스트 실행 시 user/challenge/amount/refresh_token 비워짐. Flutter 카카오 재로그인으로 복구. tenk_test 분리는 다음 머신 운영자가 원하면 그때 결정.
 
 ---
 
 ## 남은 일 (우선순위 순)
 
-### 1. 배지 자동 지급 E2E (다음 세션 1순위)
-- 단위 테스트는 정책을 커버하지만 **실제 이벤트 propagation(`AFTER_COMMIT`) + 배치(@Scheduled cron) 동작은 미검증**.
-- 검증 시나리오:
-  - **NO_SPEND 3단계**: 진행 중 챌린지에서 무지출만 3일 연속 → DB `user_badge`에 `(user_id, badge_id)` 행이 새로 생기는지. 단, 같은 날 시각만 다르게 여러 무지출 기록해도 1일로 카운트 (Set 기반).
-  - **CHALLENGE_SUCCESS**: 챌린지 종료 후 `POST /api/challenges/{id}/finalize` → `CHALLENGE_SUCCESS` 1단계 1회 지급.
-  - **배치 재평가**: 이벤트가 누락된 케이스 보강 — 새벽 1시 `BadgeScheduler.dailyReconciliation` (테스트 시 수동 호출 가능하게 빼야 할 수도).
-- 검증 방법: 챌린지 기간을 짧게 (예: 시작=오늘, 종료=오늘+2) 만들고 `spent_dt`를 직접 박아서 (Swagger의 `request.dateTime` 필드) 3일치 무지출 생성. 그 후 `GET /api/badges/me` 또는 DB `select * from user_badge where user_id = N` 확인.
-- 참고: Flutter에는 **배지 표시 화면이 아직 없음** — DB 또는 Swagger로 확인. (배지 화면 자체는 §3 앱 UX로 분리)
+### 1. ~~배지 자동 지급 E2E~~ — ✅ 완료 (2026-05-20)
+- `BadgeEventIntegrationTest` + `BadgeSchedulerIntegrationTest` 8개. 운영 버그 1건 발견·수정 (위 "완료된 것" 참고).
 
-### 2. 통합 테스트 (단위 ✅, 통합은 후속)
-- 단위 테스트가 잡지 못하는 영역:
-  - **`AmountRepository.findUserAmountsBetween` 경계** — datetime `[from, toExclusive)` 구간. `@DataJpaTest` + Testcontainers MariaDB 권장 (H2는 SQL 방언 차이 함정 — `DATETIME` vs `TIMESTAMP`, boolean 컬럼).
-  - **`BadgeEventListener` AFTER_COMMIT** — 트랜잭션 커밋 후 실제로 배지 평가가 도는지 (§1과 일부 겹침).
-  - **`@WebMvcTest` 인증 필터** — 헤더 없을 때 401, 만료 AT 401 + 코드, 정상 AT 200. Swagger 시나리오 1·2·3을 자동화하는 셈.
-- ⚠️ [TenkApplicationTests.java](../tenk-backend/src/test/java/com/hjson/tenk/TenkApplicationTests.java)는 Spring Initializr 기본 `@SpringBootTest contextLoads`. **로컬 DB가 떠 있어야 통과** (`ddl-auto=validate` + MariaDB 접속). CI 도입 시점에 ① Testcontainers ② test 프로파일 + H2 ③ 이 테스트 삭제·치환 중 결정 필요.
+### 2. 통합 테스트 — 부분 완료, 나머지
+- ✅ 배지 이벤트 propagation + 배치 보강 (§1)
+- ❌ **남은 영역**:
+  - **`AmountRepository.findUserAmountsBetween` 경계** — datetime `[from, toExclusive)` 구간. `@DataJpaTest` 패턴으로 추가 가능 (지금처럼 로컬 MariaDB 그대로 쓰면 됨).
+  - **`@WebMvcTest` 인증 필터** — 헤더 없을 때 401, 만료 AT 401 + `AU0002`, 정상 AT 200. Swagger 시나리오 1·2·3 자동화.
+- ⚠️ [TenkApplicationTests.java](../tenk-backend/src/test/java/com/hjson/tenk/TenkApplicationTests.java)는 Spring Initializr 기본 `@SpringBootTest contextLoads`. 현재 `test` 프로파일이 아닌 default(`local`) 로 떠서 `tenk` 스키마에 접속 — 동일 DB 이긴 하지만 test 와 프로파일이 갈린다. CI 도입 시점에 ① 이 테스트 삭제 ② `@ActiveProfiles("test")` 박아서 IntegrationTestBase 와 일관화 ③ Testcontainers 도입 중 결정.
 
 ### 3. 앱 UX 다듬기
 - **배지 화면** — `GET /api/badges/me` 호출 + 단계별 그리드/리스트. §1 배지 E2E 검증을 사용자가 눈으로 확인할 수 있게 됨.
@@ -106,6 +108,8 @@
 - **`JwtAuthenticationFilter`에서 토큰 invalid/expired는 401을 직접 응답** (Bearer 헤더가 *있을 때만*). 헤더가 아예 없으면 그대로 통과 + `AuthenticationEntryPoint`가 401 처리.
 - **AT는 stateless** — 로그아웃해도 AT 만료 시간까지 유효. 즉시 무효화 필요하면 RT만 revoke하면 다음 갱신 시 거부됨 (Swagger 시나리오 2로 확인됨).
 - **JWT secret 노출 시 대응**: `openssl rand -base64 64`로 새 키 생성 → `application-prod.yaml`의 `tenk.auth.jwt.secret` 교체 → 재부팅. 서명 검증 실패로 기존 AT/RT 즉시 거부. 별도 블랙리스트/Redis 필요 없음.
+- **`@TransactionalEventListener(AFTER_COMMIT)` 에서 DB 쓰기**: 리스너 메서드 자체에 **`@Transactional(propagation = REQUIRES_NEW)`** 필수. 안 박으면 `[Badge] granted` 로그는 찍히는데 INSERT 가 사라진다 (AFTER_COMMIT 콜백 시점에 원본 tx 동기화가 정리 중이라 단순 REQUIRED 가 새 tx 를 못 연다). [BadgeEventListener](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 참고.
+- **통합 테스트가 `tenk` 스키마 데이터를 비움**: [IntegrationTestBase](../tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 의 `@BeforeEach` 가 user/challenge/amount/refresh_token 을 DELETE 한다 (badge 마스터 9행은 유지). `./gradlew test` 후 Flutter 카카오 재로그인 필요. tenk_test 스키마 분리는 일부러 안 함 (다음 운영자가 원하면 그때).
 
 ### Flutter
 - **목록/상세 화면의 비동기 데이터는 `AsyncStateMixin` + `AsyncStateView` 사용**, `FutureBuilder` 금지 ([presentation/common/async_state.dart](../tenk_app/lib/presentation/common/async_state.dart)). 한 화면이 두 종류 이상의 비동기 자원을 다루면 mixin 대신 직접 state.

@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/tenk?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
+    username: tenk
+    password: gmlwns12!@
+
+tenk:
+  auth:
+    jwt:
+      # 통합 테스트용 dummy 키 (로컬과 동일해도 무방). prod 키와 절대 같지 않게.
+      secret: dGVuay10ZXN0LWp3dC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0LTEy
+  upload:
+    base-dir: ./build/uploads-test
