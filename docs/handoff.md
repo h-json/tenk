@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-20 (배지 이벤트 E2E 통과 + `AFTER_COMMIT` propagation 운영 버그 발견·수정. 단위 49 + 통합 8 + 컨텍스트 1 = **58 그린**)
+마지막 갱신: 2026-05-20 (배지 이벤트 E2E + AmountRepository 경계 + JWT 필터 WebMvc 까지 통합 테스트 완비. 단위 49 + 통합(배지 8 + amount 5) + WebMvc 4 + 컨텍스트 1 = **67 그린**)
 
 ---
 
@@ -20,7 +20,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 58개 그린 — 단위 49 + 통합 8 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 67개 그린 — 단위 49 + 통합 13 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -66,36 +66,35 @@
   - **함정 1 — 챌린지 `validatePeriod`**: 도메인 invariant 가 `startDate >= today` 라서 NO_SPEND 3단계처럼 today-2 ~ today 의 spentDt 가 필요한 시나리오는 API 만으로 재현 불가. `createChallenge(userId, today-2, today+1, ...)` 처럼 invariant 통과 후 reflection 으로 startDate 를 사후에 박는 패턴 사용. BadgeGrantServiceTest 와 동일.
   - **함정 2 — 통합 테스트가 dev DB 데이터를 비움**: 위에 적은 대로 별도 `tenk_test` 스키마를 만들지 않고 `tenk` 스키마를 공유한다. 매 테스트 실행 시 user/challenge/amount/refresh_token 비워짐. Flutter 카카오 재로그인으로 복구. tenk_test 분리는 다음 머신 운영자가 원하면 그때 결정.
 
+- ✅ **통합 테스트 마무리 — Amount 쿼리 경계 + JWT 필터 WebMvc** (2026-05-20). 백엔드 테스트 총 67개 그린:
+  - [AmountRepositoryIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountRepositoryIntegrationTest.java) (5) — `findUserAmountsBetween` 의 `[from, toExclusive)` 반열린 구간 검증. from 자정 포함·toExclusive 자정 제외, spentDt 정렬, 유저 필터, 빈 결과, 60일 lookback 패턴까지. `BadgeGrantService.evaluateForUser` 가 의존하는 쿼리라 단위 테스트로는 못 잡는 SQL/JPQL 영역을 메움. `IntegrationTestBase` 패턴 재사용 (다른 통합 테스트와 컨텍스트 공유돼 부팅 비용 0). 직접 native insert 로 amount 박는 이유 = `validateDateInChallenge` invariant + 영상 필수를 우회하기 위해.
+  - [JwtAuthenticationFilterWebMvcTest](../tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java) (4) — Swagger 시나리오 1·2·3 자동화: 헤더 없음 401+`C0003`(SecurityConfig EntryPoint), 정상 AT 200, 만료 AT 401+`AU0002`(필터가 직접 응답), 깨진 토큰 401+`AU0001`. `@WebMvcTest(UserController.class)` 슬라이스 + `@Import(SecurityConfig, JwtAuthenticationFilter, JwtTokenProvider)` + `@EnableConfigurationProperties(AuthProperties)` + `@TestPropertySource` 로 시크릿 주입. DB 없이 가볍게 (1.3초). 만료 토큰 생성은 `JwtTokenProvider` 가 TTL 기반이라 만들 수 없어 같은 시크릿 키로 `Jwts.builder()` 직접 호출, expiration 만 과거로 박는 헬퍼 사용.
+  - [TenkApplicationTests](../tenk-backend/src/test/java/com/hjson/tenk/TenkApplicationTests.java) — `@ActiveProfiles("test")` 박아서 IntegrationTestBase 와 프로파일 일관화.
+  - **🚧 Spring Boot 4 함정**: `WebMvcTest` 어노테이션 패키지가 이동했다. 기존 `org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest` 는 사라졌고 `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` 가 정답. `spring-boot-starter-webmvc-test` → `spring-boot-webmvc-test` 모듈 안. (`spring-boot-test-autoconfigure` 자체는 SB4 에서 `json` 슬라이스만 남았다.) IDE 가 "WebMvcTest cannot be resolved" 라고 짖으면 이 import 부터 확인할 것.
+
 ---
 
 ## 남은 일 (우선순위 순)
 
-### 1. ~~배지 자동 지급 E2E~~ — ✅ 완료 (2026-05-20)
-- `BadgeEventIntegrationTest` + `BadgeSchedulerIntegrationTest` 8개. 운영 버그 1건 발견·수정 (위 "완료된 것" 참고).
+> 백엔드 테스트(단위·통합·WebMvc)는 ✅ 완료. 자세한 건 "완료된 것 — 통합 테스트 마무리" 항목 참고.
 
-### 2. 통합 테스트 — 부분 완료, 나머지
-- ✅ 배지 이벤트 propagation + 배치 보강 (§1)
-- ❌ **남은 영역**:
-  - **`AmountRepository.findUserAmountsBetween` 경계** — datetime `[from, toExclusive)` 구간. `@DataJpaTest` 패턴으로 추가 가능 (지금처럼 로컬 MariaDB 그대로 쓰면 됨).
-  - **`@WebMvcTest` 인증 필터** — 헤더 없을 때 401, 만료 AT 401 + `AU0002`, 정상 AT 200. Swagger 시나리오 1·2·3 자동화.
-- ⚠️ [TenkApplicationTests.java](../tenk-backend/src/test/java/com/hjson/tenk/TenkApplicationTests.java)는 Spring Initializr 기본 `@SpringBootTest contextLoads`. 현재 `test` 프로파일이 아닌 default(`local`) 로 떠서 `tenk` 스키마에 접속 — 동일 DB 이긴 하지만 test 와 프로파일이 갈린다. CI 도입 시점에 ① 이 테스트 삭제 ② `@ActiveProfiles("test")` 박아서 IntegrationTestBase 와 일관화 ③ Testcontainers 도입 중 결정.
-
-### 3. 앱 UX 다듬기
-- **배지 화면** — `GET /api/badges/me` 호출 + 단계별 그리드/리스트. §1 배지 E2E 검증을 사용자가 눈으로 확인할 수 있게 됨.
+### 1. 앱 UX 다듬기
+- **배지 화면** — `GET /api/badges/me` 호출 + 단계별 그리드/리스트. 배지 E2E 검증을 사용자가 눈으로 확인할 수 있게 됨.
 - **챌린지 결과 화면** — `GET /api/challenges/{id}/export` 활용. 일별/카테고리별 막대 또는 도넛.
 - **녹화 영상 미리보기** — 현재는 체크 아이콘만. `video_player` 패키지 추가하면 미리보기 가능 (MVP 범위 밖).
 - **실기기 테스트** — `--dart-define=API_BASE_URL=http://192.168.x.x:8080`로 같은 Wi-Fi의 PC IP 주입. 에뮬레이터와 카메라 동작이 미묘하게 다름.
 
-### 4. 페이지네이션 / 정렬
+### 2. 페이지네이션 / 정렬
 - `/api/challenges`, `/api/challenges/{id}/amounts`가 전체 목록 반환 중. `Pageable` 도입 시점 결정 (지금은 사용자당 챌린지 수가 적어 무방).
 
-### 5. Google / Naver 로그인 추가 (예정)
+### 3. Google / Naver 로그인 추가 (예정)
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
-### 6. 운영 고려사항 (필요해지면)
+### 4. 운영 고려사항 (필요해지면)
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **영상 워터마크** (날짜·잔액 오버레이) — 추후 FFmpeg 도입 시 별도 서비스.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.
+- **CI 도입** — 현재 통합 테스트가 로컬 `tenk` 스키마를 비우는 구조라 CI 에서 그대로 못 돈다. 도입 시 Testcontainers + 별도 `tenk_test` 스키마로 갈아탈 것.
 
 ---
 
