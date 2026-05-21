@@ -10,12 +10,14 @@ import static org.mockito.Mockito.verify;
 import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.amount.AmountRepository;
+import com.hjson.tenk.domain.badge.ChallengeBadgeRepository;
 import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
 import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
 import com.hjson.tenk.domain.user.AuthProvider;
 import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserService;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,14 +25,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ChallengeServiceTest {
 
     @Mock ChallengeRepository challengeRepository;
     @Mock AmountRepository amountRepository;
+    @Mock ChallengeBadgeRepository challengeBadgeRepository;
     @Mock UserService userService;
     @Mock ApplicationEventPublisher eventPublisher;
 
@@ -42,6 +48,9 @@ class ChallengeServiceTest {
     void setUp() {
         user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
         ReflectionTestUtils.setField(user, "id", 100L);
+        // 모든 toResponse 경로가 badge 조회를 거치므로 디폴트 빈 리스트로 stub.
+        given(challengeBadgeRepository.findByChallengeOrderByCreatedDtAsc(any()))
+                .willReturn(Collections.emptyList());
     }
 
     private Challenge ongoingChallenge(long id, int target) {

@@ -67,3 +67,4 @@ class AmountScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AmountScope oldWidget) => api != oldWidget.api;
 }
+

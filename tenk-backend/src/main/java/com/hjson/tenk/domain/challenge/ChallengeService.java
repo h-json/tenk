@@ -3,6 +3,8 @@ package com.hjson.tenk.domain.challenge;
 import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.amount.AmountRepository;
+import com.hjson.tenk.domain.badge.ChallengeBadgeRepository;
+import com.hjson.tenk.domain.badge.dto.AcquiredBadgeResponse;
 import com.hjson.tenk.domain.challenge.dto.ChallengeCreateRequest;
 import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
 import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
@@ -22,6 +24,7 @@ public class ChallengeService {
 
     private final ChallengeRepository challengeRepository;
     private final AmountRepository amountRepository;
+    private final ChallengeBadgeRepository challengeBadgeRepository;
     private final UserService userService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -29,13 +32,14 @@ public class ChallengeService {
     public ChallengeResponse create(Long userId, ChallengeCreateRequest request) {
         User user = userService.getActiveUser(userId);
         Challenge challenge = Challenge.create(user, request.startDate(), request.endDate(), request.targetAmount());
-        return ChallengeResponse.of(challengeRepository.save(challenge), 0L, LocalDate.now());
+        Challenge saved = challengeRepository.save(challenge);
+        // 새 챌린지엔 배지 없음 — 빈 리스트 인라인
+        return ChallengeResponse.of(saved, 0L, LocalDate.now(), List.of());
     }
 
     public ChallengeResponse getOne(Long userId, Long challengeId) {
         Challenge challenge = loadOwned(userId, challengeId);
-        long total = amountRepository.sumByChallenge(challenge);
-        return ChallengeResponse.of(challenge, total, LocalDate.now());
+        return toResponse(challenge, LocalDate.now());
     }
 
     public List<ChallengeResponse> listMine(Long userId, boolean onlyActive) {
@@ -45,7 +49,7 @@ public class ChallengeService {
                 ? challengeRepository.findByUserAndDeletedFalseAndEndDateGreaterThanEqualOrderByStartDateAsc(user, today)
                 : challengeRepository.findByUserAndDeletedFalseOrderByStartDateDesc(user);
         return challenges.stream()
-                .map(c -> ChallengeResponse.of(c, amountRepository.sumByChallenge(c), today))
+                .map(c -> toResponse(c, today))
                 .toList();
     }
 
@@ -59,8 +63,7 @@ public class ChallengeService {
     public ChallengeResponse finalizeIfDue(Long userId, Long challengeId) {
         Challenge challenge = loadOwned(userId, challengeId);
         finalizeInternal(challenge);
-        long total = amountRepository.sumByChallenge(challenge);
-        return ChallengeResponse.of(challenge, total, LocalDate.now());
+        return toResponse(challenge, LocalDate.now());
     }
 
     @Transactional
@@ -80,6 +83,16 @@ public class ChallengeService {
             throw new BusinessException(ErrorCode.CHALLENGE_NOT_OWNER);
         }
         return challenge;
+    }
+
+    private ChallengeResponse toResponse(Challenge challenge, LocalDate today) {
+        long total = amountRepository.sumByChallenge(challenge);
+        List<AcquiredBadgeResponse> badges = challengeBadgeRepository
+                .findByChallengeOrderByCreatedDtAsc(challenge)
+                .stream()
+                .map(AcquiredBadgeResponse::from)
+                .toList();
+        return ChallengeResponse.of(challenge, total, today, badges);
     }
 
     private void finalizeInternal(Challenge challenge) {

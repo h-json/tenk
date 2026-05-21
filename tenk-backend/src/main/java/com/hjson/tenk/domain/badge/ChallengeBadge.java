@@ -1,6 +1,6 @@
 package com.hjson.tenk.domain.badge;
 
-import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.challenge.Challenge;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -19,27 +19,31 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+/**
+ * 한 챌린지 안에서 획득한 배지. 같은 사용자가 챌린지 A 와 B 에서 같은 type/condition 의 배지를
+ * 얻으면 행이 두 개 생긴다 (각 챌린지에 1:1 로 붙음). 유저 단위 누적(=업적)은 별도 테이블로 추후 추가.
+ */
 @Getter
 @Entity
 @Table(
-        name = "user_badge",
+        name = "challenge_badge",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_user_badge",
-                columnNames = {"user_id", "badge_id"}
+                name = "uk_challenge_badge",
+                columnNames = {"challenge_id", "badge_id"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-public class UserBadge {
+public class ChallengeBadge {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_badge_id")
+    @Column(name = "challenge_badge_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "challenge_id", nullable = false)
+    private Challenge challenge;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "badge_id", nullable = false)
@@ -49,12 +53,12 @@ public class UserBadge {
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
-    private UserBadge(User user, Badge badge) {
-        this.user = user;
+    private ChallengeBadge(Challenge challenge, Badge badge) {
+        this.challenge = challenge;
         this.badge = badge;
     }
 
-    public static UserBadge create(User user, Badge badge) {
-        return new UserBadge(user, badge);
+    public static ChallengeBadge create(Challenge challenge, Badge badge) {
+        return new ChallengeBadge(challenge, badge);
     }
 }

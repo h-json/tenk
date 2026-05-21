@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-20 (배지 이벤트 E2E + AmountRepository 경계 + JWT 필터 WebMvc 까지 통합 테스트 완비. 단위 49 + 통합(배지 8 + amount 5) + WebMvc 4 + 컨텍스트 1 = **67 그린**)
+마지막 갱신: 2026-05-21 (**배지 도메인 모델 재편 — 유저 단위 → 챌린지 단위**. `user_badge` → `challenge_badge`, 전용 배지 화면 제거 후 챌린지 카드/상세에 작은 아이콘 row 인라인. 백엔드 테스트 **68 그린** (단위 49 + 통합 14 + WebMvc 4 + 컨텍스트 1). 유저 단위 누적(=업적)은 별도 시스템으로 추후 추가)
 
 ---
 
@@ -20,7 +20,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 67개 그린 — 단위 49 + 통합 13 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 68개 그린 — 단위 49 + 통합 14 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -46,6 +46,13 @@
 - ✅ **Spring Boot 4 + Jackson v3 마이그레이션**: `com.fasterxml.jackson.databind.ObjectMapper` → `tools.jackson.databind.ObjectMapper`. 어노테이션은 그대로.
 
 - ✅ **Flutter 앱**: 카카오 로그인 + 챌린지 CRUD + 지출/무지출 기록 + 2초 영상 녹화·업로드(`camera` ResolutionPreset.low + enableAudio:false) + 일시 picker + 잔액 반영 + 삭제 + finalize. **에뮬레이터 E2E 통과 (2026-05-19)**. 구조는 `lib/app/`(셸) + `lib/data/`(api/repository) + `lib/presentation/`(화면) 3층. 컨벤션은 [../CLAUDE.md](../CLAUDE.md) "패키지 구조 (Flutter 앱)" + "코딩 컨벤션 — Flutter" 참고.
+
+- ✅ **배지 도메인 모델 재편 — 유저 단위 → 챌린지 단위** (2026-05-21). 한 챌린지 안에서만 의미를 갖도록 재편. 같은 사용자가 챌린지 A 와 B 에서 똑같이 STREAK 7 을 얻으면 `challenge_badge` 행이 두 개. 챌린지 응답(`ChallengeResponse.badges`)에 인라인 노출. 전용 "배지 화면"·진입점·잠금 상태 UI 모두 제거. 유저 단위 누적(=업적)은 별도 시스템으로 추후 추가.
+  - 백엔드: `user_badge` → `challenge_badge` (PK 변경, FK 가 user_id → challenge_id), `UserBadge` → [ChallengeBadge](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/ChallengeBadge.java), [BadgeGrantService](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java) 는 `evaluateForChallenge(challengeId)` / `grantChallengeSuccess(challengeId, result)` 로 시그니처 변경. streak 끝나는 기준일 = `min(today, challenge.endDate)`. amount 쿼리도 user 전체 lookback → 챌린지 내부만. `BadgeController` 와 `GET /api/badges/me` 삭제.
+  - 챌린지 API: [ChallengeResponse.badges](../tenk-backend/src/main/java/com/hjson/tenk/domain/challenge/dto/ChallengeResponse.java) 인라인 + [AcquiredBadgeResponse](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/dto/AcquiredBadgeResponse.java). [ChallengeService.toResponse](../tenk-backend/src/main/java/com/hjson/tenk/domain/challenge/ChallengeService.java) 가 badge JOIN FETCH (직전 운영 LazyInit 버그 패턴 재발 방지).
+  - Flutter: `lib/data/badge/badge_api.dart` · `lib/presentation/badge/` 삭제, `BadgeScope` 삭제, AppBar 🏆 진입점 제거. [Challenge.badges](../tenk_app/lib/data/challenge/challenge.dart) 필드 + [ChallengeBadgesRow](../tenk_app/lib/presentation/challenge/widgets/challenge_badges.dart) 위젯 신설 — 챌린지 카드(작게 26px, max 5+N) / 상세(36px). 잠금 상태는 카탈로그 자체를 없앴으므로 노출 안 함. `assets/badges/` PNG 9장은 그대로 재활용 (업적 화면 도입 시도 재사용 가능).
+  - 테스트: `BadgeControllerIntegrationTest` 삭제. `BadgeGrantServiceTest` · `BadgeEventIntegrationTest` · `BadgeSchedulerIntegrationTest` 모두 challenge_badge 기반으로 재작성. `BadgeEventIntegrationTest` 에 챌린지 격리 케이스 1개 추가 (`otherChallengeRecordsDoNotLeakIntoThisChallenge`).
+  - DB 마이그레이션: `mysql -u tenk -p tenk < docs/schema.sql` 1회 적용 필요 (DROP & RECREATE). 기존 `user_badge` 행은 모두 폐기.
 - ✅ **카카오 키 박힘**: 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳 (kakao_config.dart + Android build.gradle + iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=` (이 머신 debug.keystore 기준). 새 머신은 [[reference-kakao-android-keyhash]] 절차로 재등록.
 
 - ✅ **백엔드 단위 테스트 49개 그린** (2026-05-19, Mockito + AssertJ). `./gradlew.bat test` 통과. 6개 파일:
@@ -79,8 +86,8 @@
 > 백엔드 테스트(단위·통합·WebMvc)는 ✅ 완료. 자세한 건 "완료된 것 — 통합 테스트 마무리" 항목 참고.
 
 ### 1. 앱 UX 다듬기
-- **배지 화면** — `GET /api/badges/me` 호출 + 단계별 그리드/리스트. 배지 E2E 검증을 사용자가 눈으로 확인할 수 있게 됨.
 - **챌린지 결과 화면** — `GET /api/challenges/{id}/export` 활용. 일별/카테고리별 막대 또는 도넛.
+- **업적(achievement) 시스템** — 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
 - **녹화 영상 미리보기** — 현재는 체크 아이콘만. `video_player` 패키지 추가하면 미리보기 가능 (MVP 범위 밖).
 - **실기기 테스트** — `--dart-define=API_BASE_URL=http://192.168.x.x:8080`로 같은 Wi-Fi의 PC IP 주입. 에뮬레이터와 카메라 동작이 미묘하게 다름.
 

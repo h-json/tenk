@@ -7,6 +7,7 @@ import '../../data/challenge/challenge.dart';
 import '../amount/amount_record_screen.dart';
 import '../common/async_state.dart';
 import '_formatters.dart';
+import 'widgets/challenge_badges.dart';
 import 'widgets/challenge_status.dart';
 
 /// 챌린지 1건 + 그 챌린지의 지출 기록 목록을 함께 다룬다.
@@ -242,6 +243,10 @@ class _DetailBody extends StatelessWidget {
           formatPeriod(challenge.startDate, challenge.endDate),
           style: theme.textTheme.titleSmall,
         ),
+        if (challenge.badges.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ChallengeBadgesRow(badges: challenge.badges, iconSize: 36),
+        ],
         const SizedBox(height: 24),
         Text('잔액', style: theme.textTheme.labelLarge),
         const SizedBox(height: 4),

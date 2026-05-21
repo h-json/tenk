@@ -12,7 +12,8 @@ use `tenk`;
 
 -- 외래키 순서를 고려한 드롭
 DROP TABLE IF EXISTS `refresh_token`;
-DROP TABLE IF EXISTS `user_badge`;
+DROP TABLE IF EXISTS `challenge_badge`;
+DROP TABLE IF EXISTS `user_badge`;  -- 구 테이블 (있으면 정리)
 DROP TABLE IF EXISTS `badge`;
 DROP TABLE IF EXISTS `media_file`;
 DROP TABLE IF EXISTS `amount`;
@@ -86,17 +87,18 @@ CREATE TABLE `badge` (
     UNIQUE KEY `uk_badge_type_value` (`type`, `condition_value`)
 );
 
-CREATE TABLE `user_badge` (
-    `user_badge_id`     BIGINT AUTO_INCREMENT                            NOT NULL,
-    `user_id`           BIGINT                                           NOT NULL,
-    `badge_id`          BIGINT                                           NOT NULL,
-    `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
-    PRIMARY KEY (`user_badge_id`),
-    UNIQUE KEY `uk_user_badge` (`user_id`, `badge_id`),
-    KEY `idx_user_badge_user` (`user_id`),
-    CONSTRAINT `fk_user_badge_user`
-        FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`),
-    CONSTRAINT `fk_user_badge_badge`
+-- 챌린지 단위로 부여되는 배지. 유저 단위 누적(=업적)은 별도 테이블로 추후 추가.
+CREATE TABLE `challenge_badge` (
+    `challenge_badge_id` BIGINT AUTO_INCREMENT                           NOT NULL,
+    `challenge_id`       BIGINT                                          NOT NULL,
+    `badge_id`           BIGINT                                          NOT NULL,
+    `created_dt`         DATETIME     DEFAULT CURRENT_TIMESTAMP          NOT NULL,
+    PRIMARY KEY (`challenge_badge_id`),
+    UNIQUE KEY `uk_challenge_badge` (`challenge_id`, `badge_id`),
+    KEY `idx_challenge_badge_challenge` (`challenge_id`),
+    CONSTRAINT `fk_challenge_badge_challenge`
+        FOREIGN KEY (`challenge_id`) REFERENCES `challenge` (`challenge_id`),
+    CONSTRAINT `fk_challenge_badge_badge`
         FOREIGN KEY (`badge_id`) REFERENCES `badge` (`badge_id`)
 );
 

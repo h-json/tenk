@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../badge/badge.dart';
+
 enum ChallengeResult {
   success,
   fail;
@@ -34,6 +36,7 @@ class Challenge {
     required this.result,
     required this.started,
     required this.finished,
+    required this.badges,
   });
 
   final int id;
@@ -50,12 +53,16 @@ class Challenge {
   /// 종료일이 지났는지 (종료일 당일은 still 진행 중).
   final bool finished;
 
+  /// 이 챌린지 안에서 획득한 배지 (서버 응답 인라인). 미획득은 포함되지 않음 — 빈 리스트 가능.
+  final List<AcquiredBadge> badges;
+
   bool get isBeforeStart => !started && result == null;
   bool get isInProgress => started && !finished && result == null;
   bool get awaitsFinalize => finished && result == null;
 
   factory Challenge.fromJson(Map<String, dynamic> json) {
     final resultRaw = json['result'] as String?;
+    final badgesRaw = json['badges'] as List?;
     return Challenge(
       id: (json['challengeId'] as num).toInt(),
       startDate: DateTime.parse(json['startDate'] as String),
@@ -66,6 +73,12 @@ class Challenge {
       result: resultRaw == null ? null : ChallengeResult.fromServer(resultRaw),
       started: json['started'] as bool,
       finished: json['finished'] as bool,
+      badges: badgesRaw == null
+          ? const []
+          : badgesRaw
+              .cast<Map<String, dynamic>>()
+              .map(AcquiredBadge.fromJson)
+              .toList(growable: false),
     );
   }
 }

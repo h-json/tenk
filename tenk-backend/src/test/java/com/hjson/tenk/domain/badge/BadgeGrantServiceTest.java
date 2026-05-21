@@ -1,7 +1,6 @@
 package com.hjson.tenk.domain.badge;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -11,12 +10,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.hjson.tenk.domain.amount.Amount;
 import com.hjson.tenk.domain.amount.AmountRepository;
 import com.hjson.tenk.domain.challenge.Challenge;
+import com.hjson.tenk.domain.challenge.ChallengeRepository;
 import com.hjson.tenk.domain.challenge.ChallengeResult;
 import com.hjson.tenk.domain.user.AuthProvider;
 import com.hjson.tenk.domain.user.User;
-import com.hjson.tenk.domain.user.UserRepository;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,15 +33,16 @@ class BadgeGrantServiceTest {
 
     @Mock AmountRepository amountRepository;
     @Mock BadgeRepository badgeRepository;
-    @Mock UserBadgeRepository userBadgeRepository;
-    @Mock UserRepository userRepository;
+    @Mock ChallengeBadgeRepository challengeBadgeRepository;
+    @Mock ChallengeRepository challengeRepository;
 
     @InjectMocks BadgeGrantService service;
 
     private static final LocalDate TODAY = LocalDate.now();
+    private static final long CHALLENGE_ID = 200L;
 
     private User user;
-    private Challenge bigChallenge;
+    private Challenge challenge;
     private Badge streak3, streak7, streak14, streak30;
     private Badge noSpend3, noSpend7, noSpend14, noSpend30;
     private Badge challengeSuccess1;
@@ -52,11 +51,14 @@ class BadgeGrantServiceTest {
     void setUp() {
         user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
         ReflectionTestUtils.setField(user, "id", 100L);
-        given(userRepository.findByIdAndDeletedFalse(100L)).willReturn(Optional.of(user));
 
-        bigChallenge = Challenge.create(user, TODAY, TODAY, 1_000_000);
-        ReflectionTestUtils.setField(bigChallenge, "startDate", TODAY.minusDays(70));
-        ReflectionTestUtils.setField(bigChallenge, "endDate", TODAY.plusDays(1));
+        // 챌린지 기간은 today-70 ~ today+1 — 모든 시나리오의 spentDt 를 invariant 없이 모킹할 수 있게.
+        // endDate >= today 라 endingOn = today.
+        challenge = Challenge.create(user, TODAY, TODAY, 1_000_000);
+        ReflectionTestUtils.setField(challenge, "id", CHALLENGE_ID);
+        ReflectionTestUtils.setField(challenge, "startDate", TODAY.minusDays(70));
+        ReflectionTestUtils.setField(challenge, "endDate", TODAY.plusDays(1));
+        given(challengeRepository.findById(CHALLENGE_ID)).willReturn(Optional.of(challenge));
 
         streak3 = badge(BadgeType.STREAK, 3, 1L);
         streak7 = badge(BadgeType.STREAK, 7, 2L);
@@ -86,15 +88,15 @@ class BadgeGrantServiceTest {
     }
 
     private Amount spendOn(LocalDate day) {
-        return Amount.spend(bigChallenge, "x", "x", 100, day.atTime(12, 0));
+        return Amount.spend(challenge, "x", "x", 100, day.atTime(12, 0));
     }
 
     private Amount noSpendOn(LocalDate day) {
-        return Amount.noSpend(bigChallenge, day.atTime(12, 0));
+        return Amount.noSpend(challenge, day.atTime(12, 0));
     }
 
     private void stubAmounts(List<Amount> records) {
-        given(amountRepository.findUserAmountsBetween(eq(100L), any(LocalDateTime.class), any(LocalDateTime.class)))
+        given(amountRepository.findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge))
                 .willReturn(records);
     }
 
@@ -106,11 +108,11 @@ class BadgeGrantServiceTest {
                 spendOn(TODAY)
         ));
 
-        service.evaluateForUser(100L);
+        service.evaluateForChallenge(CHALLENGE_ID);
 
-        verify(userBadgeRepository).existsByUserAndBadge(user, streak3);
-        verify(userBadgeRepository, never()).existsByUserAndBadge(user, streak7);
-        verify(userBadgeRepository, times(1)).save(any(UserBadge.class));
+        verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, streak3);
+        verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, streak7);
+        verify(challengeBadgeRepository, times(1)).save(any(ChallengeBadge.class));
     }
 
     @Test
@@ -124,11 +126,11 @@ class BadgeGrantServiceTest {
                 spendOn(TODAY.minusDays(1))
         ));
 
-        service.evaluateForUser(100L);
+        service.evaluateForChallenge(CHALLENGE_ID);
 
-        verify(userBadgeRepository).existsByUserAndBadge(user, streak3);
-        verify(userBadgeRepository, never()).existsByUserAndBadge(user, streak7);
-        verify(userBadgeRepository, times(1)).save(any(UserBadge.class));
+        verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, streak3);
+        verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, streak7);
+        verify(challengeBadgeRepository, times(1)).save(any(ChallengeBadge.class));
     }
 
     @Test
@@ -139,9 +141,9 @@ class BadgeGrantServiceTest {
                 spendOn(TODAY.minusDays(2))
         ));
 
-        service.evaluateForUser(100L);
+        service.evaluateForChallenge(CHALLENGE_ID);
 
-        verify(userBadgeRepository, never()).save(any());
+        verify(challengeBadgeRepository, never()).save(any());
     }
 
     @Test
@@ -154,12 +156,12 @@ class BadgeGrantServiceTest {
                 noSpendOn(TODAY)
         ));
 
-        service.evaluateForUser(100L);
+        service.evaluateForChallenge(CHALLENGE_ID);
 
         // STREAK: 3일 연속 어떤 기록이라도 있음 → STREAK 3 지급
-        verify(userBadgeRepository).existsByUserAndBadge(user, streak3);
+        verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, streak3);
         // NO_SPEND: 그제는 지출이 끼어 무지출-only 아님. 오늘+어제 = 2일 → NO_SPEND 3 미달, 지급 안 함
-        verify(userBadgeRepository, never()).existsByUserAndBadge(user, noSpend3);
+        verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, noSpend3);
     }
 
     @Test
@@ -169,33 +171,33 @@ class BadgeGrantServiceTest {
                 spendOn(TODAY.minusDays(1)),
                 spendOn(TODAY)
         ));
-        given(userBadgeRepository.existsByUserAndBadge(user, streak3)).willReturn(true);
+        given(challengeBadgeRepository.existsByChallengeAndBadge(challenge, streak3)).willReturn(true);
 
-        service.evaluateForUser(100L);
+        service.evaluateForChallenge(CHALLENGE_ID);
 
-        verify(userBadgeRepository, never()).save(any());
+        verify(challengeBadgeRepository, never()).save(any());
     }
 
     @Test
     void grant_challenge_success_only_on_success_result() {
-        service.grantChallengeSuccess(100L, ChallengeResult.SUCCESS);
-        verify(userBadgeRepository).existsByUserAndBadge(user, challengeSuccess1);
-        verify(userBadgeRepository).save(any(UserBadge.class));
+        service.grantChallengeSuccess(CHALLENGE_ID, ChallengeResult.SUCCESS);
+        verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, challengeSuccess1);
+        verify(challengeBadgeRepository).save(any(ChallengeBadge.class));
     }
 
     @Test
     void grant_challenge_success_does_nothing_on_fail() {
-        service.grantChallengeSuccess(100L, ChallengeResult.FAIL);
+        service.grantChallengeSuccess(CHALLENGE_ID, ChallengeResult.FAIL);
         verifyNoInteractions(badgeRepository);
-        verifyNoInteractions(userBadgeRepository);
+        verifyNoInteractions(challengeBadgeRepository);
     }
 
     @Test
-    void evaluate_for_missing_user_does_nothing() {
-        given(userRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
-        service.evaluateForUser(999L);
+    void evaluate_for_missing_challenge_does_nothing() {
+        given(challengeRepository.findById(999L)).willReturn(Optional.empty());
+        service.evaluateForChallenge(999L);
         verifyNoInteractions(amountRepository);
         verifyNoInteractions(badgeRepository);
-        verifyNoInteractions(userBadgeRepository);
+        verifyNoInteractions(challengeBadgeRepository);
     }
 }

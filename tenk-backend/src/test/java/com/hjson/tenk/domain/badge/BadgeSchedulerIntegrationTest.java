@@ -19,7 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
  * {@link BadgeScheduler#dailyReconciliation()} 의 두 책임을 검증한다.
  * <ul>
  *   <li>{@code challengeService.finalizeAllDue()} : 종료일이 어제까지인 미확정 챌린지를 확정.</li>
- *   <li>{@code badgeGrantService.evaluateAllUsers()} : 이벤트가 누락된 케이스 보강.</li>
+ *   <li>{@code badgeGrantService.evaluateAllActive()} : 이벤트가 누락된 케이스 보강 (챌린지 단위).</li>
  * </ul>
  *
  * <p>이벤트 path 는 {@link BadgeEventIntegrationTest} 가 커버. 여기는 "이벤트가 비어있어도
@@ -31,7 +31,7 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
     @Autowired UserRepository userRepository;
     @Autowired ChallengeRepository challengeRepository;
     @Autowired BadgeRepository badgeRepository;
-    @Autowired UserBadgeRepository userBadgeRepository;
+    @Autowired ChallengeBadgeRepository challengeBadgeRepository;
     @Autowired BadgeScheduler badgeScheduler;
 
     @Test
@@ -48,9 +48,8 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
         Challenge after = challengeRepository.findById(challengeId).orElseThrow();
         assertThat(after.getResult()).isEqualTo(ChallengeResult.SUCCESS);
 
-        User user = userRepository.findById(userId).orElseThrow();
         Badge cs = badgeRepository.findByTypeAndConditionValue(BadgeType.CHALLENGE_SUCCESS, 1).orElseThrow();
-        assertThat(userBadgeRepository.existsByUserAndBadge(user, cs)).isTrue();
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(after, cs)).isTrue();
     }
 
     @Test
@@ -64,15 +63,15 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
         insertNoSpend(challengeId, LocalDate.now().minusDays(1));
         insertNoSpend(challengeId, LocalDate.now());
 
-        User user = userRepository.findById(userId).orElseThrow();
+        Challenge challenge = challengeRepository.findById(challengeId).orElseThrow();
         Badge noSpend3 = badgeRepository.findByTypeAndConditionValue(BadgeType.NO_SPEND, 3).orElseThrow();
-        assertThat(userBadgeRepository.existsByUserAndBadge(user, noSpend3))
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3))
                 .as("이벤트 우회로 박힌 직후에는 아직 배지 없음").isFalse();
 
         badgeScheduler.dailyReconciliation();
 
-        assertThat(userBadgeRepository.existsByUserAndBadge(user, noSpend3))
-                .as("배치가 evaluateAllUsers 로 보강").isTrue();
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3))
+                .as("배치가 evaluateAllActive 로 보강").isTrue();
     }
 
     // ---------- helpers ----------

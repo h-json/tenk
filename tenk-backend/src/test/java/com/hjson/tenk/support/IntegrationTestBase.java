@@ -35,7 +35,7 @@ public abstract class IntegrationTestBase {
     @BeforeEach
     void cleanDatabase() {
         tx.executeWithoutResult(status -> {
-            em.createNativeQuery("DELETE FROM user_badge").executeUpdate();
+            em.createNativeQuery("DELETE FROM challenge_badge").executeUpdate();
             em.createNativeQuery("DELETE FROM media_file").executeUpdate();
             em.createNativeQuery("DELETE FROM amount").executeUpdate();
             em.createNativeQuery("DELETE FROM challenge").executeUpdate();

@@ -18,7 +18,7 @@
 - **대상 클라이언트**: **Flutter 기반 모바일 앱(iOS/Android 단일 코드베이스)**. 브라우저 기반 흐름(서버 사이드 OAuth redirect, 세션 쿠키 등) 대신 모바일 친화적인 토큰 기반 흐름을 사용. 모든 백엔드 변경은 이 전제를 깔고 갈 것.
   - 카카오 로그인: 공식 `kakao_flutter_sdk`로 access token 발급 후 백엔드 `/api/auth/kakao/login`에 전달.
   - 영상 녹화: Flutter `camera` 패키지의 **`ResolutionPreset.low` + 2초 타이머**로 처음부터 저화질·짧게 촬영. ffmpeg 등 후처리 트랜스코딩은 사용하지 않음.
-- **현재 단계**: 백엔드 REST API 골격 1차 구현 완료. 통합테스트는 미수행. Flutter 앱은 카카오 로그인 + 챌린지 CRUD 화면까지 완료 (지출 기록 / 영상 녹화 화면은 다음 단계).
+- **현재 단계**: 백엔드 REST API 골격 1차 구현 완료. 통합테스트는 미수행. Flutter 앱은 카카오 로그인 + 챌린지 CRUD + 지출/무지출 기록 + 영상 녹화·업로드 + 배지 화면까지 완료.
 
 ## 리포 구조 (모노레포)
 
@@ -55,7 +55,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 67개: 단위 49 + `@SpringBootTest` 통합 13 (배지 이벤트·배치 8 + Amount 쿼리 경계 5) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 68개: 단위 49 + `@SpringBootTest` 통합 14 (배지 이벤트·배치 9 + Amount 쿼리 경계 5) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
@@ -106,14 +106,21 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - `created_dt` (DATETIME, JPA Auditing): 서버가 자동으로 박는 row 생성 시각. 감사용. 도메인 로직에서 직접 쓰지 않는다.
 - 챌린지가 시작 전이거나(`CHALLENGE_NOT_STARTED`) 종료된 상태(`CHALLENGE_ALREADY_FINISHED`)에서는 기록 불가.
 
-### 배지
-- 단계: `condition_value` = **3 / 7 / 14 / 30**.
-- `STREAK`: 매일(지출 또는 무지출 무관) 기록한 **연속 일수**.
-- `NO_SPEND`: 그날 기록이 **무지출만** 있는 날의 연속 일수. 같은 날 지출 기록이 끼면 끊김.
-- `CHALLENGE_SUCCESS`: `condition_value = 1` 1개만 존재, 챌린지 성공 시 1회 지급.
+### 배지 (챌린지 단위)
+배지는 **챌린지 1개에 귀속**된다. 같은 사용자가 챌린지 A 와 B 에서 똑같이 STREAK 7 을 얻으면
+`challenge_badge` 행이 두 개 생긴다. 챌린지 응답(`ChallengeResponse.badges`)에 인라인으로 노출되며
+별도 "내 배지" 화면은 없다. **유저 단위 누적(=업적, achievement) 시스템은 추후 별도 테이블로 추가 예정**
+(현재 범위 밖).
+
+- 단계: `condition_value` = **3 / 7 / 14 / 30** (CHALLENGE_SUCCESS 만 1).
+- `STREAK`: **그 챌린지 안에서** 매일(지출 또는 무지출 무관) 기록한 연속 일수.
+- `NO_SPEND`: **그 챌린지 안에서** 기록이 무지출만 있는 날의 연속 일수. 같은 날 지출이 끼면 끊김.
+- `CHALLENGE_SUCCESS`: 챌린지가 성공으로 확정될 때 1회 지급.
+- streak 끝나는 기준일: `min(today, challenge.endDate)`. 진행 중이면 today, 종료 후엔 endDate.
 - **지급 트리거 2종**:
-  - 이벤트: `AmountRecordedEvent`(지출/무지출 기록 후), `ChallengeFinishedEvent`(챌린지 확정 후) — `BadgeEventListener`가 `@TransactionalEventListener(AFTER_COMMIT)` + `@Transactional(REQUIRES_NEW)` 조합으로 처리. **REQUIRES_NEW가 필수**: AFTER_COMMIT 콜백 시점에는 원본 tx의 동기화가 정리 중이라 단순 REQUIRED 호출은 새 tx를 못 열고 쓰기가 조용히 사라진다 ([BadgeEventListener](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 주석 + [BadgeEventIntegrationTest.grantChallengeSuccessDirectCall vs challengeSuccessGrantsBadge](tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeEventIntegrationTest.java)).
-  - 배치: 매일 새벽 1시 전체 사용자 재평가 (이벤트 누락 대비)
+  - 이벤트: `AmountRecordedEvent`(지출/무지출 기록 후 → 해당 챌린지 재평가), `ChallengeFinishedEvent`(챌린지 확정 후 → CHALLENGE_SUCCESS 지급 + 재평가) — `BadgeEventListener`가 `@TransactionalEventListener(AFTER_COMMIT)` + `@Transactional(REQUIRES_NEW)` 조합으로 처리. **REQUIRES_NEW가 필수**: AFTER_COMMIT 콜백 시점에는 원본 tx의 동기화가 정리 중이라 단순 REQUIRED 호출은 새 tx를 못 열고 쓰기가 조용히 사라진다 ([BadgeEventListener](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 주석 + [BadgeEventIntegrationTest.grantChallengeSuccessDirectCall vs challengeSuccessGrantsBadge](tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeEventIntegrationTest.java)).
+  - 배치: 매일 새벽 1시 활성 챌린지 전체 재평가 (`evaluateAllActive`, 이벤트 누락 대비).
+- 데이터 모델: [challenge_badge](docs/schema.sql) `(challenge_id, badge_id)` UNIQUE. 한 챌린지 안에서 같은 배지는 1번만.
 
 ### 내보내기
 - **영상 내보내기(워터마크/오버레이)는 이번 범위에서 제외.**
@@ -138,7 +145,9 @@ com.hjson.tenk
     ├── challenge/   (+ ChallengeExportService, event/ChallengeFinishedEvent)
     ├── amount/      (+ event/AmountRecordedEvent)
     ├── media/       (MediaFile, LocalFileStorage, MediaController)
-    └── badge/       (Badge, UserBadge, BadgeGrantService, BadgeEventListener, BadgeScheduler)
+    └── badge/       (Badge, ChallengeBadge, BadgeGrantService, BadgeEventListener, BadgeScheduler, dto/AcquiredBadgeResponse)
+                     <!-- 챌린지 단위. 응답은 ChallengeResponse.badges 에 인라인 — 별도 컨트롤러 없음 -->
+
 ```
 
 ## 패키지 구조 (Flutter 앱)
@@ -164,8 +173,10 @@ lib/
 │   │   ├── auth_tokens.dart, token_storage.dart, auth_repository.dart
 │   ├── challenge/                # 도메인 폴더: 모델 + api (지금은 repo 불필요)
 │   │   ├── challenge.dart, challenge_api.dart
-│   └── amount/                   # 지출/무지출 기록 + multipart 영상 업로드
-│       ├── amount.dart, amount_api.dart
+│   ├── amount/                   # 지출/무지출 기록 + multipart 영상 업로드
+│   │   ├── amount.dart, amount_api.dart
+│   └── badge/                    # 챌린지 응답에 인라인되는 AcquiredBadge 모델만 (API 없음)
+│       └── badge.dart
 └── presentation/               # 화면. data 레이어를 Scope로만 호출
     ├── common/                   # 도메인 무관 공용 위젯·헬퍼
     │   ├── async_state.dart        # AsyncStateMixin + AsyncStateView (필수 — 아래 컨벤션 참고)
@@ -174,11 +185,19 @@ lib/
     ├── challenge/
     │   ├── _formatters.dart        # 도메인 내부 공유 (외부 노출 X — 언더스코어 prefix)
     │   ├── widgets/                # 도메인 전용 공용 위젯
-    │   │   └── challenge_status.dart
-    │   └── *_screen.dart
+    │   │   ├── challenge_status.dart
+    │   │   └── challenge_badges.dart  # 챌린지에 귀속된 배지 아이콘만 작게 (잠금 노출 X)
+    │   └── *_screen.dart           # 카드·상세 양쪽에서 ChallengeBadgesRow 사용
     └── amount/
         └── amount_record_screen.dart  # 카메라 프리뷰 + 2초 녹화 + 폼 (지출/무지출 토글)
 ```
+
+배지 자산: `tenk_app/assets/badges/` (pubspec.yaml `flutter.assets`에 등록). 파일명은 서버 `badge.icon_path`와 1:1 매칭 (`streak_3.png` 등 9개). 새 배지 추가 시 schema.sql · 자산 디렉토리 동시 갱신.
+
+배지 UI 원칙:
+- **챌린지에 귀속된 획득 배지만 노출** — 잠금 상태/미획득은 챌린지 단위 모델에서 의미 없으므로 보이지 않는다. 전용 "배지 화면"이나 진입점도 없다.
+- 챌린지 응답(`Challenge.badges`)을 카드·상세에서 그대로 [ChallengeBadgesRow](tenk_app/lib/presentation/challenge/widgets/challenge_badges.dart) 로 렌더.
+- 유저 단위 누적(=업적) 화면은 추후 추가 예정 — 그때 별도 `presentation/achievement/` + 별도 Scope/API 신설.
 
 ### 레이어 규칙 (반드시 지킬 것)
 - **`presentation/`에서 `data/api/*Api`를 직접 import 금지.** 항상 `Scope.of(context)`를 거쳐서만 접근. composition root(`main.dart`)에서 주입된 인스턴스만 화면이 본다.
@@ -196,6 +215,7 @@ lib/
 - **사용자 ID 주입**: 컨트롤러 파라미터에 `@CurrentUserId Long userId` 사용. (내부적으로 `@AuthenticationPrincipal(expression="userId")`)
 - **댓글은 최소화.** "왜"가 비자명할 때만 작성. JavaDoc은 정책 문서 역할일 때만 (예: `BadgeGrantService` 상단).
 - **새 API를 만들 때**: `@Tag`, `@Operation` 어노테이션을 빠뜨리지 말 것 (Swagger).
+- **LAZY 연관 매핑된 엔티티를 응답 DTO로 변환할 때**: 컨트롤러가 트랜잭션 밖에서 매핑하면 `LazyInitializationException`. **컨트롤러에 `@Transactional` 붙이지 말고, repository 쿼리에서 `JOIN FETCH`로 같이 끌어와라.** N+1도 피한다. 회귀 가드는 `@SpringBootTest` 통합 테스트로 — 단위/`@DataJpaTest`는 못 잡는다 ([UserBadgeRepository.findByUserOrderByCreatedDtDesc](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/UserBadgeRepository.java) + [BadgeControllerIntegrationTest.returnsAcquiredBadgesWithBadgeFieldsResolved](tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeControllerIntegrationTest.java) 패턴 참고).
 
 ## 코딩 컨벤션 — Flutter
 
@@ -265,6 +285,9 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행
 | 백엔드 통합 테스트 추가 | [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 상속. `@SpringBootTest` + `@ActiveProfiles("test")` + 트랜잭션 롤백 대신 `@BeforeEach`로 비-마스터 테이블 DELETE. **테스트 메서드 자체는 `@Transactional` 금지** — AFTER_COMMIT이 안 도는 함정 ([handoff.md §1·§2 검증 메모](docs/handoff.md)). 트랜잭션이 필요하면 `tx.execute(status -> ...)`로 명시 |
 | 인증/필터 슬라이스 테스트 추가 | [JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java) 패턴. `@WebMvcTest(SomeController.class)` + `@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})` + `@EnableConfigurationProperties(AuthProperties.class)` + `@TestPropertySource`로 jwt secret 주입. 컨트롤러 협력자는 `@MockitoBean`. **Spring Boot 4 함정**: `WebMvcTest` import 가 `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` 로 이동했다 (구 `...test.autoconfigure.web.servlet.WebMvcTest` 아님). 만료 토큰은 TTL 기반 `JwtTokenProvider`로 못 만드니까 같은 시크릿으로 `Jwts.builder()` 직접 호출해 expiration 만 과거로 박는다 |
 | Flutter 새 도메인 추가 | ① 데이터: `lib/data/<feature>/<feature>.dart`(모델, `@immutable` + `fromJson`) + `<feature>_api.dart`(authDio 주입, `unwrapData`/`unwrapList` 사용). 여러 출처를 합쳐야 하면 `<feature>_repository.dart`도. ② DI: `lib/app/scopes.dart`에 `<Feature>Scope` 추가 + `main.dart`에서 인스턴스 생성·주입. ③ 화면: `lib/presentation/<feature>/<feature>_screen.dart`. 데이터 호출은 `<Feature>Scope.of(context)`로만 |
+| Flutter 새 자산(이미지/폰트) 추가 | `tenk_app/assets/<feature>/` 아래에 두고 `tenk_app/pubspec.yaml`의 `flutter.assets`에 디렉토리(끝에 `/`) 등록. 디렉토리 등록은 그 안의 파일이 추가될 때 자동 인식. **새 자산은 hot reload 안 됨** — `R`(hot restart)로 반영. 자산이 없을 수도 있는 개발 중에는 `Image.asset(... errorBuilder:)`로 폴백 위젯을 두면 화면이 안 깨짐 ([badge_list_screen.dart](tenk_app/lib/presentation/badge/badge_list_screen.dart) `_IconFallback` 참고) |
+| 배지 카탈로그 변경 | 서버는 `badge` 테이블의 9행(STREAK 3/7/14/30, NO_SPEND 3/7/14/30, CHALLENGE_SUCCESS 1)으로 고정. 새 단계/타입 추가 시 **세 곳을 동시에 갱신**: ① [docs/schema.sql](docs/schema.sql)의 INSERT (+ DB에 수동 적용) ② [tenk_app/lib/data/badge/badge.dart](tenk_app/lib/data/badge/badge.dart)의 `BadgeType` enum (label 매핑까지) ③ [tenk_app/assets/badges/](tenk_app/assets/badges/)에 아이콘 파일. **챌린지 단위라 클라에 카탈로그 전체를 두지 않는다** — 획득한 것만 챌린지 응답에 인라인되므로 미획득 노출 위젯이 없음 |
+| 배지를 부여하는 로직 변경 | [BadgeGrantService](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java) 는 항상 **챌린지 단위**로 평가. `evaluateForChallenge(challengeId)` / `grantChallengeSuccess(challengeId, result)`. 유저 단위 누적이 필요하면 새 서비스(추후 achievement 시스템)로 분리할 것 — 여기에 user 파라미터를 다시 끼우지 말 것. amount 쿼리는 `findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge)` 사용 |
 | Flutter 새 화면의 비동기 로딩 | `AsyncStateMixin<W, T>` + `AsyncStateView<T>` 사용 ([presentation/common/async_state.dart](tenk_app/lib/presentation/common/async_state.dart)). `FutureBuilder` 금지. `fetch()` 오버라이드 + `didChangeDependencies`에서 `ensureLoaded()`. 외부 동작 결과를 즉시 반영하려면 `replaceData(next)`, 그 외 갱신은 `reload()`. 에러는 `toApiException(e).message`로 SnackBar 노출 |
 | Flutter 새 공용 위젯 | 두 화면 이상이 같은 위젯을 쓰면 즉시 추출. 도메인 전용은 `presentation/<domain>/widgets/`, 도메인 무관은 `presentation/common/` |
 

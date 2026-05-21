@@ -8,6 +8,7 @@ import '../login/login_screen.dart';
 import '_formatters.dart';
 import 'challenge_create_screen.dart';
 import 'challenge_detail_screen.dart';
+import 'widgets/challenge_badges.dart';
 import 'widgets/challenge_status.dart';
 
 class ChallengeListScreen extends StatefulWidget {
@@ -184,6 +185,14 @@ class _ChallengeCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (challenge.badges.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ChallengeBadgesRow(
+                  badges: challenge.badges,
+                  iconSize: 26,
+                  maxItems: 5,
+                ),
+              ],
             ],
           ),
         ),

@@ -30,9 +30,9 @@ public class BadgeEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAmountRecorded(AmountRecordedEvent event) {
         try {
-            badgeGrantService.evaluateForUser(event.userId());
+            badgeGrantService.evaluateForChallenge(event.challengeId());
         } catch (Exception e) {
-            log.warn("[BadgeEventListener] amount evaluation failed userId={}", event.userId(), e);
+            log.warn("[BadgeEventListener] amount evaluation failed challengeId={}", event.challengeId(), e);
         }
     }
 
@@ -40,9 +40,13 @@ public class BadgeEventListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onChallengeFinished(ChallengeFinishedEvent event) {
         try {
-            badgeGrantService.grantChallengeSuccess(event.userId(), event.result());
+            // CHALLENGE_SUCCESS 지급
+            badgeGrantService.grantChallengeSuccess(event.challengeId(), event.result());
+            // 종료 시점 기준으로 STREAK/NO_SPEND 도 한 번 더 재평가 — 마지막 날 기록이
+            // 진행 중에 평가됐던 것과 동일한 결과여야 하지만 안전망 차원.
+            badgeGrantService.evaluateForChallenge(event.challengeId());
         } catch (Exception e) {
-            log.warn("[BadgeEventListener] challenge result handling failed userId={}", event.userId(), e);
+            log.warn("[BadgeEventListener] challenge result handling failed challengeId={}", event.challengeId(), e);
         }
     }
 }
