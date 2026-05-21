@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-21 (**배지 도메인 모델 재편 — 유저 단위 → 챌린지 단위**. `user_badge` → `challenge_badge`, 전용 배지 화면 제거 후 챌린지 카드/상세에 작은 아이콘 row 인라인. 백엔드 테스트 **68 그린** (단위 49 + 통합 14 + WebMvc 4 + 컨텍스트 1). 유저 단위 누적(=업적)은 별도 시스템으로 추후 추가)
+마지막 갱신: 2026-05-21 (**무지출/배지 도메인 정합성 개선 + 챌린지 상세 화면 UX 강화** 완료. 무지출 일시 입력 불가·하루 1회·자동 삭제, NO_SPEND 정의 "연속 → 누적", 배지 회수(revoke) 로직 추가. 챌린지 상세는 amount 목록 날짜별 그룹화 + 오늘 상태 기반 동적 액션 패널 + 무지출 성취감 카드(누적 일수·다음 배지 게이지). 백엔드 테스트 **75 그린** (단위 55 + 통합 15 + WebMvc 4 + 컨텍스트 1). 다음 우선순위: 내보내기 구체화(회의 필요) → 배지 획득 애니메이션)
 
 ---
 
@@ -20,7 +20,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 68개 그린 — 단위 49 + 통합 14 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 75개 그린 — 단위 55 + 통합 15 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -73,6 +73,25 @@
   - **함정 1 — 챌린지 `validatePeriod`**: 도메인 invariant 가 `startDate >= today` 라서 NO_SPEND 3단계처럼 today-2 ~ today 의 spentDt 가 필요한 시나리오는 API 만으로 재현 불가. `createChallenge(userId, today-2, today+1, ...)` 처럼 invariant 통과 후 reflection 으로 startDate 를 사후에 박는 패턴 사용. BadgeGrantServiceTest 와 동일.
   - **함정 2 — 통합 테스트가 dev DB 데이터를 비움**: 위에 적은 대로 별도 `tenk_test` 스키마를 만들지 않고 `tenk` 스키마를 공유한다. 매 테스트 실행 시 user/challenge/amount/refresh_token 비워짐. Flutter 카카오 재로그인으로 복구. tenk_test 분리는 다음 머신 운영자가 원하면 그때 결정.
 
+- ✅ **챌린지 상세 화면 UX 강화** (2026-05-21). 도메인 변경에 맞춰 화면도 정리.
+  - **amount 목록 날짜별 그룹화** ([_buildGroupedAmounts](../tenk_app/lib/presentation/challenge/challenge_detail_screen.dart)): 최신 날짜 위, 같은 날 안에서도 시간 역순. 그룹 헤더에 "M월 D일 (요일)" + 그날 합계(지출 합산) 또는 "무지출" 라벨. helper 는 [_formatters.dart](../tenk_app/lib/presentation/challenge/_formatters.dart) 의 `formatDayHeader` / `dateOnly`.
+  - **오늘 상태 기반 동적 액션 패널** ([_TodayActionPanel](../tenk_app/lib/presentation/challenge/challenge_detail_screen.dart)): 진행 중 챌린지에서 3분기.
+    - 오늘 무지출 기록 있음 → 강조 카드만 (지출 버튼도 숨김). 사용자가 마음 바꾸려면 무지출 row 삭제 → 다시 두 버튼.
+    - 오늘 지출 기록 있음 → "오늘 N원 지출했어요" 카드 + 지출 버튼만 (무지출은 의미 없음).
+    - 오늘 기록 없음 → 기존대로 지출/무지출 두 버튼.
+  - **무지출 성취감 카드** ([_NoSpendTodayCard](../tenk_app/lib/presentation/challenge/challenge_detail_screen.dart)): 트로피 아이콘 + "오늘은 무지출!" + 누적 일수 + NO_SPEND 사다리(3/7/14/30) 게이지 + "다음 배지까지 X일". 등록할 때마다 게이지가 한 칸씩 차는 시각적 진전. 30일 도달 시 "최고 단계 달성 🎉". 누적 정의는 `amounts.where(noSpend).map(day).toSet().length` 로 백엔드 `BadgeGrantService.daysWithOnlyNoSpend` 와 동일.
+  - 카드 ladder `[3, 7, 14, 30]` 는 백엔드 `badge` 마스터의 NO_SPEND condition_value 와 1:1. 변경 시 [docs/schema.sql](schema.sql) 시드와 함께 갱신 (CLAUDE.md "배지 카탈로그 변경" 행 참고).
+  - 백엔드 변경 없음 — 데이터는 기존 challenge + amounts 응답으로 충분.
+
+- ✅ **무지출/배지 도메인 정합성 개선** (2026-05-21). 모델 모호성 제거 + 누적 정의 정착. 백엔드 테스트 **75 그린** (단위 55 + 통합 15 + WebMvc 4 + 컨텍스트 1).
+  - 무지출 제약 강화: 일시 입력 불가(서버 `LocalDateTime.now()` 강제), 하루 1회(서비스 + DB `uk_amount_no_spend_day` 생성 컬럼 UNIQUE), 수정 불가(원래 수정 API 자체 미구현 — 자동 성립), 지출 등록 시 같은 날 무지출 row + 첨부 영상까지 자동 삭제. 사용자 통지는 [AmountRecordResult](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountRecordResult.java)의 `removedNoSpendCount` 로 → Flutter [challenge_detail_screen.dart](../tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) `_openRecord` 에서 SnackBar.
+  - NO_SPEND 정의 변경: "연속 일수" → "챌린지 내 누적 일수". 무지출 5일 → 지출 → 무지출 5일이면 총 10일. STREAK 은 "연속" 유지 (꾸준함 vs 절약 총량 — 보상 의미가 달라서).
+  - 배지 회수(revoke): [BadgeGrantService.applyLadder](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java) 가 grant/revoke 양방향을 단일 패스로 처리. 회수가 필요한 케이스(예: 무지출 자동 삭제로 누적이 줄어든 경우)에서도 별도 호출 없이 `evaluateForChallenge` 재평가만으로 정합. 검증은 [BadgeEventIntegrationTest.noSpendBadgeRevokedWhenSpendAddedSameDay](../tenk-backend/src/test/java/com/hjson/tenk/domain/badge/BadgeEventIntegrationTest.java).
+  - 스키마: amount 에 `no_spend_day_key VARCHAR(64) GENERATED ALWAYS AS (CASE WHEN is_no_spend = 1 THEN CONCAT(challenge_id, '-', DATE(spent_dt)) ELSE NULL END) VIRTUAL` + `uk_amount_no_spend_day` UNIQUE 인덱스. MariaDB 는 partial index 미지원이라 생성 컬럼이 자연스러움. NULL 허용이라 지출 row 끼리는 충돌 안 함.
+  - 이벤트 흐름: 지출 시 무지출 자동 삭제 → `AmountRecordedEvent` 발행 → `BadgeEventListener` 가 `evaluateForChallenge` 호출 → revoke 분기로 NO_SPEND 단계 정정. AFTER_COMMIT + REQUIRES_NEW 패턴은 직전 작업에서 정착된 그대로.
+  - DB 마이그레이션: `mysql -u tenk -p tenk < docs/schema.sql` 1회 적용 필요 (DROP & RECREATE). 기존 amount row 는 모두 폐기되므로 Flutter 재로그인 후 새로 기록.
+  - 추가 테스트: AmountServiceTest +3 (무지출 spentDt 무시·중복 차단·지출 시 자동 삭제), BadgeGrantServiceTest +3 (NO_SPEND 누적 정의·NO_SPEND revoke·STREAK revoke), BadgeEventIntegrationTest +1 (revoke E2E 시나리오). 기존 통합 케이스도 누적 정의에 맞춰 재작성.
+
 - ✅ **통합 테스트 마무리 — Amount 쿼리 경계 + JWT 필터 WebMvc** (2026-05-20). 백엔드 테스트 총 67개 그린:
   - [AmountRepositoryIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountRepositoryIntegrationTest.java) (5) — `findUserAmountsBetween` 의 `[from, toExclusive)` 반열린 구간 검증. from 자정 포함·toExclusive 자정 제외, spentDt 정렬, 유저 필터, 빈 결과, 60일 lookback 패턴까지. `BadgeGrantService.evaluateForUser` 가 의존하는 쿼리라 단위 테스트로는 못 잡는 SQL/JPQL 영역을 메움. `IntegrationTestBase` 패턴 재사용 (다른 통합 테스트와 컨텍스트 공유돼 부팅 비용 0). 직접 native insert 로 amount 박는 이유 = `validateDateInChallenge` invariant + 영상 필수를 우회하기 위해.
   - [JwtAuthenticationFilterWebMvcTest](../tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java) (4) — Swagger 시나리오 1·2·3 자동화: 헤더 없음 401+`C0003`(SecurityConfig EntryPoint), 정상 AT 200, 만료 AT 401+`AU0002`(필터가 직접 응답), 깨진 토큰 401+`AU0001`. `@WebMvcTest(UserController.class)` 슬라이스 + `@Import(SecurityConfig, JwtAuthenticationFilter, JwtTokenProvider)` + `@EnableConfigurationProperties(AuthProperties)` + `@TestPropertySource` 로 시크릿 주입. DB 없이 가볍게 (1.3초). 만료 토큰 생성은 `JwtTokenProvider` 가 TTL 기반이라 만들 수 없어 같은 시크릿 키로 `Jwts.builder()` 직접 호출, expiration 만 과거로 박는 헬퍼 사용.
@@ -85,19 +104,40 @@
 
 > 백엔드 테스트(단위·통합·WebMvc)는 ✅ 완료. 자세한 건 "완료된 것 — 통합 테스트 마무리" 항목 참고.
 
-### 1. 앱 UX 다듬기
-- **챌린지 결과 화면** — `GET /api/challenges/{id}/export` 활용. 일별/카테고리별 막대 또는 도넛.
+### 1. 내보내기 구체화 (회의 필요)
+
+> `GET /api/challenges/{id}/export` JSON은 이미 있지만 화면이 없음. 디자인 결정이 먼저.
+
+**회의에서 정할 것**
+- 시각화 형태: 일별 막대 / 카테고리 도넛 / 캘린더 히트맵 / 조합?
+- 공유 기능: 결과 화면 이미지 저장? 외부 공유 링크? (영상 export는 CLAUDE.md 범위 밖 유지)
+- 정보 우선순위: 총지출 vs 목표 / 무지출 일수 / 획득 배지 / 일별 추이 중 메인은?
+- 결과 확정 전(진행 중) 챌린지에도 노출할지, 확정 후에만 보여줄지.
+- export 가 결과 화면을 그대로 캡처하는 형태인지, 별도 포맷(PDF/이미지)으로 가공하는지.
+
+회의 결과가 나오면 `presentation/challenge/export_screen.dart` 신설 + `ChallengeApi.fetchExport()` 추가.
+
+### 2. 배지 획득 애니메이션
+
+> 사용자 성취감/재미를 위해. 도메인 변경 없는 순수 클라이언트 UX.
+
+- 트리거: 챌린지 응답의 `badges`가 직전 조회 대비 늘어난 시점 감지. `AsyncStateMixin.replaceData` 호출 전후 비교 또는 별도 캐시.
+- 표현: Lottie 애니메이션 + confetti + 햅틱 1회. 패키지 `lottie`, `confetti`, `flutter/services`.
+- MVP: 새 배지 발견 시 dialog로 1.5초 lottie 재생. 챌린지 상세에서만 트리거 (목록 화면은 시끄러워짐).
+- 애셋: Lottie JSON 1~2개 정도. `assets/animations/badge_acquired.json` 같은 위치.
+
+### 3. 앱 UX 다듬기 (나머지)
 - **업적(achievement) 시스템** — 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
 - **녹화 영상 미리보기** — 현재는 체크 아이콘만. `video_player` 패키지 추가하면 미리보기 가능 (MVP 범위 밖).
 - **실기기 테스트** — `--dart-define=API_BASE_URL=http://192.168.x.x:8080`로 같은 Wi-Fi의 PC IP 주입. 에뮬레이터와 카메라 동작이 미묘하게 다름.
 
-### 2. 페이지네이션 / 정렬
+### 4. 페이지네이션 / 정렬
 - `/api/challenges`, `/api/challenges/{id}/amounts`가 전체 목록 반환 중. `Pageable` 도입 시점 결정 (지금은 사용자당 챌린지 수가 적어 무방).
 
-### 3. Google / Naver 로그인 추가 (예정)
+### 5. Google / Naver 로그인 추가 (예정)
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
-### 4. 운영 고려사항 (필요해지면)
+### 6. 운영 고려사항 (필요해지면)
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **영상 워터마크** (날짜·잔액 오버레이) — 추후 FFmpeg 도입 시 별도 서비스.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.

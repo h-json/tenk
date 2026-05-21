@@ -35,6 +35,7 @@ public enum ErrorCode {
     AMOUNT_INVALID_NO_SPEND_VALUE(HttpStatus.BAD_REQUEST, "A0004", "무지출 기록의 금액은 0이어야 합니다."),
     AMOUNT_CATEGORY_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "A0005", "지출 기록은 카테고리와 내용이 필요합니다."),
     AMOUNT_DATE_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "A0006", "기록 날짜는 챌린지 기간 안에 있어야 합니다."),
+    AMOUNT_NO_SPEND_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "A0007", "오늘은 이미 무지출 기록이 있어요."),
 
     MEDIA_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M0001", "파일 업로드에 실패했습니다."),
     MEDIA_NOT_FOUND(HttpStatus.NOT_FOUND, "M0002", "파일을 찾을 수 없습니다."),

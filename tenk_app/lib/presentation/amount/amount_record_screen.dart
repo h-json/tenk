@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/scopes.dart';
+import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
@@ -186,17 +187,18 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     setState(() => _submitting = true);
     try {
       final api = AmountScope.of(context);
-      await api.record(
+      // 무지출은 일시 입력 불가 — 백엔드가 서버 now() 로 강제하므로 명시적으로 null 을 보낸다.
+      final result = await api.record(
         challengeId: widget.challenge.id,
         noSpend: widget.noSpend,
-        dateTime: _spentDt,
+        dateTime: widget.noSpend ? null : _spentDt,
         category: widget.noSpend ? null : _categoryController.text.trim(),
         content: widget.noSpend ? null : _contentController.text.trim(),
         amount: widget.noSpend ? null : int.parse(_amountController.text),
         videoPath: _videoPath,
       );
       if (!mounted) return;
-      Navigator.of(context).pop<bool>(true);
+      Navigator.of(context).pop<AmountRecordResult>(result);
     } catch (e) {
       if (!mounted) return;
       _showError('저장 실패: ${toApiException(e).message}');
@@ -222,19 +224,30 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Text('일시', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              _DateTimeField(
-                label: '기록 일시',
-                dt: _spentDt,
-                onTap: _pickDateTime,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '챌린지 기간: ${formatPeriod(widget.challenge.startDate, widget.challenge.endDate)}',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 24),
+              if (widget.noSpend) ...[
+                // 무지출은 일시 입력 불가 — 서버가 지금 시각을 박는다.
+                Text('오늘 무지출', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  '오늘 하루 지출이 없었다면 무지출로 기록할 수 있어요. 일시는 지금으로 자동 저장됩니다.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                Text('일시', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _DateTimeField(
+                  label: '기록 일시',
+                  dt: _spentDt,
+                  onTap: _pickDateTime,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '챌린지 기간: ${formatPeriod(widget.challenge.startDate, widget.challenge.endDate)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 24),
+              ],
               if (!widget.noSpend) ..._buildSpendFields(theme),
               Text(
                 widget.noSpend ? '영상 (선택)' : '영상 (필수, 2초)',

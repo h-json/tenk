@@ -2,10 +2,11 @@
 -- Tenk 백엔드 DDL
 -- ddl-auto=validate 이므로 운영 전 이 스크립트를 수동 적용해야 함.
 -- ERD 대비 변경 사항:
---   user          : password 제거, provider/provider_user_id/email 추가
---   challenge     : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
---   amount        : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
---   refresh_token : 신설 — JWT 모바일 인증의 RT 보관소
+--   user             : password 제거, provider/provider_user_id/email 추가
+--   challenge        : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
+--   amount           : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
+--                      + no_spend_day_key (생성 컬럼) + uk_amount_no_spend_day 인덱스로 "무지출 하루 1회" 강제
+--   refresh_token    : 신설 — JWT 모바일 인증의 RT 보관소
 -- ============================================================
 
 use `tenk`;
@@ -60,7 +61,16 @@ CREATE TABLE `amount` (
     `is_no_spend`       TINYINT(1)    DEFAULT 0                          NOT NULL,
     `spent_dt`          DATETIME                                         NOT NULL,
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
+    -- "무지출 하루 1회" 강제용 생성 컬럼. is_no_spend=1 일 때만 challenge+날짜로 키를 만들고,
+    -- 지출 row 에서는 NULL → MariaDB UNIQUE 인덱스는 NULL 중복을 허용하므로 지출은 영향 없음.
+    -- 컬럼 자체는 INSERT/UPDATE 불가 (GENERATED ALWAYS).
+    `no_spend_day_key`  VARCHAR(64)   GENERATED ALWAYS AS (
+        CASE WHEN `is_no_spend` = 1
+            THEN CONCAT(`challenge_id`, '-', DATE(`spent_dt`))
+            ELSE NULL END
+    ) VIRTUAL,
     PRIMARY KEY (`amount_id`),
+    UNIQUE KEY `uk_amount_no_spend_day` (`no_spend_day_key`),
     KEY `idx_amount_challenge` (`challenge_id`),
     KEY `idx_amount_challenge_spent` (`challenge_id`, `spent_dt`),
     CONSTRAINT `fk_amount_challenge`

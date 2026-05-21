@@ -1,7 +1,10 @@
 package com.hjson.tenk.domain.badge;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.hjson.tenk.common.exception.BusinessException;
+import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.amount.AmountService;
 import com.hjson.tenk.domain.amount.dto.AmountCreateRequest;
 import com.hjson.tenk.domain.challenge.Challenge;
@@ -15,24 +18,31 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 챌린지 단위 배지 자동 지급 E2E.
  *
  * <p>핸드오프 §1의 검증 항목 — {@code @TransactionalEventListener(AFTER_COMMIT)} 가 실제
- * 커밋 후 호출되어 배지가 DB ({@code challenge_badge} 테이블)에 기록되는지를 본다.
- * 단위 테스트({@link BadgeGrantServiceTest})는 정책만 커버하므로 propagation 자체는
- * 여기서만 확인 가능.
+ * 커밋 후 호출되어 배지가 DB ({@code challenge_badge} 테이블)에 기록되는지, 그리고 누적/회수
+ * 정책이 실제로 동작하는지를 본다. 단위 테스트({@link BadgeGrantServiceTest})는 정책 분기만
+ * 커버하므로 propagation·DB constraint 는 여기서만 확인 가능.
  *
  * <p><b>왜 reflection 으로 startDate / endDate 를 사후에 박는가?</b>
  * <ul>
  *   <li>{@link Challenge#create} invariant: {@code startDate >= today}. API 로는 과거
  *       시작일을 만들 수 없다.</li>
- *   <li>하지만 NO_SPEND 3 단계는 그제~오늘 3일치 spentDt 가 필요하므로 챌린지의 startDate 가
- *       today-2 이하여야 한다.</li>
+ *   <li>하지만 NO_SPEND 누적 시나리오는 백데이트된 spentDt 가 필요하므로 챌린지의
+ *       startDate 도 과거여야 한다.</li>
  *   <li>따라서 정상 생성 후 startDate / endDate 만 reflection 으로 backdate.</li>
  * </ul>
+ *
+ * <p><b>왜 무지출도 native insert 인가?</b> 무지출은 {@link AmountService#record} 에서
+ * spentDt 가 서버 now() 로 강제 박힘 (도메인 규칙: 과거/미래 무지출 불가). 백데이트가
+ * 필요한 시나리오는 native insert 후 {@code badgeGrantService.evaluateForChallenge} 를
+ * 직접 호출하거나, 이벤트 propagation 자체를 보고 싶을 땐 마지막 한 건을 service 경유로 박는다.
  */
 class BadgeEventIntegrationTest extends IntegrationTestBase {
 
@@ -60,62 +70,82 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("무지출 3일 연속 기록 시 NO_SPEND 3 배지가 AFTER_COMMIT 으로 지급된다")
+    @DisplayName("무지출 3일 누적 (연속 아님) 시 NO_SPEND 3 배지가 지급된다")
     void noSpendThreeDaysGrantsBadge() {
         Long userId = createUser("kakao-nospend");
-        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1_000_000);
+        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(6), LocalDate.now().plusDays(1), 1_000_000);
 
-        recordNoSpendOn(userId, challengeId, LocalDate.now().minusDays(2));
-        recordNoSpendOn(userId, challengeId, LocalDate.now().minusDays(1));
-        recordNoSpendOn(userId, challengeId, LocalDate.now());
+        // 불연속 무지출 3일 (day-6, day-4, day-2). 연속 STREAK 은 받지 못해야 함.
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(6), 0, true);
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(4), 0, true);
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(2), 0, true);
+        badgeGrantService.evaluateForChallenge(challengeId);
 
         Challenge challenge = challengeRepository.findById(challengeId).orElseThrow();
         Badge noSpend3 = badgeRepository.findByTypeAndConditionValue(BadgeType.NO_SPEND, 3).orElseThrow();
-        Badge streak3 = badgeRepository.findByTypeAndConditionValue(BadgeType.STREAK, 3).orElseThrow();
         Badge noSpend7 = badgeRepository.findByTypeAndConditionValue(BadgeType.NO_SPEND, 7).orElseThrow();
+        Badge streak3 = badgeRepository.findByTypeAndConditionValue(BadgeType.STREAK, 3).orElseThrow();
 
         assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3)).isTrue();
-        // 3일 무지출은 STREAK 3 단계도 같이 충족 (모든 날 기록은 했으므로)
-        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, streak3)).isTrue();
-        // 7단계는 미달
         assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend7)).isFalse();
+        // 오늘/어제 미기록 → STREAK 끊김
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, streak3)).isFalse();
     }
 
     @Test
-    @DisplayName("같은 날 무지출이 여러 건이어도 배지 단계는 같다 (Set 기반 카운트)")
-    void multipleNoSpendOnSameDayCountAsOne() {
+    @DisplayName("같은 날 무지출 두 번째 등록은 AMOUNT_NO_SPEND_ALREADY_EXISTS 로 거부된다")
+    void noSpendDuplicateOnSameDayRejected() {
         Long userId = createUser("kakao-dup");
-        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1_000_000);
+        Long challengeId = createChallenge(userId, LocalDate.now(), LocalDate.now().plusDays(2), 1_000_000);
 
-        // 오늘 2건, 어제 1건. 그제는 비어있음 → streak 2일 → 배지 미지급.
-        recordNoSpendOn(userId, challengeId, LocalDate.now().minusDays(1));
-        recordNoSpendOn(userId, challengeId, LocalDate.now());
-        recordNoSpendOn(userId, challengeId, LocalDate.now());
+        amountService.record(userId, challengeId, noSpendRequest(), null);
+
+        assertThatThrownBy(() -> amountService.record(userId, challengeId, noSpendRequest(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.AMOUNT_NO_SPEND_ALREADY_EXISTS);
+    }
+
+    @Test
+    @DisplayName("같은 날 지출+무지출이 끼면 NO_SPEND 누적에서 그 날이 제외된다")
+    void spendIntrudesOnNoSpendDayReducesCount() {
+        Long userId = createUser("kakao-mixed");
+        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(6), LocalDate.now().plusDays(1), 1_000_000);
+
+        // 무지출 3일 + 그 중 하루엔 지출도 함께 있음. service 우회 (event 가 도는지가 핵심이 아님)
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(6), 0, true);
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(6), 500, false); // 같은 날 지출 끼움
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(4), 0, true);
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(2), 0, true);
+        badgeGrantService.evaluateForChallenge(challengeId);
 
         Challenge challenge = challengeRepository.findById(challengeId).orElseThrow();
         Badge noSpend3 = badgeRepository.findByTypeAndConditionValue(BadgeType.NO_SPEND, 3).orElseThrow();
+
+        // day-6 은 지출이 끼어 무지출-only 아님 → 누적 2일 → 미달
         assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3)).isFalse();
     }
 
     @Test
-    @DisplayName("같은 날 지출 + 무지출이 끼면 그날은 NO_SPEND 대상에서 빠진다")
-    void spendBreaksNoSpendStreak() {
-        Long userId = createUser("kakao-broken");
-        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1_000_000);
+    @DisplayName("이미 지급된 NO_SPEND 배지는 그 날 지출이 끼어 무지출이 자동 삭제되면 회수된다 (revoke)")
+    void noSpendBadgeRevokedWhenSpendAddedSameDay() {
+        Long userId = createUser("kakao-revoke");
+        Long challengeId = createChallenge(userId, LocalDate.now().minusDays(6), LocalDate.now().plusDays(1), 1_000_000);
 
-        recordNoSpendOn(userId, challengeId, LocalDate.now().minusDays(2));
-        insertAmountDirectly(challengeId, LocalDate.now().minusDays(2), 100, false); // 그제에 지출도 끼움 (영상 필수라 직접 insert)
-        recordNoSpendOn(userId, challengeId, LocalDate.now().minusDays(1));
-        recordNoSpendOn(userId, challengeId, LocalDate.now());
+        // 무지출 3일 누적 → NO_SPEND 3 grant
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(6), 0, true);
+        insertAmountDirectly(challengeId, LocalDate.now().minusDays(4), 0, true);
+        // today 무지출은 service 로 박아야 자동 삭제 흐름을 탈 수 있음
+        amountService.record(userId, challengeId, noSpendRequest(), null);
 
         Challenge challenge = challengeRepository.findById(challengeId).orElseThrow();
         Badge noSpend3 = badgeRepository.findByTypeAndConditionValue(BadgeType.NO_SPEND, 3).orElseThrow();
-        Badge streak3 = badgeRepository.findByTypeAndConditionValue(BadgeType.STREAK, 3).orElseThrow();
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3)).isTrue();
 
-        // NO_SPEND: 그제는 지출이 끼어 자격 박탈 → 오늘+어제 2일만 → 3단계 미달
+        // today 에 지출 등록 → today 무지출 자동 삭제 → 누적 2일 → revoke
+        amountService.record(userId, challengeId,
+                new AmountCreateRequest("food", "lunch", 500, false, null), videoPart());
+
         assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3)).isFalse();
-        // STREAK: 어떤 기록이든 있으면 카운트 → 3일 모두 기록 있음 → 3단계 충족
-        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, streak3)).isTrue();
     }
 
     @Test
@@ -151,13 +181,15 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
     @DisplayName("다른 챌린지의 기록은 이 챌린지의 배지에 영향을 주지 않는다 (챌린지 격리)")
     void otherChallengeRecordsDoNotLeakIntoThisChallenge() {
         Long userId = createUser("kakao-isolation");
-        Long aId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1_000_000);
-        Long bId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().plusDays(1), 1_000_000);
+        Long aId = createChallenge(userId, LocalDate.now().minusDays(6), LocalDate.now().plusDays(1), 1_000_000);
+        Long bId = createChallenge(userId, LocalDate.now().minusDays(6), LocalDate.now().plusDays(1), 1_000_000);
 
-        // 챌린지 A 에만 3일 무지출 기록
-        recordNoSpendOn(userId, aId, LocalDate.now().minusDays(2));
-        recordNoSpendOn(userId, aId, LocalDate.now().minusDays(1));
-        recordNoSpendOn(userId, aId, LocalDate.now());
+        // 챌린지 A 에만 3일 무지출 (불연속) 기록
+        insertAmountDirectly(aId, LocalDate.now().minusDays(6), 0, true);
+        insertAmountDirectly(aId, LocalDate.now().minusDays(4), 0, true);
+        insertAmountDirectly(aId, LocalDate.now().minusDays(2), 0, true);
+        badgeGrantService.evaluateForChallenge(aId);
+        badgeGrantService.evaluateForChallenge(bId);
 
         Challenge a = challengeRepository.findById(aId).orElseThrow();
         Challenge b = challengeRepository.findById(bId).orElseThrow();
@@ -193,10 +225,12 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
         });
     }
 
-    private void recordNoSpendOn(Long userId, Long challengeId, LocalDate day) {
-        amountService.record(userId, challengeId,
-                new AmountCreateRequest(null, null, 0, true, day.atTime(12, 0)),
-                null);
+    private AmountCreateRequest noSpendRequest() {
+        return new AmountCreateRequest(null, null, 0, true, null);
+    }
+
+    private MultipartFile videoPart() {
+        return new MockMultipartFile("video", "clip.mp4", "video/mp4", new byte[]{1, 2, 3});
     }
 
     private void insertAmountDirectly(Long challengeId, LocalDate day, int amount, boolean noSpend) {

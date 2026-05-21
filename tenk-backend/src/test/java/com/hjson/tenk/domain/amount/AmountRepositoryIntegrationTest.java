@@ -40,15 +40,15 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
 
         LocalDate base = LocalDate.now().minusDays(3);
         // from 직전 (제외)
-        insertNoSpend(challengeId, base.minusDays(1).atTime(23, 59, 59));
+        insertAmount(challengeId, base.minusDays(1).atTime(23, 59, 59));
         // from 정확히 (포함)
-        insertNoSpend(challengeId, base.atStartOfDay());
+        insertAmount(challengeId, base.atStartOfDay());
         // 범위 안
-        insertNoSpend(challengeId, base.atTime(12, 0));
+        insertAmount(challengeId, base.atTime(12, 0));
         // toExclusive 직전 (포함)
-        insertNoSpend(challengeId, base.plusDays(1).atStartOfDay().minusNanos(1));
+        insertAmount(challengeId, base.plusDays(1).atStartOfDay().minusNanos(1));
         // toExclusive 정확히 (제외)
-        insertNoSpend(challengeId, base.plusDays(1).atStartOfDay());
+        insertAmount(challengeId, base.plusDays(1).atStartOfDay());
 
         List<Amount> result = amountRepository.findUserAmountsBetween(
                 userId,
@@ -71,9 +71,9 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
 
         LocalDate day = LocalDate.now().minusDays(2);
         // 일부러 시간 역순으로 박음
-        insertNoSpend(challengeId, day.atTime(15, 0));
-        insertNoSpend(challengeId, day.atTime(9, 0));
-        insertNoSpend(challengeId, day.atTime(20, 0));
+        insertAmount(challengeId, day.atTime(15, 0));
+        insertAmount(challengeId, day.atTime(9, 0));
+        insertAmount(challengeId, day.atTime(20, 0));
 
         List<Amount> result = amountRepository.findUserAmountsBetween(
                 userId,
@@ -98,9 +98,9 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
         Long otherChallenge = createChallenge(otherId, LocalDate.now().minusDays(3), LocalDate.now().plusDays(1));
 
         LocalDate day = LocalDate.now().minusDays(1);
-        insertNoSpend(myChallenge, day.atTime(12, 0));
-        insertNoSpend(otherChallenge, day.atTime(12, 0));
-        insertNoSpend(otherChallenge, day.atTime(14, 0));
+        insertAmount(myChallenge, day.atTime(12, 0));
+        insertAmount(otherChallenge, day.atTime(12, 0));
+        insertAmount(otherChallenge, day.atTime(14, 0));
 
         List<Amount> mine = amountRepository.findUserAmountsBetween(
                 meId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
@@ -118,7 +118,7 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
         Long challengeId = createChallenge(userId, LocalDate.now().minusDays(5), LocalDate.now().plusDays(1));
 
         // 범위 밖에만 박는다
-        insertNoSpend(challengeId, LocalDate.now().minusDays(5).atTime(12, 0));
+        insertAmount(challengeId, LocalDate.now().minusDays(5).atTime(12, 0));
 
         LocalDate target = LocalDate.now().minusDays(2);
         List<Amount> result = amountRepository.findUserAmountsBetween(
@@ -133,9 +133,9 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
         Long userId = createUser("kakao-wide");
         Long challengeId = createChallenge(userId, LocalDate.now().minusDays(10), LocalDate.now().plusDays(1));
 
-        insertNoSpend(challengeId, LocalDate.now().minusDays(7).atTime(10, 0));
-        insertNoSpend(challengeId, LocalDate.now().minusDays(3).atTime(10, 0));
-        insertNoSpend(challengeId, LocalDate.now().atTime(10, 0));
+        insertAmount(challengeId, LocalDate.now().minusDays(7).atTime(10, 0));
+        insertAmount(challengeId, LocalDate.now().minusDays(3).atTime(10, 0));
+        insertAmount(challengeId, LocalDate.now().atTime(10, 0));
 
         // BadgeGrantService 와 동일한 경계: [today-60, today+1)
         List<Amount> result = amountRepository.findUserAmountsBetween(
@@ -167,11 +167,13 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
         });
     }
 
-    private void insertNoSpend(Long challengeId, LocalDateTime spentDt) {
+    /// 쿼리 범위 검증이 목적이라 영상 필수·금액 검증 같은 도메인 룰은 우회한다. 같은 challenge+날짜에
+    /// 여러 건 박는 시나리오가 있어 무지출(is_no_spend=1)로 박으면 uk_amount_no_spend_day 와 충돌 → 지출로 박는다.
+    private void insertAmount(Long challengeId, LocalDateTime spentDt) {
         tx.executeWithoutResult(status ->
                 em.createNativeQuery(
                                 "INSERT INTO amount (challenge_id, category, content, amount, is_no_spend, spent_dt, created_dt) "
-                                        + "VALUES (?1, NULL, NULL, 0, 1, ?2, NOW())")
+                                        + "VALUES (?1, 'x', 'x', 1, 0, ?2, NOW())")
                         .setParameter(1, challengeId)
                         .setParameter(2, spentDt)
                         .executeUpdate());

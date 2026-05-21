@@ -147,7 +147,24 @@ class BadgeGrantServiceTest {
     }
 
     @Test
-    void no_spend_streak_breaks_when_spend_record_intrudes() {
+    void no_spend_three_non_consecutive_days_grants_no_spend_3() {
+        // 무지출이 day-6, day-4, day-2 — 불연속이지만 누적 3일이라 NO_SPEND 3 충족 (누적 정의)
+        stubAmounts(List.of(
+                noSpendOn(TODAY.minusDays(6)),
+                noSpendOn(TODAY.minusDays(4)),
+                noSpendOn(TODAY.minusDays(2))
+        ));
+
+        service.evaluateForChallenge(CHALLENGE_ID);
+
+        verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, noSpend3);
+        // STREAK 은 연속 정의 유지 — 오늘/어제 미기록이라 0 → 어떤 STREAK 도 grant 안 됨
+        verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, streak3);
+        verify(challengeBadgeRepository, times(1)).save(any(ChallengeBadge.class));
+    }
+
+    @Test
+    void no_spend_count_excludes_days_with_spend() {
         // 오늘/어제/그제 모두 무지출이지만 그제에 지출도 함께 기록 → 그날 NO_SPEND 자격 박탈, STREAK는 살아남음
         stubAmounts(List.of(
                 noSpendOn(TODAY.minusDays(2)),
@@ -160,8 +177,42 @@ class BadgeGrantServiceTest {
 
         // STREAK: 3일 연속 어떤 기록이라도 있음 → STREAK 3 지급
         verify(challengeBadgeRepository).existsByChallengeAndBadge(challenge, streak3);
-        // NO_SPEND: 그제는 지출이 끼어 무지출-only 아님. 오늘+어제 = 2일 → NO_SPEND 3 미달, 지급 안 함
+        // NO_SPEND: 그제는 지출이 끼어 무지출-only 아님. 누적 2일 → NO_SPEND 3 미달, 지급 안 함
         verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, noSpend3);
+    }
+
+    @Test
+    void no_spend_revokes_badge_when_count_drops_below_threshold() {
+        // 누적이 2일 → NO_SPEND 3 미달 → revoke 호출 (이미 grant 됐었는지 무관하게 delete 시도)
+        stubAmounts(List.of(
+                noSpendOn(TODAY.minusDays(4)),
+                noSpendOn(TODAY.minusDays(2))
+        ));
+
+        service.evaluateForChallenge(CHALLENGE_ID);
+
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, noSpend3);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, noSpend7);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, noSpend14);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, noSpend30);
+        // 어떤 NO_SPEND 도 grant 안 됨
+        verify(challengeBadgeRepository, never()).existsByChallengeAndBadge(challenge, noSpend3);
+    }
+
+    @Test
+    void streak_revoke_when_streak_broken() {
+        // 그제까지만 기록 → streak = 0 → 모든 STREAK 단계가 revoke 대상
+        stubAmounts(List.of(
+                spendOn(TODAY.minusDays(3)),
+                spendOn(TODAY.minusDays(2))
+        ));
+
+        service.evaluateForChallenge(CHALLENGE_ID);
+
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, streak3);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, streak7);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, streak14);
+        verify(challengeBadgeRepository).deleteByChallengeAndBadge(challenge, streak30);
     }
 
     @Test

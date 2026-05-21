@@ -2,6 +2,7 @@ package com.hjson.tenk.domain.amount;
 
 import com.hjson.tenk.common.api.ApiResponse;
 import com.hjson.tenk.domain.amount.dto.AmountCreateRequest;
+import com.hjson.tenk.domain.amount.dto.AmountRecordResult;
 import com.hjson.tenk.domain.amount.dto.AmountResponse;
 import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,10 +41,10 @@ public class AmountController {
                     @Encoding(name = "video", contentType = "video/*")
             }
     ))
-    public ApiResponse<AmountResponse> record(@CurrentUserId Long userId,
-                                              @PathVariable Long challengeId,
-                                              @RequestPart("request") AmountCreateRequest request,
-                                              @RequestPart(value = "video", required = false) MultipartFile video) {
+    public ApiResponse<AmountRecordResult> record(@CurrentUserId Long userId,
+                                                  @PathVariable Long challengeId,
+                                                  @RequestPart("request") AmountCreateRequest request,
+                                                  @RequestPart(value = "video", required = false) MultipartFile video) {
         return ApiResponse.ok(amountService.record(userId, challengeId, request, video));
     }
 

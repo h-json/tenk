@@ -14,10 +14,11 @@ class AmountApi {
 
   final Dio _dio;
 
-  Future<Amount> record({
+  /// 지출/무지출 기록 추가. 무지출이면 [dateTime] 은 백엔드가 무시(서버 now 강제)하므로 null 로 보낸다.
+  Future<AmountRecordResult> record({
     required int challengeId,
     required bool noSpend,
-    required DateTime dateTime,
+    DateTime? dateTime,
     String? category,
     String? content,
     int? amount,
@@ -28,7 +29,7 @@ class AmountApi {
       'content': content,
       'amount': amount,
       'noSpend': noSpend,
-      'dateTime': _formatLocalDateTime(dateTime),
+      'dateTime': dateTime != null ? _formatLocalDateTime(dateTime) : null,
     });
     final parts = <String, dynamic>{
       // 백엔드가 `request` part의 Content-Type을 application/json으로 기대 → MultipartFile.fromString + contentType 명시.
@@ -48,7 +49,7 @@ class AmountApi {
       '/api/challenges/$challengeId/amounts',
       data: form,
     );
-    return Amount.fromJson(unwrapData(res.data));
+    return AmountRecordResult.fromJson(unwrapData(res.data));
   }
 
   Future<List<Amount>> list(int challengeId) async {

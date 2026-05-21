@@ -65,6 +65,11 @@ public class Amount {
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
+    /// "무지출 하루 1회" UNIQUE 인덱스를 받쳐주는 DB 생성 컬럼. JPA 는 읽기만 한다 (DDL 에서 GENERATED ALWAYS).
+    /// 매핑이 빠지면 `ddl-auto=validate` 가 부팅 시점에 schema mismatch 로 막는다.
+    @Column(name = "no_spend_day_key", insertable = false, updatable = false)
+    private String noSpendDayKey;
+
     private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend, LocalDateTime spentDt) {
         this.challenge = challenge;
         this.category = category;

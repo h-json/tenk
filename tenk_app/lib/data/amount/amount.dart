@@ -63,3 +63,24 @@ class Amount {
     );
   }
 }
+
+/// 지출/무지출 기록 추가 응답. [removedNoSpendCount] 는 지출 등록 시 같은 날 무지출이 자동
+/// 삭제된 건수 (정상 흐름에선 0 또는 1). 0보다 크면 사용자에게 "오늘 무지출 기록이 취소되었어요"
+/// 같은 안내를 띄운다.
+@immutable
+class AmountRecordResult {
+  const AmountRecordResult({
+    required this.amount,
+    required this.removedNoSpendCount,
+  });
+
+  final Amount amount;
+  final int removedNoSpendCount;
+
+  factory AmountRecordResult.fromJson(Map<String, dynamic> json) {
+    return AmountRecordResult(
+      amount: Amount.fromJson(json['amount'] as Map<String, dynamic>),
+      removedNoSpendCount: (json['removedNoSpendCount'] as num).toInt(),
+    );
+  }
+}

@@ -33,4 +33,18 @@ public interface AmountRepository extends JpaRepository<Amount, Long> {
     List<Amount> findUserAmountsBetween(@Param("userId") Long userId,
                                         @Param("from") LocalDateTime from,
                                         @Param("toExclusive") LocalDateTime toExclusive);
+
+    /// 같은 챌린지 + 같은 날(spentDt 의 DATE 부분) 의 무지출 row. DB 의 uk_amount_no_spend_day 인덱스 덕에
+    /// 정상 흐름에선 최대 1건이지만 동시 요청 대비 List 로 받는다. 지출 등록 시 자동 삭제, 무지출 등록 시
+    /// 중복 차단 양쪽에서 사용.
+    @Query("""
+            select a from Amount a
+            where a.challenge = :challenge
+              and a.noSpend = true
+              and a.spentDt >= :from
+              and a.spentDt < :toExclusive
+            """)
+    List<Amount> findNoSpendInChallengeOnDay(@Param("challenge") Challenge challenge,
+                                             @Param("from") LocalDateTime from,
+                                             @Param("toExclusive") LocalDateTime toExclusive);
 }

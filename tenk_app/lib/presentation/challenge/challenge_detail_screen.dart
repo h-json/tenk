@@ -108,8 +108,8 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
   }
 
   Future<void> _openRecord(Challenge challenge, {required bool noSpend}) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    final result = await Navigator.of(context).push<AmountRecordResult>(
+      MaterialPageRoute<AmountRecordResult>(
         builder: (_) => AmountRecordScreen(
           challenge: challenge,
           noSpend: noSpend,
@@ -117,8 +117,13 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
       ),
     );
     if (!mounted) return;
-    if (saved == true) {
+    if (result != null) {
       _changed = true;
+      if (result.removedNoSpendCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('오늘 무지출 기록이 취소되었어요.')),
+        );
+      }
       await reload();
     }
   }
@@ -316,32 +321,13 @@ class _DetailBody extends StatelessWidget {
             ),
           ),
         ],
-        if (onRecordSpend != null || onRecordNoSpend != null) ...[
+        if (challenge.isInProgress) ...[
           const SizedBox(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: busy ? null : onRecordSpend,
-                  icon: const Icon(Icons.payments_outlined),
-                  label: const Text('지출 기록'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: busy ? null : onRecordNoSpend,
-                  icon: const Icon(Icons.do_not_disturb_on_outlined),
-                  label: const Text('무지출'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                  ),
-                ),
-              ),
-            ],
+          _TodayActionPanel(
+            amounts: amounts,
+            busy: busy,
+            onRecordSpend: onRecordSpend,
+            onRecordNoSpend: onRecordNoSpend,
           ),
         ],
         const SizedBox(height: 32),
@@ -357,11 +343,300 @@ class _DetailBody extends StatelessWidget {
             ),
           )
         else
-          ...amounts.map((a) => _AmountTile(
-                amount: a,
-                onDelete: busy ? null : () => onDeleteAmount(a),
-              )),
+          ..._buildGroupedAmounts(amounts, busy, onDeleteAmount),
       ],
+    );
+  }
+
+  /// 백엔드는 spentDt asc 로 보내지만 화면은 "최신이 위" 가 자연스러움 → 그룹 자체도, 그룹 안에서도 내림차순.
+  /// 같은 날에 무지출과 지출이 섞이는 케이스는 백엔드 자동 취소 로직이 막아주지만 (`AmountService.record`),
+  /// 방어적으로 헤더는 "지출이 있으면 합계 / 없고 무지출만 있으면 '무지출'" 로 표기.
+  List<Widget> _buildGroupedAmounts(
+    List<Amount> all,
+    bool busy,
+    ValueChanged<Amount> onDelete,
+  ) {
+    final byDay = <DateTime, List<Amount>>{};
+    for (final a in all) {
+      byDay.putIfAbsent(dateOnly(a.spentDt), () => []).add(a);
+    }
+    final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    final widgets = <Widget>[];
+    for (var i = 0; i < days.length; i++) {
+      final day = days[i];
+      final dayAmounts = byDay[day]!
+        ..sort((a, b) => b.spentDt.compareTo(a.spentDt));
+      final spendTotal = dayAmounts
+          .where((a) => !a.noSpend)
+          .fold<int>(0, (sum, a) => sum + a.amount);
+      final isNoSpendDay = spendTotal == 0 && dayAmounts.any((a) => a.noSpend);
+
+      if (i > 0) widgets.add(const SizedBox(height: 16));
+      widgets.add(_DaySectionHeader(
+        day: day,
+        isNoSpend: isNoSpendDay,
+        spendTotal: spendTotal,
+      ));
+      widgets.add(const SizedBox(height: 4));
+      for (final a in dayAmounts) {
+        widgets.add(_AmountTile(
+          amount: a,
+          onDelete: busy ? null : () => onDelete(a),
+        ));
+      }
+    }
+    return widgets;
+  }
+}
+
+/// 진행 중 챌린지에서 "오늘 어떤 행동을 할 수 있나" 를 좌우하는 패널.
+///
+/// 분기 3가지:
+/// 1. 오늘 무지출 기록이 있음 → 강조 카드만, 두 버튼 모두 숨김 (오늘은 절약을 의지로 박았으니
+///    지출 진입점을 보여주지 않음. 마음 바꾸려면 아래 무지출 row 삭제).
+/// 2. 오늘 지출 기록이 1건 이상 → 오늘 지출 합계 카드 + 지출 버튼만 (무지출은 이미 의미 없음).
+/// 3. 오늘 기록 없음 → 지출/무지출 두 버튼 다.
+class _TodayActionPanel extends StatelessWidget {
+  const _TodayActionPanel({
+    required this.amounts,
+    required this.busy,
+    required this.onRecordSpend,
+    required this.onRecordNoSpend,
+  });
+
+  final List<Amount> amounts;
+  final bool busy;
+  final VoidCallback? onRecordSpend;
+  final VoidCallback? onRecordNoSpend;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = dateOnly(DateTime.now());
+    final todayAmounts =
+        amounts.where((a) => dateOnly(a.spentDt) == today).toList();
+    final hasNoSpendToday = todayAmounts.any((a) => a.noSpend);
+    final spendToday =
+        todayAmounts.where((a) => !a.noSpend).toList(growable: false);
+    final hasSpendToday = spendToday.isNotEmpty;
+    final spendTodayTotal =
+        spendToday.fold<int>(0, (sum, a) => sum + a.amount);
+
+    if (hasNoSpendToday) {
+      // 이번 챌린지 안의 누적 무지출 일수 — 백엔드 자동 취소 로직이 있어 noSpend row 의 DISTINCT day
+      // 만 세면 백엔드 정의(`BadgeGrantService.daysWithOnlyNoSpend`)와 동일하다.
+      final noSpendDays = amounts
+          .where((a) => a.noSpend)
+          .map((a) => dateOnly(a.spentDt))
+          .toSet()
+          .length;
+      return _NoSpendTodayCard(noSpendDays: noSpendDays);
+    }
+    if (hasSpendToday) {
+      return Column(
+        children: [
+          _TodaySpendSummaryCard(total: spendTodayTotal),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: busy ? null : onRecordSpend,
+            icon: const Icon(Icons.payments_outlined),
+            label: const Text('지출 기록'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: busy ? null : onRecordSpend,
+            icon: const Icon(Icons.payments_outlined),
+            label: const Text('지출 기록'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: busy ? null : onRecordNoSpend,
+            icon: const Icon(Icons.do_not_disturb_on_outlined),
+            label: const Text('무지출'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoSpendTodayCard extends StatelessWidget {
+  const _NoSpendTodayCard({required this.noSpendDays});
+
+  /// 이 챌린지 안의 누적 무지출 일수. NO_SPEND 배지의 사다리(3/7/14/30) 와 동일한 정의.
+  final int noSpendDays;
+
+  /// 백엔드 `BadgeType.NO_SPEND` 의 condition_value 와 일치. 사다리는 [docs/schema.sql](docs/schema.sql)
+  /// badge 마스터 시드와 1:1 매칭되며, 변경 시 양쪽을 같이 갱신할 것.
+  static const _ladder = [3, 7, 14, 30];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final nextStep = _ladder.firstWhere(
+      (s) => s > noSpendDays,
+      orElse: () => _ladder.last,
+    );
+    final reachedMax = noSpendDays >= _ladder.last;
+    final goal = reachedMax ? _ladder.last : nextStep;
+    final progress = (noSpendDays / goal).clamp(0.0, 1.0);
+    final daysToGo = (nextStep - noSpendDays).clamp(0, _ladder.last);
+
+    return Card(
+      color: theme.colorScheme.secondaryContainer,
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.emoji_events,
+              size: 56,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '오늘은 무지출!',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              reachedMax
+                  ? '챌린지 풀 무지출 $noSpendDays일 달성!'
+                  : '이번 챌린지 무지출 $noSpendDays일째 누적 중',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                color: theme.colorScheme.onSecondaryContainer,
+                backgroundColor: theme.colorScheme.onSecondaryContainer
+                    .withValues(alpha: 0.18),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$noSpendDays / $goal일',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                Text(
+                  reachedMax
+                      ? '최고 단계 달성 🎉'
+                      : '다음 배지까지 $daysToGo일',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TodaySpendSummaryCard extends StatelessWidget {
+  const _TodaySpendSummaryCard({required this.total});
+
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: Row(
+          children: [
+            Icon(Icons.today,
+                color: theme.colorScheme.onPrimaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '오늘 ${formatWon(total)} 지출했어요',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DaySectionHeader extends StatelessWidget {
+  const _DaySectionHeader({
+    required this.day,
+    required this.isNoSpend,
+    required this.spendTotal,
+  });
+
+  final DateTime day;
+  final bool isNoSpend;
+  final int spendTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            formatDayHeader(day),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            isNoSpend ? '무지출' : formatWon(spendTotal),
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: isNoSpend
+                  ? theme.colorScheme.secondary
+                  : theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
