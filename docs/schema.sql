@@ -6,6 +6,7 @@
 --   challenge        : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
 --   amount           : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
 --                      + no_spend_day_key (생성 컬럼) + uk_amount_no_spend_day 인덱스로 "무지출 하루 1회" 강제
+--                      + memo (NULL 허용, 영상 export 시 자막 디폴트 오버라이드 용도)
 --   refresh_token    : 신설 — JWT 모바일 인증의 RT 보관소
 -- ============================================================
 
@@ -59,6 +60,7 @@ CREATE TABLE `amount` (
     `content`           VARCHAR(255)                                     NULL,
     `amount`            INT                                              NOT NULL,
     `is_no_spend`       TINYINT(1)    DEFAULT 0                          NOT NULL,
+    `memo`              VARCHAR(500)                                     NULL,
     `spent_dt`          DATETIME                                         NOT NULL,
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
     -- "무지출 하루 1회" 강제용 생성 컬럼. is_no_spend=1 일 때만 challenge+날짜로 키를 만들고,

@@ -41,6 +41,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
   final _categoryController = TextEditingController();
   final _contentController = TextEditingController();
   final _amountController = TextEditingController();
+  final _memoController = TextEditingController();
 
   late DateTime _spentDt;
   CameraController? _camera;
@@ -82,6 +83,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
+    _memoController.dispose();
     super.dispose();
   }
 
@@ -188,6 +190,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     try {
       final api = AmountScope.of(context);
       // 무지출은 일시 입력 불가 — 백엔드가 서버 now() 로 강제하므로 명시적으로 null 을 보낸다.
+      final memo = _memoController.text.trim();
       final result = await api.record(
         challengeId: widget.challenge.id,
         noSpend: widget.noSpend,
@@ -195,6 +198,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         category: widget.noSpend ? null : _categoryController.text.trim(),
         content: widget.noSpend ? null : _contentController.text.trim(),
         amount: widget.noSpend ? null : int.parse(_amountController.text),
+        memo: memo.isEmpty ? null : memo,
         videoPath: _videoPath,
       );
       if (!mounted) return;
@@ -249,6 +253,22 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 const SizedBox(height: 24),
               ],
               if (!widget.noSpend) ..._buildSpendFields(theme),
+              Text('메모 (선택)', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _memoController,
+                maxLength: 500,
+                maxLines: 3,
+                minLines: 1,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: widget.noSpend
+                      ? '예) 오늘 잘 참았다'
+                      : '예) 회식이라 어쩔 수 없었음',
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
                 widget.noSpend ? '영상 (선택)' : '영상 (필수, 2초)',
                 style: theme.textTheme.titleMedium,

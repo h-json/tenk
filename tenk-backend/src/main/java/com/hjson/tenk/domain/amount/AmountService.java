@@ -70,9 +70,9 @@ public class AmountService {
         }
 
         Amount amount = noSpend
-                ? Amount.noSpend(challenge, spentDt)
+                ? Amount.noSpend(challenge, request.memo(), spentDt)
                 : Amount.spend(challenge, request.category(), request.content(),
-                        request.amount() == null ? -1 : request.amount(), spentDt);
+                        request.amount() == null ? -1 : request.amount(), request.memo(), spentDt);
         amountRepository.save(amount);
 
         List<MediaFile> savedFiles = Collections.emptyList();

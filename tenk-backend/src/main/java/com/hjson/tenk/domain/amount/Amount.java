@@ -58,6 +58,11 @@ public class Amount {
     @Column(name = "is_no_spend", nullable = false)
     private boolean noSpend;
 
+    /// 사용자가 기록 시 남기는 자유 메모. 영상 export 시 자막 디폴트를 오버라이드한다
+    /// (메모 있으면 그 값, 없으면 지출="내용 금액원" / 무지출="무지출").
+    @Column(name = "memo", length = 500)
+    private String memo;
+
     @Column(name = "spent_dt", nullable = false)
     private LocalDateTime spentDt;
 
@@ -70,16 +75,19 @@ public class Amount {
     @Column(name = "no_spend_day_key", insertable = false, updatable = false)
     private String noSpendDayKey;
 
-    private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend, LocalDateTime spentDt) {
+    private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend,
+                   String memo, LocalDateTime spentDt) {
         this.challenge = challenge;
         this.category = category;
         this.content = content;
         this.amount = amount;
         this.noSpend = noSpend;
+        this.memo = normalizeMemo(memo);
         this.spentDt = spentDt;
     }
 
-    public static Amount spend(Challenge challenge, String category, String content, int amount, LocalDateTime spentDt) {
+    public static Amount spend(Challenge challenge, String category, String content, int amount,
+                               String memo, LocalDateTime spentDt) {
         validateDateInChallenge(challenge, spentDt);
         if (amount <= 0) {
             throw new BusinessException(ErrorCode.AMOUNT_INVALID_SPEND_VALUE);
@@ -87,15 +95,15 @@ public class Amount {
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
-        return new Amount(challenge, category, content, amount, false, spentDt);
+        return new Amount(challenge, category, content, amount, false, memo, spentDt);
     }
 
-    public static Amount noSpend(Challenge challenge, LocalDateTime spentDt) {
+    public static Amount noSpend(Challenge challenge, String memo, LocalDateTime spentDt) {
         validateDateInChallenge(challenge, spentDt);
-        return new Amount(challenge, null, null, 0, true, spentDt);
+        return new Amount(challenge, null, null, 0, true, memo, spentDt);
     }
 
-    public void update(String category, String content, int amount) {
+    public void update(String category, String content, int amount, String memo) {
         if (this.noSpend) {
             if (amount != 0) {
                 throw new BusinessException(ErrorCode.AMOUNT_INVALID_NO_SPEND_VALUE);
@@ -103,6 +111,7 @@ public class Amount {
             this.category = null;
             this.content = null;
             this.amount = 0;
+            this.memo = normalizeMemo(memo);
             return;
         }
         if (amount <= 0) {
@@ -114,6 +123,14 @@ public class Amount {
         this.category = category;
         this.content = content;
         this.amount = amount;
+        this.memo = normalizeMemo(memo);
+    }
+
+    /// 빈/공백 메모는 null 로 정규화 — DTO 디폴트 분기(메모 있으면 메모, 없으면 폴백)가 깔끔해진다.
+    private static String normalizeMemo(String memo) {
+        if (memo == null) return null;
+        String trimmed = memo.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static void validateDateInChallenge(Challenge challenge, LocalDateTime dt) {

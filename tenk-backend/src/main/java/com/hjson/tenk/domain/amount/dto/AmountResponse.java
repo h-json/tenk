@@ -12,6 +12,7 @@ public record AmountResponse(
         String content,
         int amount,
         boolean noSpend,
+        String memo,
         LocalDateTime spentDt,
         LocalDateTime createdDt,
         List<MediaFileSummary> mediaFiles
@@ -24,6 +25,7 @@ public record AmountResponse(
                 amount.getContent(),
                 amount.getAmount(),
                 amount.isNoSpend(),
+                amount.getMemo(),
                 amount.getSpentDt(),
                 amount.getCreatedDt(),
                 mediaFiles.stream().map(MediaFileSummary::from).toList()

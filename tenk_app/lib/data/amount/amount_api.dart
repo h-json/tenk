@@ -22,6 +22,7 @@ class AmountApi {
     String? category,
     String? content,
     int? amount,
+    String? memo,
     String? videoPath,
   }) async {
     final requestJson = jsonEncode({
@@ -29,6 +30,7 @@ class AmountApi {
       'content': content,
       'amount': amount,
       'noSpend': noSpend,
+      'memo': memo,
       'dateTime': dateTime != null ? _formatLocalDateTime(dateTime) : null,
     });
     final parts = <String, dynamic>{

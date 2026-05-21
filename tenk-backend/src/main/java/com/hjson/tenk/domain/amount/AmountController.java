@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Encoding;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -43,7 +44,7 @@ public class AmountController {
     ))
     public ApiResponse<AmountRecordResult> record(@CurrentUserId Long userId,
                                                   @PathVariable Long challengeId,
-                                                  @RequestPart("request") AmountCreateRequest request,
+                                                  @Valid @RequestPart("request") AmountCreateRequest request,
                                                   @RequestPart(value = "video", required = false) MultipartFile video) {
         return ApiResponse.ok(amountService.record(userId, challengeId, request, video));
     }

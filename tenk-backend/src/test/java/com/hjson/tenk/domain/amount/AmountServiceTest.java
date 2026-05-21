@@ -89,7 +89,7 @@ class AmountServiceTest {
     @Test
     void record_on_finished_challenge_throws_already_finished() {
         given(challengeService.loadOwned(100L, 1L)).willReturn(finishedChallenge());
-        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null, null);
 
         assertThatThrownBy(() -> service.record(100L, 1L, req, videoPart()))
                 .isInstanceOf(BusinessException.class)
@@ -100,7 +100,7 @@ class AmountServiceTest {
     @Test
     void record_on_not_started_challenge_throws() {
         given(challengeService.loadOwned(100L, 1L)).willReturn(notStartedChallenge());
-        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null, null);
 
         assertThatThrownBy(() -> service.record(100L, 1L, req, videoPart()))
                 .isInstanceOf(BusinessException.class)
@@ -111,7 +111,7 @@ class AmountServiceTest {
     @Test
     void record_spend_without_video_throws_video_required() {
         given(challengeService.loadOwned(100L, 1L)).willReturn(ongoingChallenge());
-        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null, null);
 
         assertThatThrownBy(() -> service.record(100L, 1L, req, null))
                 .isInstanceOf(BusinessException.class)
@@ -121,7 +121,7 @@ class AmountServiceTest {
     @Test
     void record_spend_with_empty_video_throws_video_required() {
         given(challengeService.loadOwned(100L, 1L)).willReturn(ongoingChallenge());
-        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 1_000, false, null, null);
         MockMultipartFile empty = new MockMultipartFile("video", "clip.mp4", "video/mp4", new byte[0]);
 
         assertThatThrownBy(() -> service.record(100L, 1L, req, empty))
@@ -132,7 +132,7 @@ class AmountServiceTest {
     @Test
     void record_no_spend_without_video_succeeds_and_publishes_event() {
         given(challengeService.loadOwned(100L, 1L)).willReturn(ongoingChallenge());
-        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, null);
+        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, null, null);
 
         AmountRecordResult result = service.record(100L, 1L, req, null);
 
@@ -152,7 +152,7 @@ class AmountServiceTest {
         given(mediaFileRepository.save(any(MediaFile.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 5_000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "lunch", 5_000, false, null, null);
 
         AmountRecordResult result = service.record(100L, 1L, req, videoPart());
 
@@ -171,7 +171,7 @@ class AmountServiceTest {
         given(challengeService.loadOwned(100L, 1L)).willReturn(challenge);
         // 클라이언트가 챌린지 안의 다른 날짜를 보내도 무시 — 서버가 now() 를 박는다.
         LocalDateTime clientSent = LocalDate.now().plusDays(1).atTime(10, 0);
-        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, clientSent);
+        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, null, clientSent);
 
         ArgumentCaptor<Amount> captor = ArgumentCaptor.forClass(Amount.class);
         given(amountRepository.save(captor.capture())).willAnswer(inv -> inv.getArgument(0));
@@ -187,11 +187,11 @@ class AmountServiceTest {
     void record_no_spend_throws_when_already_exists_today() {
         Challenge challenge = ongoingChallenge();
         given(challengeService.loadOwned(100L, 1L)).willReturn(challenge);
-        Amount existing = Amount.noSpend(challenge, LocalDate.now().atTime(8, 0));
+        Amount existing = Amount.noSpend(challenge, null, LocalDate.now().atTime(8, 0));
         given(amountRepository.findNoSpendInChallengeOnDay(eq(challenge), any(), any()))
                 .willReturn(List.of(existing));
 
-        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, null);
+        AmountCreateRequest req = new AmountCreateRequest(null, null, null, true, null, null);
 
         assertThatThrownBy(() -> service.record(100L, 1L, req, null))
                 .isInstanceOf(BusinessException.class)
@@ -204,7 +204,7 @@ class AmountServiceTest {
     void record_spend_deletes_same_day_no_spend_and_reports_count() {
         Challenge challenge = ongoingChallenge();
         given(challengeService.loadOwned(100L, 1L)).willReturn(challenge);
-        Amount existingNoSpend = Amount.noSpend(challenge, LocalDate.now().atTime(8, 0));
+        Amount existingNoSpend = Amount.noSpend(challenge, null, LocalDate.now().atTime(8, 0));
         ReflectionTestUtils.setField(existingNoSpend, "id", 555L);
         given(amountRepository.findNoSpendInChallengeOnDay(eq(challenge), any(), any()))
                 .willReturn(List.of(existingNoSpend));
@@ -216,7 +216,7 @@ class AmountServiceTest {
         given(mediaFileRepository.save(any(MediaFile.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
-        AmountCreateRequest req = new AmountCreateRequest("food", "snack", 3000, false, null);
+        AmountCreateRequest req = new AmountCreateRequest("food", "snack", 3000, false, null, null);
         AmountRecordResult result = service.record(100L, 1L, req, videoPart());
 
         assertThat(result.removedNoSpendCount()).isEqualTo(1);

@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-21 (**무지출/배지 도메인 정합성 개선 + 챌린지 상세 화면 UX 강화** 완료. 무지출 일시 입력 불가·하루 1회·자동 삭제, NO_SPEND 정의 "연속 → 누적", 배지 회수(revoke) 로직 추가. 챌린지 상세는 amount 목록 날짜별 그룹화 + 오늘 상태 기반 동적 액션 패널 + 무지출 성취감 카드(누적 일수·다음 배지 게이지). 백엔드 테스트 **75 그린** (단위 55 + 통합 15 + WebMvc 4 + 컨텍스트 1). 다음 우선순위: 내보내기 구체화(회의 필요) → 배지 획득 애니메이션)
+마지막 갱신: 2026-05-21 (**영상 내보내기 회의 완료 + amount.memo 도메인 추가**. 영상 합본 export 는 이번 범위로 들어옴 — 클라이언트 측 ffmpeg_kit_flutter 로 시간순 합성, 자막 디폴트 오버라이드용 `amount.memo` 필드 추가. 백엔드 테스트 **77 그린** (단위 57 + 통합 15 + WebMvc 4 + 컨텍스트 1, 이전 75 → +2 memo 케이스). 다음 우선순위: 영상 내보내기 구현 착수 → 결과 카드 회의 → 배지 획득 애니메이션)
 
 ---
 
@@ -83,6 +83,13 @@
   - 카드 ladder `[3, 7, 14, 30]` 는 백엔드 `badge` 마스터의 NO_SPEND condition_value 와 1:1. 변경 시 [docs/schema.sql](schema.sql) 시드와 함께 갱신 (CLAUDE.md "배지 카탈로그 변경" 행 참고).
   - 백엔드 변경 없음 — 데이터는 기존 challenge + amounts 응답으로 충분.
 
+- ✅ **영상 내보내기 회의 완료 + amount.memo 도메인 추가** (2026-05-21). 영상 합본 export 가 이번 범위로 진입. amount 에 메모 필드(VARCHAR 500, NULL 허용) 추가 — 지출/무지출 양쪽 모두 선택 입력. 빈/공백은 엔티티에서 null 로 정규화 (DTO 분기를 깔끔하게). 용도는 영상 export 자막 디폴트 오버라이드.
+  - 백엔드: [Amount.java](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/Amount.java) `memo` 필드 + `spend()`/`noSpend()`/`update()` 시그니처에 memo 추가, [AmountCreateRequest](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountCreateRequest.java) `@Size(max=500) memo` + [AmountController](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/AmountController.java) `@Valid`, [AmountResponse](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountResponse.java) memo 노출.
+  - DB: amount 테이블에 `memo VARCHAR(500) NULL` 컬럼. **schema.sql 1회 적용 필요** (DROP & RECREATE).
+  - Flutter: [Amount](../tenk_app/lib/data/amount/amount.dart) 모델에 `memo` 필드, [AmountApi.record](../tenk_app/lib/data/amount/amount_api.dart) 에 memo 파라미터, [amount_record_screen.dart](../tenk_app/lib/presentation/amount/amount_record_screen.dart) 에 "메모 (선택)" 입력칸(maxLength 500, 3줄, 지출/무지출 별 hint 분기).
+  - 회의록은 아래 "영상 내보내기 회의록 (2026-05-21)" 참고. 13개 항목 결정 + 결과 카드 1개 보류.
+  - 테스트 +2 ([AmountTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountTest.java) `spend_happy_path_sets_fields` 에 memo 검증 추가, `spend_blank_memo_is_normalized_to_null` · `noSpend_keeps_memo` 신설, `update_*` 케이스에 memo 검증). 시그니처 변경 따라 AmountServiceTest · BadgeGrantServiceTest · BadgeEventIntegrationTest 호출처 일괄 갱신.
+
 - ✅ **무지출/배지 도메인 정합성 개선** (2026-05-21). 모델 모호성 제거 + 누적 정의 정착. 백엔드 테스트 **75 그린** (단위 55 + 통합 15 + WebMvc 4 + 컨텍스트 1).
   - 무지출 제약 강화: 일시 입력 불가(서버 `LocalDateTime.now()` 강제), 하루 1회(서비스 + DB `uk_amount_no_spend_day` 생성 컬럼 UNIQUE), 수정 불가(원래 수정 API 자체 미구현 — 자동 성립), 지출 등록 시 같은 날 무지출 row + 첨부 영상까지 자동 삭제. 사용자 통지는 [AmountRecordResult](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountRecordResult.java)의 `removedNoSpendCount` 로 → Flutter [challenge_detail_screen.dart](../tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) `_openRecord` 에서 SnackBar.
   - NO_SPEND 정의 변경: "연속 일수" → "챌린지 내 누적 일수". 무지출 5일 → 지출 → 무지출 5일이면 총 10일. STREAK 은 "연속" 유지 (꾸준함 vs 절약 총량 — 보상 의미가 달라서).
@@ -104,18 +111,25 @@
 
 > 백엔드 테스트(단위·통합·WebMvc)는 ✅ 완료. 자세한 건 "완료된 것 — 통합 테스트 마무리" 항목 참고.
 
-### 1. 내보내기 구체화 (회의 필요)
+### 1. 영상 합본 내보내기 구현 (회의 완료, 착수 대기)
 
-> `GET /api/challenges/{id}/export` JSON은 이미 있지만 화면이 없음. 디자인 결정이 먼저.
+> 회의록은 아래 "영상 내보내기 회의록 (2026-05-21)" 참고. 13개 항목 결정 + 결과 카드 1개 보류.
+> **핵심**: 챌린지 확정 후 기록 영상을 시간순으로 합쳐 1개 MP4 로 만드는 기능. 클라이언트 측 `ffmpeg_kit_flutter` 로 처리 (서버 부담 0).
 
-**회의에서 정할 것**
-- 시각화 형태: 일별 막대 / 카테고리 도넛 / 캘린더 히트맵 / 조합?
-- 공유 기능: 결과 화면 이미지 저장? 외부 공유 링크? (영상 export는 CLAUDE.md 범위 밖 유지)
-- 정보 우선순위: 총지출 vs 목표 / 무지출 일수 / 획득 배지 / 일별 추이 중 메인은?
-- 결과 확정 전(진행 중) 챌린지에도 노출할지, 확정 후에만 보여줄지.
-- export 가 결과 화면을 그대로 캡처하는 형태인지, 별도 포맷(PDF/이미지)으로 가공하는지.
+**구현 순서 제안**
+1. **백엔드**: 영상 다운로드 엔드포인트 확인/추가. 현재 [MediaController](../tenk-backend/src/main/java/com/hjson/tenk/domain/media/MediaController.java) 가 어떤 형태인지 점검 → 인증된 사용자가 자신의 amount 영상을 받을 수 있어야 함.
+2. **Flutter 의존성 추가**: `ffmpeg_kit_flutter`(또는 `_min` 변형), `gal` 또는 `image_gallery_saver`, `share_plus`, `video_player`, `path_provider`. 앱 크기 +30~50MB.
+3. **선택 화면**: `presentation/challenge/export/` 신설. 챌린지 확정 후에만 진입 가능한 버튼 → 기록 선택 리스트(체크박스 + 날짜 + 내용 + 금액). 각 row 탭 시 메모 편집 모달.
+4. **합성 진행**: 전체화면 진행률 + 캔슬 버튼. 1개라도 실패하면 전체 중단 + 재시도. 캐싱 없음.
+5. **결과 처리**: 미리보기(video_player) → 갤러리 저장 + OS 공유 시트 둘 다 노출.
 
-회의 결과가 나오면 `presentation/challenge/export_screen.dart` 신설 + `ChallengeApi.fetchExport()` 추가.
+**자막/대시보드 사양** (회의 결정)
+- 대시보드(상단): `Day N · 잔여 X,XXX원`. 잔여는 클립 시작=직전 잔여, 끝=차감 후 잔여 카운트다운.
+- 자막(하단 고정): 사용자 메모 있으면 메모, 없으면 지출="내용 금액원" / 무지출="무지출".
+- 무지출 영상 없으면 텍스트 카드(2초)로 합본에 끼움.
+- 클립 간 0.3초 cross-fade, 무음. 출력은 480p 통일.
+
+**보류 — 결과 카드 (마지막 3초)**: 영상 끝에 붙일지 vs 챌린지 확정 시 별도 화면으로 분리할지 미정. 영상 내보내기 구현 도중 결정 가능.
 
 ### 2. 배지 획득 애니메이션
 
@@ -174,3 +188,48 @@
 - (선택) MariaDB 데이터 — 새 환경에서 `schema.sql` 다시 적용해도 무방하면 불필요
 - (선택) `tenk-backend/uploads/` 디렉토리 — 이번 머신 영상이 필요 없으면 무시
 - (참고) `~/.android/debug.keystore`는 머신별로 다른 게 정상 — Android Studio가 새로 만들어줌. 새 키스토어 → 새 키해시 → 카카오 디벨로퍼스에 추가 등록.
+
+---
+
+## 영상 내보내기 회의록 (2026-05-21)
+
+> CLAUDE.md "영상 내보내기는 이번 범위에서 제외" 결정을 뒤집은 회의. 챌린지 확정 후 기록 영상들을 시간순으로 합쳐 하나의 MP4 로 만드는 기능을 이번 범위로 편입.
+
+### 사용자 요구사항 (사전 정의)
+1. 챌린지 내 모든 기록 목록에 선택 박스. 기본값 전체 선택. 해제하면 그 기록의 영상은 합본 제외.
+2. 각 기록에 코멘트 작성 가능 — 영상 중간에 텍스트로 자막 표시. 메모(`amount.memo`)가 있으면 그것이 디폴트.
+3. 영상 상단에 대시보드 — 일시 + 잔여금액(목표 - 사용금액). 기록 영상마다 갱신.
+
+### 결정 사항 (13)
+
+| # | 항목 | 결정 |
+|---|---|---|
+| 1 | 처리 위치 | 클라이언트 (Flutter, `ffmpeg_kit_flutter`). 서버 부담 0, 앱 크기 +30~50MB 감수. |
+| 2 | 노출 시점 | 챌린지 확정 후에만 (SUCCESS/FAIL 결정 후) |
+| 3 | 선택 화면 row | 축소형 리스트 (체크박스 + 날짜 + 내용 + 금액). 영상 썸네일 없음 — 텍스트만 보고 판단. 코멘트 편집은 row 탭 → 모달 |
+| 4 | 기록별 자막 디폴트 | `memo` 있으면 memo, 없으면 지출="내용 금액원" / 무지출="무지출". 사용자가 편집 가능 |
+| 5 | 자막 영상 안 표시 | 클립 내내 하단 고정 자막 |
+| 6 | 상단 대시보드 | `Day N · 잔여 X,XXX원` 포맷 (절대 날짜 대신 상대 진행도 — 스토리라인 느낌) |
+| 7 | 잔여금 갱신 | 클립 시작=직전 잔여, 끝=차감 후 잔여로 카운트다운 |
+| 8 | 무지출 + 영상 없음 | 2초 텍스트 카드 삽입 (검정 배경 + "무지출 ✓" + 코멘트) |
+| 9 | 클립 간 트랜지션 / BGM | 0.3초 cross-fade + 무음 (ffmpeg xfade) |
+| 10 | 출력 해상도 | 480p (854x480) 통일. 입력 원본은 ResolutionPreset.low 라 디바이스마다 다름 — 클립별 스케일 필요 |
+| 11 | 합성 진행 UX | 전체화면 진행률 + 캔슬 버튼 (백그라운드 처리 X) |
+| 12 | 원본 영상 누락 시 | 1개라도 실패하면 전체 중단 + 재시도 버튼. 부분 합본 안 만듦 |
+| 13 | 결과 캐싱 | 안 함 — 매번 새로 합성. 같은 입력으로 다시 들어가도 ffmpeg 재실행 |
+| - | 완료 후 동작 | 미리보기(`video_player`) + 갤러리 저장(`gal`) + OS 공유 시트(`share_plus`) 셋 다 노출 |
+| - | 기존 `/export` JSON | 유지 (통계·외부 연동용으로 남김) |
+
+### 보류 — 결과 카드 (영상 마지막 3초)
+
+영상 끝에 "성공! 8,200/10,000원" 같은 결과 카드를 붙일지 vs 챌린지 확정 시 별도 결과 화면으로 보여줄지 미정.
+챌린지 확정 화면 자체가 별도 의사결정 항목으로 분리될 가능성이 있어 영상 내보내기 구현 도중 함께 정리.
+
+### 구현 시 주의사항
+
+- **백엔드 추가 작업 거의 없음** — 영상 다운로드 엔드포인트가 이미 있으면 그대로. 없으면 인증된 사용자가 자신의 amount 영상을 받을 수 있는 엔드포인트 1개 (현재 [MediaController](../tenk-backend/src/main/java/com/hjson/tenk/domain/media/MediaController.java) 확인 필요).
+- **앱 크기**: `ffmpeg_kit_flutter` full 빌드는 +30~50MB. `_min` 변형 또는 LTS 빌드 검토하여 필요한 코덱만 포함. h264 + xfade + drawtext + scale 정도면 충분.
+- **메모리/배터리**: 30일치(최대 ~60개 클립 × 2초) 합성은 저사양 폰에서 수십 초 걸릴 수 있음. 캔슬 가능해야 함. ffmpeg_kit 의 `Session.cancel()` 활용.
+- **자막 폰트**: ffmpeg drawtext 는 시스템 폰트 경로가 필요. 한글 폰트를 앱 자산으로 번들링 (예: `assets/fonts/PretendardJP.ttf`) 후 ffmpeg 에 경로 전달.
+- **잔여금 카운트다운**: 한 클립(2초)에서 시작값→끝값으로 보간된 텍스트를 매 프레임 그리려면 drawtext 의 `t` 변수(현재 재생시간)와 expression 활용. 또는 클립 길이를 짧은 세그먼트로 쪼개고 각 세그먼트마다 다른 텍스트 — 후자가 단순.
+- **음성 트랙 없음**: 원본 녹화가 `enableAudio:false` 라 입력에 오디오 트랙이 없을 수도 — ffmpeg 명령에 `-an` 명시 또는 무음 트랙 강제 생성으로 출력 일관성 확보.

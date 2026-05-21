@@ -30,6 +30,7 @@ class Amount {
     required this.content,
     required this.amount,
     required this.noSpend,
+    required this.memo,
     required this.spentDt,
     required this.mediaFiles,
   });
@@ -40,6 +41,10 @@ class Amount {
   final String? content;
   final int amount;
   final bool noSpend;
+
+  /// 사용자가 기록 시 남긴 자유 메모 (nullable). 영상 export 시 자막 디폴트를 오버라이드한다
+  /// (있으면 그 값, 없으면 지출="내용 금액원" / 무지출="무지출").
+  final String? memo;
 
   /// 사용자가 선택한 "지출 발생 일시" (날짜 부분이 챌린지 기간 안에 있어야 함).
   /// 백엔드는 `LocalDateTime` (타임존 없음)으로 보낸다.
@@ -58,6 +63,7 @@ class Amount {
       content: json['content'] as String?,
       amount: (json['amount'] as num).toInt(),
       noSpend: json['noSpend'] as bool,
+      memo: json['memo'] as String?,
       spentDt: DateTime.parse(json['spentDt'] as String),
       mediaFiles: media,
     );

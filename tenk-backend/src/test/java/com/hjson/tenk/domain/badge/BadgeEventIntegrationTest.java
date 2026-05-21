@@ -143,7 +143,7 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
 
         // today 에 지출 등록 → today 무지출 자동 삭제 → 누적 2일 → revoke
         amountService.record(userId, challengeId,
-                new AmountCreateRequest("food", "lunch", 500, false, null), videoPart());
+                new AmountCreateRequest("food", "lunch", 500, false, null, null), videoPart());
 
         assertThat(challengeBadgeRepository.existsByChallengeAndBadge(challenge, noSpend3)).isFalse();
     }
@@ -226,7 +226,7 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
     }
 
     private AmountCreateRequest noSpendRequest() {
-        return new AmountCreateRequest(null, null, 0, true, null);
+        return new AmountCreateRequest(null, null, 0, true, null, null);
     }
 
     private MultipartFile videoPart() {

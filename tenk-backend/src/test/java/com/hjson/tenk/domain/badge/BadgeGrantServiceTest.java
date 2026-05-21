@@ -88,11 +88,11 @@ class BadgeGrantServiceTest {
     }
 
     private Amount spendOn(LocalDate day) {
-        return Amount.spend(challenge, "x", "x", 100, day.atTime(12, 0));
+        return Amount.spend(challenge, "x", "x", 100, null, day.atTime(12, 0));
     }
 
     private Amount noSpendOn(LocalDate day) {
-        return Amount.noSpend(challenge, day.atTime(12, 0));
+        return Amount.noSpend(challenge, null, day.atTime(12, 0));
     }
 
     private void stubAmounts(List<Amount> records) {
