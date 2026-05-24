@@ -3,7 +3,7 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-05-24 (**촬영 영상 미리보기 + 수정 화면 영상 미리보기 화면 도입**. 카메라 화면은 녹화 직후 `video_player` 로 자동 loop 재생 (체크 아이콘 폐기). 수정 화면의 영상 섹션은 collapsed-by-default — "영상 보기" 탭 시 신규 [AmountVideoPreviewScreen](../tenk_app/lib/presentation/amount/amount_video_preview_screen.dart) 으로 영상 + 다시 촬영/삭제 노출. 서버 영상은 lazy 다운로드 + tmp 캐시 + dispose 정리, 다운로드 전 잔재 선삭제 + 사이즈 검증으로 깨진 캐시 차단. 같은 갱신에서 AmountService.update 단위 테스트 5개 보강 (백엔드 84개 그린). 다음 우선순위: 결과 카드 회의 → 배지 획득 애니메이션)
+마지막 갱신: 2026-05-24 (**촬영 영상 미리보기 + 수정 화면 영상 미리보기 화면 도입**. 카메라 화면은 녹화 직후 `video_player` 로 자동 loop 재생 (체크 아이콘 폐기). 수정 화면의 영상 섹션은 collapsed-by-default — "영상 보기" 탭 시 신규 [AmountVideoPreviewScreen](../tenk_app/lib/presentation/amount/amount_video_preview_screen.dart) 으로 영상 + 다시 촬영/삭제 노출. 서버 영상은 lazy 다운로드 + tmp 캐시 + dispose 정리, 다운로드 전 잔재 선삭제 + 사이즈 검증으로 깨진 캐시 차단. 직전 커밋에서 AmountService.update 단위 테스트 5개 보강해 백엔드 총 84개 그린. 다음 우선순위: 결과 카드 회의 → 배지 획득 애니메이션)
 
 ---
 
@@ -91,6 +91,13 @@
   - **인코더 시행착오 (놓치면 같은 함정 재방문)**: `h264_mediacodec`(hw) → return code 0 인데 빈 컨테이너 silent fail. `libx264`(sw H.264) → GPL 이라 'video' 변종 빌드에 미포함. `libkvazaar`(sw HEVC) → cleanup 단계 native crash (`pthread_mutex_destroy called on a destroyed mutex`). 최종 정착은 ffmpeg 내장 **`mpeg4` (MPEG-4 Part 2, LGPL)**. 자세한 경로는 [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) `_videoEncoder` 상단 주석 + 본 문서 "함정 — H.264/HEVC sw 인코더 다 막힘".
   - **보류 — 결과 카드**: 회의에서 보류된 "영상 끝 3초 결과 카드" 는 이번 구현에 미포함. 챌린지 확정 화면 자체가 분리될 가능성 때문에 후속 결정으로 미룸.
 
+- ✅ **촬영 영상 미리보기 + 수정 화면 영상 미리보기 화면** (2026-05-24). "녹화 영상 미리보기" + "촬영 직후 바로 재생" 두 항목 같이 처리. 실기기에서 retake/delete 흐름까지 골든 패스 검증 통과.
+  - **카메라 화면 ([AmountCameraScreen](../tenk_app/lib/presentation/amount/amount_camera_screen.dart))**: 녹화 정지 직후 `video_player` 로 영상을 자동 loop 재생. 탭으로 일시정지/재생. 기존 체크 아이콘 + "2초 영상 녹화 완료" 텍스트는 player 초기화 실패 시 폴백으로만 남김 (저장은 가능). dispose 시 player + 임시 파일 모두 정리.
+  - **수정 화면 영상 미리보기 화면 신설 ([AmountVideoPreviewScreen](../tenk_app/lib/presentation/amount/amount_video_preview_screen.dart))**: 영상 + "다시 촬영" / "삭제" 두 버튼. `VideoPreviewAction` enum 으로 부모(edit 화면) 에 액션 반환. 실제 카메라 호출·REMOVE 마킹은 부모 책임. UI 는 카메라 화면의 녹화 후 미리보기와 동일한 레이아웃.
+  - **[VideoAttachmentSection](../tenk_app/lib/presentation/amount/widgets/video_attachment_section.dart) 재구성**: `expandable` 플래그로 두 모드 분기. `false` (record 화면): 기존 즉시 모드 — 메시지 + 다시 촬영/삭제 한 번에. `true` (edit 화면): collapsed-by-default — 메시지 + "영상 보기" 버튼만, 미리보기·재촬영·삭제는 위 화면이 책임. record 화면 사용자는 카메라 직후 이미 영상을 봤으므로 즉시 모드가 자연스럽고, edit 화면 사용자는 기존 영상을 못 봤으므로 확인 단계가 필요한 점을 반영.
+  - **[AmountEditScreen](../tenk_app/lib/presentation/amount/amount_edit_screen.dart) 서버 영상 lazy 다운로드**: "영상 보기" 첫 탭에 `MediaApi.downloadToFile` 로 `{tmp}/tenk_edit_preview/{fileId}.mp4` 저장. 같은 세션 내 재탭은 캐시 재사용, 화면 dispose 시 파일 삭제. 다운로드 전 같은 경로 잔재 선삭제 + 다운로드 직후 `exists` + `size > 0` 검증 — 둘 다 `video_player` init 실패로 이어지는 케이스 (이전 호출의 partial write / 다른 핸들 점유 / 백엔드 빈 응답) 라 캐시 박기 전 즉시 snackbar 로 차단. 미리보기 화면도 player 초기화 실패 시 실제 예외 메시지를 노출해서 진단 가능.
+  - **백엔드 변경 없음** — 기존 `GET /api/media/{fileId}` 다운로드 엔드포인트 재사용. 영상 export 의 prefetch 화면과 같은 패턴.
+
 - ✅ **영상 내보내기 회의 완료 + amount.memo 도메인 추가** (2026-05-21). 영상 합본 export 가 이번 범위로 진입. amount 에 메모 필드(VARCHAR 500, NULL 허용) 추가 — 지출/무지출 양쪽 모두 선택 입력. 빈/공백은 엔티티에서 null 로 정규화 (DTO 분기를 깔끔하게). 용도는 영상 export 자막 디폴트 오버라이드.
   - 백엔드: [Amount.java](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/Amount.java) `memo` 필드 + `spend()`/`noSpend()`/`update()` 시그니처에 memo 추가, [AmountCreateRequest](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountCreateRequest.java) `@Size(max=500) memo` + [AmountController](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/AmountController.java) `@Valid`, [AmountResponse](../tenk-backend/src/main/java/com/hjson/tenk/domain/amount/dto/AmountResponse.java) memo 노출.
   - DB: amount 테이블에 `memo VARCHAR(500) NULL` 컬럼. **schema.sql 1회 적용 필요** (DROP & RECREATE).
@@ -130,8 +137,6 @@
 
 ### 2. 앱 UX 다듬기 (나머지)
 - **업적(achievement) 시스템** — 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
-- **녹화 영상 미리보기** — 현재는 체크 아이콘만. `video_player` 는 이미 의존성에 들어와 있음 (영상 export result 화면용) — 재활용 가능.
-  - 관련: **촬영 직후 바로 재생** — `AmountCameraScreen` 에서 녹화 끝나면 그 자리에서 한 번 재생/확인 후 결정(사용/재촬영) 흐름. 현재는 pop 으로 path 만 반환하고 끝.
 - **카메라 탭하여 초점(tap-to-focus)** — `camera` 패키지 `CameraController.setFocusPoint(Offset)` + `setExposurePoint`. 프리뷰 GestureDetector 로 좌표 변환 (`Offset(dx/width, dy/height)` 정규화). 시각 피드백(초점 사각형 0.5초)도 같이.
 - **하단 시스템 바(제스처 내비/3-버튼) 가림** — 안드로이드 일부 기기에서 화면 하단 버튼이 시스템 내비게이션 바에 가려져 누르기 힘듦. 후보: ① `SafeArea` 점검 + bottomPadding 강제, ② 주요 액션을 상단 또는 FAB 로 이동, ③ `SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge)` + 수동 inset 처리. 영향 화면 전수 점검 필요 (카메라 화면, 기록/수정 화면 등).
 - **영상 export 결과 카드** — 회의 보류 항목. 영상 끝 3초 결과 카드 vs 챌린지 확정 시 별도 화면. 챌린지 확정 화면 디자인과 같이 결정.

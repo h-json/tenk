@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// 영상 첨부 상태를 보여주고 행동 버튼만 노출하는 공용 위젯.
+/// 영상 첨부 상태를 보여주고 행동 버튼을 노출하는 공용 위젯.
 ///
-/// 상태 분기:
-/// - 영상 없음: "촬영하기" 버튼만
-/// - 영상 있음 (새로 찍은 로컬 path 또는 기존 서버 영상): "다시 촬영" + "삭제" 버튼
-///
-/// 카메라 화면 전이/임시 파일 정리는 부모(record/edit 화면)가 책임진다.
-/// 이 위젯은 단순히 콜백 호출만 한다.
+/// 두 모드를 [expandable] 로 가른다:
+/// - **즉시 모드** (`expandable: false`, record 화면): "있음" 시 메시지 + 다시촬영/삭제 즉시.
+/// - **미리보기 모드** (`expandable: true`, edit 화면): "있음" 시 메시지 + "영상 보기" 만.
+///   미리보기·재촬영·삭제는 부모가 별도 화면([AmountVideoPreviewScreen])으로 띄워서 처리.
 class VideoAttachmentSection extends StatelessWidget {
   const VideoAttachmentSection({
     super.key,
@@ -15,6 +13,9 @@ class VideoAttachmentSection extends StatelessWidget {
     required this.fromServer,
     required this.onPickNew,
     required this.onRemove,
+    this.expandable = false,
+    this.previewLoading = false,
+    this.onTapPreview,
   });
 
   /// 영상이 첨부된 상태인지. 로컬 path 든 서버 영상이든 동일하게 "있음" 으로 처리.
@@ -26,19 +27,37 @@ class VideoAttachmentSection extends StatelessWidget {
   /// "촬영하기" / "다시 촬영" 트리거.
   final VoidCallback onPickNew;
 
-  /// "삭제" 트리거. 영상 없음 상태에서는 호출되지 않는다.
+  /// "삭제" 트리거. 영상 없음 상태 또는 expandable 모드에서는 호출되지 않는다.
   final VoidCallback onRemove;
+
+  /// true 면 hasVideo 시 "영상 보기" 만 노출 — 미리보기·재촬영·삭제는 부모가 별도 화면에서 처리.
+  /// false (기본) 면 hasVideo 시 메시지+다시촬영/삭제 즉시 노출 (record 화면).
+  final bool expandable;
+
+  /// "영상 보기" 가 외부 작업 중인지 (서버 영상 다운로드 등). 버튼 비활성 + 스피너 표시.
+  final bool previewLoading;
+
+  /// "영상 보기" 탭 콜백. expandable=true 일 때만 의미.
+  final VoidCallback? onTapPreview;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    Widget body;
+    if (!hasVideo) {
+      body = _buildEmpty(context);
+    } else if (!expandable) {
+      body = _buildAttachedImmediate(context);
+    } else {
+      body = _buildAttachedPreviewOnly(context);
+    }
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: hasVideo ? _buildAttached(context) : _buildEmpty(context),
+      child: body,
     );
   }
 
@@ -63,7 +82,7 @@ class VideoAttachmentSection extends StatelessWidget {
     );
   }
 
-  Widget _buildAttached(BuildContext context) {
+  Widget _buildAttachedImmediate(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -98,6 +117,33 @@ class VideoAttachmentSection extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttachedPreviewOnly(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(Icons.check_circle, color: theme.colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            fromServer ? '기존 영상이 첨부돼 있어요.' : '2초 영상 녹화 완료',
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: previewLoading ? null : onTapPreview,
+          icon: previewLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.play_arrow),
+          label: Text(previewLoading ? '불러오는 중…' : '영상 보기'),
         ),
       ],
     );

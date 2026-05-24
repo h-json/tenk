@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../data/api/api_error.dart';
 
@@ -31,6 +32,8 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
   Timer? _stopTimer;
   String? _recordedPath;
   bool _accepted = false;
+  VideoPlayerController? _player;
+  Object? _playerError;
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
   void dispose() {
     _stopTimer?.cancel();
     _camera?.dispose();
+    _disposePlayer();
     // "사용" 안 누른 채 종료된 임시 파일 정리. 호출자에게 넘긴 경우(_accepted)는 호출자 책임.
     if (!_accepted) _deleteRecorded();
     super.dispose();
@@ -52,6 +56,48 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
     if (path == null) return;
     File(path).delete().catchError((_) => File(path));
     _recordedPath = null;
+  }
+
+  void _disposePlayer() {
+    final p = _player;
+    if (p == null) return;
+    p.removeListener(_onPlayerChanged);
+    p.dispose();
+    _player = null;
+    _playerError = null;
+  }
+
+  Future<void> _initPlayer(String path) async {
+    try {
+      final controller = VideoPlayerController.file(File(path));
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      await controller.setLooping(true);
+      await controller.play();
+      controller.addListener(_onPlayerChanged);
+      setState(() => _player = controller);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _playerError = e);
+    }
+  }
+
+  void _onPlayerChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _togglePlay() async {
+    final c = _player;
+    if (c == null) return;
+    if (c.value.isPlaying) {
+      await c.pause();
+    } else {
+      await c.play();
+    }
   }
 
   Future<void> _initCamera() async {
@@ -112,6 +158,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
         _recording = false;
         _recordedPath = file.path;
       });
+      await _initPlayer(file.path);
     } catch (e) {
       if (!mounted) return;
       setState(() => _recording = false);
@@ -120,6 +167,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
   }
 
   void _retake() {
+    _disposePlayer();
     _deleteRecorded();
     setState(() {});
   }
@@ -201,14 +249,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
       );
     }
     if (_recordedPath != null) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle, size: 64, color: theme.colorScheme.primary),
-          const SizedBox(height: 12),
-          const Text('2초 영상 녹화 완료'),
-        ],
-      );
+      return _buildRecordedPreview(theme);
     }
     return Stack(
       fit: StackFit.expand,
@@ -229,6 +270,60 @@ class _AmountCameraScreenState extends State<AmountCameraScreen> {
                   strokeWidth: 3,
                   color: Colors.white,
                 ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecordedPreview(ThemeData theme) {
+    if (_playerError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, size: 48, color: theme.colorScheme.primary),
+            const SizedBox(height: 12),
+            const Text(
+              '녹화 완료\n(미리보기를 불러올 수 없어요)',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    final p = _player;
+    if (p == null || !p.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        GestureDetector(
+          onTap: _togglePlay,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: p.value.size.width,
+              height: p.value.size.height,
+              child: VideoPlayer(p),
+            ),
+          ),
+        ),
+        if (!p.value.isPlaying)
+          Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.35),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                iconSize: 48,
+                color: Colors.white,
+                icon: const Icon(Icons.play_arrow),
+                onPressed: _togglePlay,
               ),
             ),
           ),

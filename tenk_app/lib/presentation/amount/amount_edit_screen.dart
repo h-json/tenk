@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
@@ -9,6 +10,7 @@ import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
 import 'amount_camera_screen.dart';
+import 'amount_video_preview_screen.dart';
 import 'widgets/video_attachment_section.dart';
 
 /// 기록 수정 화면. 카드 탭으로 진입한다.
@@ -49,6 +51,10 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   /// REPLACE 일 때만 non-null (새로 찍은 로컬 임시 파일).
   String? _newVideoPath;
 
+  /// "영상 보기" 시 서버에서 받아온 로컬 캐시 경로. 한 번 받으면 화면 종료까지 재사용.
+  String? _serverVideoLocalPath;
+  bool _serverVideoLoading = false;
+
   bool _busy = false;
 
   @override
@@ -67,6 +73,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   @override
   void dispose() {
     _disposeLocalVideo();
+    _disposeServerPreview();
     _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
@@ -79,6 +86,89 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     if (path == null) return;
     File(path).delete().catchError((_) => File(path));
     _newVideoPath = null;
+  }
+
+  void _disposeServerPreview() {
+    final path = _serverVideoLocalPath;
+    if (path == null) return;
+    File(path).delete().catchError((_) => File(path));
+    _serverVideoLocalPath = null;
+  }
+
+  Future<void> _loadServerVideo() async {
+    if (_serverVideoLocalPath != null || _serverVideoLoading) return;
+    final media = widget.original.mediaFiles.isEmpty
+        ? null
+        : widget.original.mediaFiles.first;
+    if (media == null) return;
+    final mediaApi = MediaScope.of(context);
+    setState(() => _serverVideoLoading = true);
+    try {
+      final tmp = await getTemporaryDirectory();
+      final dir = Directory('${tmp.path}/tenk_edit_preview');
+      if (!await dir.exists()) await dir.create(recursive: true);
+      // fileId 별 캐시 경로지만, 이전 호출의 잔재(짧은/깨진 파일)가 남아 있으면 truncate 가 늦거나
+      // 다른 프로세스가 핸들을 잡고 있을 가능성을 차단하기 위해 항상 선삭제.
+      final savePath = '${dir.path}/${media.fileId}.mp4';
+      final saveFile = File(savePath);
+      if (await saveFile.exists()) {
+        try {
+          await saveFile.delete();
+        } catch (_) {
+          // 삭제 실패는 무시 — dio 가 어차피 덮어쓴다. 검증은 사이즈로 한다.
+        }
+      }
+      await mediaApi.downloadToFile(
+        fileId: media.fileId,
+        savePath: savePath,
+      );
+      // 0바이트 / 누락 방어 — 둘 다 video_player 초기화 실패로 이어진다. 캐시 안 박고 즉시 에러.
+      if (!await saveFile.exists()) {
+        throw StateError('다운로드된 파일이 존재하지 않아요 (fileId=${media.fileId})');
+      }
+      final size = await saveFile.length();
+      if (size == 0) {
+        throw StateError('다운로드된 파일이 비어 있어요 (fileId=${media.fileId})');
+      }
+      if (!mounted) return;
+      setState(() => _serverVideoLocalPath = savePath);
+    } catch (e) {
+      if (!mounted) return;
+      _showError('영상을 불러오지 못했어요: ${toApiException(e).message}');
+    } finally {
+      if (mounted) setState(() => _serverVideoLoading = false);
+    }
+  }
+
+  /// "영상 보기" 진입: KEEP 이면 서버 영상을 lazy 다운로드 후, REPLACE 면 즉시
+  /// [AmountVideoPreviewScreen] push. 미리보기에서 돌아온 액션(retake/delete)을 그대로 적용.
+  Future<void> _onTapPreview() async {
+    String? path;
+    switch (_videoAction) {
+      case VideoAction.replace:
+        path = _newVideoPath;
+      case VideoAction.keep:
+        if (_serverVideoLocalPath == null) {
+          await _loadServerVideo();
+          if (!mounted) return;
+        }
+        path = _serverVideoLocalPath;
+      case VideoAction.remove:
+        return;
+    }
+    if (path == null) return;
+    final result = await Navigator.of(context).push<VideoPreviewAction>(
+      MaterialPageRoute<VideoPreviewAction>(
+        builder: (_) => AmountVideoPreviewScreen(videoPath: path!),
+      ),
+    );
+    if (!mounted || result == null) return;
+    switch (result) {
+      case VideoPreviewAction.retake:
+        await _openCamera();
+      case VideoPreviewAction.delete:
+        _removeVideo();
+    }
   }
 
   bool get _hasExistingServerVideo => widget.original.mediaFiles.isNotEmpty;
@@ -231,6 +321,9 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
                 fromServer: _videoFromServer,
                 onPickNew: _openCamera,
                 onRemove: _removeVideo,
+                expandable: true,
+                previewLoading: _serverVideoLoading,
+                onTapPreview: _onTapPreview,
               ),
               const SizedBox(height: 32),
               FilledButton(
