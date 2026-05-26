@@ -2,45 +2,27 @@
 
 녹화·UI 효과음을 두는 곳. `audioplayers` 가 `AssetSource('sounds/<file>')` 형태로 참조.
 
-## record_start.wav
+## record_start.mp3
 
-녹화가 실제로 시작되는 순간 1회 재생. 종소리 같은 chime — fundamental 1000Hz +
-하모닉 1500/2200Hz, 도입부 4ms attack + exponential decay(τ≈90ms), 첫 30ms 동안
-~5% pitch chirp 으로 "당-" 도입감. 22050Hz / 16bit mono, 280ms, ~12KB.
+녹화가 실제로 시작되는 순간 1회 재생. royalty-free 효과음 (사용자가 직접 다운로드).
 
-처음엔 1200Hz 순수 sine wave 였는데 "기계음 같다" 는 피드백 받아 종소리 envelope +
-하모닉 mixing 으로 교체.
+변경 이력:
+- 1차: 1200Hz 순수 sine wave 합성 — "기계음 같다" 피드백
+- 2차: 종소리 chime 합성 (1000Hz + 1500/2200Hz 하모닉, 280ms) — "합성음 같다" 피드백
+- 3차: 두 음 ascending ding 합성 (800Hz→1200Hz, 180ms) — 합성음 인상 잔존
+- 4차 (현재): royalty-free 효과음 MP3 채택
 
-**재생성**: 같은 PowerShell 한 블록을 다시 돌리면 됨. tone/duration 등 파라미터는
-$f1/$f2/$f3 와 $ms, decay rate 등으로 조절. 짧고 부드러운 효과음을 원하면 $ms 줄이고
-decay rate(`-$t * 11` 의 11) 올리면 됨.
+**교체 방법**: 아래 사이트 중 한 곳에서 다른 효과음(WAV/MP3) 받아 같은 파일명
+(`record_start.mp3`) 으로 덮어쓰면 됨. 확장자가 다르면 [amount_camera_screen.dart](../../lib/presentation/amount/amount_camera_screen.dart)
+의 `AssetSource('sounds/record_start.<ext>')` 두 곳(`setSource` + `play`)도 같이 갱신.
 
-```powershell
-$out = "tenk_app\assets\sounds\record_start.wav"
-$sampleRate = 22050; $ms = 280
-$f1 = 1000.0; $f2 = 1500.0; $f3 = 2200.0
-$n = [int]($sampleRate * $ms / 1000)
-$s = [System.IO.File]::Create($out); $w = New-Object System.IO.BinaryWriter $s
-try {
-  $w.Write([System.Text.Encoding]::ASCII.GetBytes("RIFF"))
-  $w.Write([uint32]($n*2 + 36))
-  $w.Write([System.Text.Encoding]::ASCII.GetBytes("WAVE"))
-  $w.Write([System.Text.Encoding]::ASCII.GetBytes("fmt "))
-  $w.Write([uint32]16); $w.Write([uint16]1); $w.Write([uint16]1)
-  $w.Write([uint32]$sampleRate); $w.Write([uint32]($sampleRate*2))
-  $w.Write([uint16]2); $w.Write([uint16]16)
-  $w.Write([System.Text.Encoding]::ASCII.GetBytes("data")); $w.Write([uint32]($n*2))
-  for ($i=0;$i -lt $n;$i++) {
-    $t = [double]$i/$sampleRate
-    $env = (1 - [Math]::Exp(-$t*250)) * [Math]::Exp(-$t*11)
-    $pm = 1 + 0.05 * [Math]::Exp(-$t*35)
-    $sig = 0.6*[Math]::Sin(2*[Math]::PI*$f1*$pm*$t) + 0.3*[Math]::Sin(2*[Math]::PI*$f2*$pm*$t) + 0.15*[Math]::Sin(2*[Math]::PI*$f3*$pm*$t)
-    $v = $env * $sig * 0.5
-    if ($v -gt 1) { $v = 1 } elseif ($v -lt -1) { $v = -1 }
-    $w.Write([int16][int]($v*32767))
-  }
-} finally { $w.Dispose(); $s.Dispose() }
-```
+royalty-free 효과음 사이트:
+- [freesound.org](https://freesound.org) — CC0/CC-BY 대량. 출처 표기 필요할 수 있음
+- [pixabay.com/sound-effects](https://pixabay.com/sound-effects) — 무료, 출처 표기 불요
+- [mixkit.co/free-sound-effects](https://mixkit.co/free-sound-effects) — 큐레이션 양질
+- [zapsplat.com](https://zapsplat.com) — 무료 (계정 가입 필요, 출처 표기 권장)
+- [soundbible.com](https://soundbible.com) — 카메라 셔터 클래식
 
-royalty-free 다른 효과음(mp3/wav) 으로 교체하고 싶으면 같은 파일명으로 덮어쓰면 됨.
+짧을수록 좋음 (~100~300ms). 길면 녹화 시작 후 시각/햅틱 시그널과 어긋남.
+
 Flutter 는 자산 변경 시 hot reload 안 됨 — 앱 stop 후 `flutter run` 으로 재시작 필요.

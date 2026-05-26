@@ -59,7 +59,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
   /// 했다가 떨어지는 snap 으로 "시작 순간" 강조. duration 은 `_encoderStartLag` 보다
   /// 살짝 짧게 잡아 실제 녹화 시작 직전에 morph 가 도착해 있도록.
   late final AnimationController _startMorph;
-  /// 녹화 시작 효과음 (`assets/sounds/record_start.wav`) 전용 플레이어. 인스턴스를
+  /// 녹화 시작 효과음 (`assets/sounds/record_start.mp3`) 전용 플레이어. 인스턴스를
   /// 들고 있어 매 호출 시 native player 를 새로 만들지 않게 한다.
   ///
   /// **PlayerMode 주의**: `lowLatency` 모드는 `setSource` 를 지원하지 않아 사전
@@ -94,7 +94,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
     );
     // 자산을 미리 로드해 둬서 실제 녹화 시작 순간엔 지연 없이 재생. 실패는 조용히
     // 무시 (사운드는 보조 시그널이고 햅틱 + 시각 효과로 충분).
-    unawaited(_startSound.setSource(AssetSource('sounds/record_start.wav')));
+    unawaited(_startSound.setSource(AssetSource('sounds/record_start.mp3')));
     _initCamera();
   }
 
@@ -313,6 +313,11 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       _starting = true;
       _recordedPath = null;
     });
+    // 탭 즉시 청각 시그널 — "버튼 먹힘" 을 사용자에게 알리는 즉각 피드백. 햅틱·morph
+    // snap 은 실제 녹화 시작 시점(recording=true)에 분리. 사유: 효과음을 녹화 시작
+    // 시점에 두면 사용자 멘탈 모델로는 "녹화 중에 소리가 났다" 로 읽혀 어색
+    // (enableAudio:false 라 영상 트랙엔 안 들어가지만 인지 모델이 그렇게 잡힘).
+    unawaited(_playStartSound());
     // 탭 즉시 morph 시작 — idle 큰 원이 recording 작은 사각형으로 변형 시작.
     _startMorph.forward(from: 0);
     try {
@@ -321,9 +326,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       // 자세한 사유는 _encoderStartLag 주석 참고.
       await Future.delayed(_encoderStartLag);
       if (!mounted) return;
-      // 녹화 시작 순간 시각/촉각/청각 트리플 시그널. 사운드는 audioplayers 가 처리,
-      // 햅틱은 시스템 진동 항상 동작. snap 은 morph 의 마지막 구간 (TweenSequence).
-      unawaited(_playStartSound());
+      // 녹화 시작 순간 촉각/시각 시그널. 효과음은 탭 즉시로 분리됨 (위 참고).
       unawaited(HapticFeedback.heavyImpact());
       setState(() {
         _starting = false;
@@ -397,7 +400,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       await _startSound.resume();
     } catch (_) {
       try {
-        await _startSound.play(AssetSource('sounds/record_start.wav'));
+        await _startSound.play(AssetSource('sounds/record_start.mp3'));
       } catch (_) {
         // 자산 로드 실패 / 시스템 음소거 — 햅틱과 시각 효과로 보완됨.
       }
