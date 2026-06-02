@@ -71,22 +71,26 @@ class AuthServiceTest {
         assertThat(tokens.userId()).isEqualTo(200L);
         assertThat(tokens.accessToken()).isEqualTo("AT");
         assertThat(tokens.refreshToken()).isEqualTo("RT-raw");
+        assertThat(tokens.isNewUser()).isTrue();
     }
 
     @Test
-    void kakaoLogin_updates_profile_for_existing_user() {
+    void kakaoLogin_updates_email_only_for_existing_user_and_preserves_nickname() {
         User existing = userWithId(200L);
+        // 사용자가 '내 정보' 에서 'mychoice' 로 변경한 상태라고 가정
+        ReflectionTestUtils.setField(existing, "nickname", "mychoice");
         given(kakaoTokenVerifier.verifyAndFetch("kakao-AT"))
-                .willReturn(new KakaoUser("kakao-id-200", "new@example.com", "newnick"));
+                .willReturn(new KakaoUser("kakao-id-200", "new@example.com", "kakaonick"));
         given(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "kakao-id-200"))
                 .willReturn(Optional.of(existing));
 
         AuthTokens tokens = service.kakaoLogin("kakao-AT");
 
         assertThat(existing.getEmail()).isEqualTo("new@example.com");
-        assertThat(existing.getNickname()).isEqualTo("newnick");
+        assertThat(existing.getNickname()).isEqualTo("mychoice"); // 카카오 닉네임으로 덮어쓰지 않는다
         verify(userRepository, never()).save(any(User.class));
         assertThat(tokens.userId()).isEqualTo(200L);
+        assertThat(tokens.isNewUser()).isFalse();
     }
 
     @Test
@@ -152,6 +156,7 @@ class AuthServiceTest {
         assertThat(tokens.accessToken()).isEqualTo("AT");
         assertThat(tokens.refreshToken()).isEqualTo("RT-raw");
         assertThat(tokens.userId()).isEqualTo(200L);
+        assertThat(tokens.isNewUser()).isFalse();
     }
 
     @Test

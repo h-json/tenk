@@ -15,6 +15,8 @@ public enum ErrorCode {
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U0001", "사용자를 찾을 수 없습니다."),
     USER_ALREADY_WITHDRAWN(HttpStatus.BAD_REQUEST, "U0002", "이미 탈퇴한 사용자입니다."),
+    USER_NICKNAME_INVALID(HttpStatus.BAD_REQUEST, "U0003", "사용할 수 없는 문자가 포함된 닉네임이에요."),
+    USER_NICKNAME_CHANGE_TOO_FREQUENT(HttpStatus.BAD_REQUEST, "U0004", "닉네임은 하루에 한 번만 변경할 수 있어요."),
 
     AUTH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AU0001", "유효하지 않은 토큰입니다."),
     AUTH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AU0002", "만료된 토큰입니다."),

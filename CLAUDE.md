@@ -66,8 +66,8 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   1. 모바일 앱이 카카오 SDK로 access token 발급.
   2. `POST /api/auth/kakao/login { accessToken }` 호출.
   3. 백엔드가 `kapi.kakao.com/v1/user/access_token_info`로 **`app_id` 매칭 검증** (다른 앱 토큰 차단) → `/v2/user/me`로 사용자 정보 조회.
-  4. 신규면 자동 프로비저닝, 기존이면 닉네임/이메일 갱신.
-  5. 자체 JWT **AT(1시간, HS256)** + opaque **RT(랜덤 64자, SHA-256 해시로 DB 저장, 14일)** 발급.
+  4. 신규면 자동 프로비저닝 (카카오 닉네임 그대로), 기존이면 **email 만 갱신** (닉네임은 사용자가 직접 변경한 값 보존 — 아래 닉네임 정책 참고).
+  5. 자체 JWT **AT(1시간, HS256)** + opaque **RT(랜덤 64자, SHA-256 해시로 DB 저장, 14일)** 발급. 응답에 `isNewUser` 플래그 — 신규 가입을 만든 호출이면 true (refresh 응답은 항상 false). 클라이언트는 true 일 때 NicknameSetupScreen 으로 분기.
 - **카카오 키 두 종류** (같은 카카오 앱에서 발급되는 별개 값):
   - **앱 ID (숫자)**: 백엔드 `tenk.auth.kakao.app-id`. `access_token_info` 응답의 `app_id`와 매칭 검증용. REST API 키 아님.
   - **네이티브 앱 키 (영숫자)**: Flutter 측에서만 사용. **세 곳에 같은 값을 박는다**:
@@ -78,6 +78,18 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 - **토큰 갱신**: `POST /api/auth/refresh { refreshToken }`. 사용된 RT는 즉시 `revoked=true`로 회전(rotation) 후 새 AT/RT 발급.
 - **로그아웃**: `POST /api/auth/logout` (AT 필요) → 해당 사용자의 모든 RT를 `revoked=true`. AT 자체는 만료 시까지 유효 (블랙리스트 없음). 회원 탈퇴 시에도 동일하게 RT 일괄 무효화.
 - **CORS**: **비활성화** (`SecurityConfig`에서 `cors.disable()`). Flutter 네이티브 앱(iOS/Android)만 호출하므로 브라우저 preflight 자체가 없음. 추후 Flutter Web 등 브라우저 클라이언트를 도입하면 `CorsConfigurationSource` 빈으로 origin/method/header를 명시 설정할 것.
+
+### 닉네임
+- **신규 가입 시 닉네임 설정 화면 필수**. 카카오 첫 로그인 응답의 `isNewUser=true` 면 클라이언트는 [NicknameSetupScreen](tenk_app/lib/presentation/profile/nickname_setup_screen.dart) 으로 분기. 카카오 닉네임 pre-fill, 그대로 두든 수정하든 '시작하기' 눌러야 ChallengeListScreen 진입. **back/swipe 차단** (`PopScope canPop=false`). 사유: 카카오 로그인이 끝나면 user 는 이미 백엔드에 만들어진 상태고, 닉네임만 확정하면 본 화면 진입 가능 — 뒤로 보낼 곳이 없다.
+- **카카오 재로그인 시 닉네임 갱신하지 않음**. [AuthService.provisionUser](tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 의 기존 사용자 분기는 `updateEmail` 만 호출, `changeNickname` 호출 안 함. 사용자가 '내 정보' 에서 변경한 닉네임이 다음 카카오 재로그인 한 번에 카카오 프로필 닉네임으로 덮어쓰이는 회귀를 막는다. 신규 사용자 생성 시에만 `User.create` 가 카카오 닉네임을 박는다.
+- **하루 1회 변경 제한**. `User.nickname_changed_dt DATETIME NULL` 컬럼에 마지막 직접 변경 시각 기록. null = 한 번도 변경 안 함 → 무조건 통과. non-null 이면 `LocalDate.now() > nickname_changed_dt.toLocalDate()` 일 때만 통과 (= 다음 날 자정 이후). 위반 시 `USER_NICKNAME_CHANGE_TOO_FREQUENT`. **신규 가입 화면의 닉네임 확정도 1회로 카운트** — 가입 화면 안내문에 "확정 후 24시간 동안 변경 불가" 명시. 단, **값이 기존과 같으면 멱등 no-op** 처리 → 가입 화면에서 카카오 닉네임 그대로 두고 '확인' 누른 경우 nickname_changed_dt 박지 않음 → 같은 날 1회 자유 변경 가능. `UserResponse.nicknameChangeAvailableFrom` (null = 즉시 가능) 으로 클라가 "X월 Y일 이후에 변경 가능" 표시.
+- **닉네임 보안 검증** (서버가 진실의 원천). `UserService.updateNickname` 에서 trim 후:
+  - 길이: 1~50자. 초과/blank 시 `USER_NICKNAME_INVALID`
+  - 거부 문자: `\p{Cc}` (제어 문자 — null byte, 줄바꿈, 백스페이스 등) + `\p{Cf}` (형식 문자 — zero-width space/joiner, BiDi override, BOM, word joiner 등). 표시 위장·로그 인젝션·방향 뒤집기 차단. 일반 이모지/한글/특수문자는 통과
+  - SQL 인젝션은 JPA prepared statement 로 자동 방어, XSS 는 Flutter Text 위젯이 raw 렌더링하므로 위험 없음
+  - 클라이언트도 같은 패턴 `RegExp(r'[\p{Cc}\p{Cf}]', unicode: true)` 으로 1차 검증 (즉시 피드백 — [NicknameSetupScreen](tenk_app/lib/presentation/profile/nickname_setup_screen.dart) / [profile_screen.dart](tenk_app/lib/presentation/profile/profile_screen.dart) 의 `_NicknameEditDialog`). 진실의 원천은 서버
+- **'내 정보' 화면** ([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart)). 챌린지 리스트 AppBar 의 `account_circle_outlined` 버튼에서 진입. 이메일·카카오 연동 표시 / 닉네임 표시 + 변경 다이얼로그 / 로그아웃 / 회원 탈퇴(confirm 다이얼로그). 변경 불가 상태(하루 1회 제한 걸림)에서는 닉네임 ListTile 에 `lock_outline` + "X년 XX월 XX일 이후에 다시 변경할 수 있어요." 라벨.
+- **회원 탈퇴는 soft delete 정책** ([User.withdraw](tenk-backend/src/main/java/com/hjson/tenk/domain/user/User.java)) — `is_deleted=true` + 모든 RT 무효화. 같은 카카오로 재로그인 시도하면 `USER_ALREADY_WITHDRAWN`. challenge/amount/media 행과 디스크 영상은 그대로 보존 (현재 정책). UI 메시지는 "모든 정보와 기록이 영구히 삭제" 로 안내하므로 실제 데이터 정합은 hard delete cascade 작업 + 개인정보처리방침 작성을 [docs/handoff.md](docs/handoff.md) "운영 고려사항" 에 향후 작업으로 박아둠.
 
 ### 영상
 - 짧은 2초 영상은 **클라이언트가 처음부터 짧게·가볍게 녹화**하는 방식 (사후 변환·트랜스코딩 아님). Flutter 기준 `camera` 패키지의 `ResolutionPreset.medium` + 2초 타이머로 처리. 백엔드는 업로드받은 파일을 그대로 저장. export 가 480x864 로 정규화하므로 medium 위로 올릴 이유 없음 (파일만 커짐).
@@ -210,8 +222,8 @@ lib/
 │   │   └── badge.dart
 │   ├── media/                    # 영상 다운로드 (export prefetch 용)
 │   │   └── media_api.dart
-│   ├── user/                     # 사용자 정보 (현재는 닉네임 조회 — 결과 카드 헤더용)
-│   │   ├── user.dart, user_api.dart
+│   ├── user/                     # 사용자 정보 — 결과 카드 헤더, '내 정보' 화면, 닉네임 변경, 회원 탈퇴
+│   │   ├── user.dart, user_api.dart  # User 모델에 nicknameChangeAvailableFrom. updateNickname/withdraw 호출
 │   └── export/                   # ffmpeg 영상 합본 합성 + 결과 카드 PNG 캡처 (외부 통신 X, 로컬 처리)
 │       ├── video_composer.dart     # 정규화→concat 2-pass. mpeg4 sw 인코더 고정. resultCardPngPath 옵션
 │       └── result_card_capture.dart  # Overlay off-screen + RepaintBoundary → PNG. video/gallery 두 해상도
@@ -236,13 +248,16 @@ lib/
     │   │   ├── result_card_widget.dart  # 480x864 고정 위젯. 캡처 시 RepaintBoundary 로 감쌈
     │   │   └── result_card_screen.dart  # 풀스크린 라우트 + 갤러리 저장 + 공유. 닉네임 fetch
     │   └── *_screen.dart           # 카드·상세 양쪽에서 ChallengeBadgesRow 사용
-    └── amount/                       # 기록 추가/수정 + 촬영 + 미리보기
-        ├── amount_record_screen.dart    # 폼 (지출/무지출 토글). 카메라 인라인 없음 — VideoAttachmentSection 만 (즉시 모드)
-        ├── amount_edit_screen.dart      # 카드 탭 → 진입. 시간/내용/메모/영상 수정 + 삭제. 서버 영상 lazy 다운로드 캐시 (`_serverVideoLocalPath`)
-        ├── amount_camera_screen.dart    # 2초 녹화 + 녹화 후 video_player 자동 재생(loop). "사용" pop<String>(path)
-        ├── amount_video_preview_screen.dart  # 기존/새 영상 전용 미리보기 화면. pop<VideoPreviewAction>(retake/delete)
-        └── widgets/
-            └── video_attachment_section.dart  # 영상 첨부 상태 위젯. `expandable=false` (record) 즉시 모드 / `expandable=true` (edit) "영상 보기" 버튼만
+    ├── amount/                       # 기록 추가/수정 + 촬영 + 미리보기
+    │   ├── amount_record_screen.dart    # 폼 (지출/무지출 토글). 카메라 인라인 없음 — VideoAttachmentSection 만 (즉시 모드)
+    │   ├── amount_edit_screen.dart      # 카드 탭 → 진입. 시간/내용/메모/영상 수정 + 삭제. 서버 영상 lazy 다운로드 캐시 (`_serverVideoLocalPath`)
+    │   ├── amount_camera_screen.dart    # 2초 녹화 + 녹화 후 video_player 자동 재생(loop). "사용" pop<String>(path)
+    │   ├── amount_video_preview_screen.dart  # 기존/새 영상 전용 미리보기 화면. pop<VideoPreviewAction>(retake/delete)
+    │   └── widgets/
+    │       └── video_attachment_section.dart  # 영상 첨부 상태 위젯. `expandable=false` (record) 즉시 모드 / `expandable=true` (edit) "영상 보기" 버튼만
+    └── profile/                      # 신규 가입 닉네임 설정 + '내 정보'
+        ├── nickname_setup_screen.dart   # 신규 가입자 전용 (LoginScreen 이 isNewUser=true 면 분기). PopScope canPop=false 로 회피 차단. 카카오 닉네임 pre-fill
+        └── profile_screen.dart          # AppBar 사람 아이콘 진입점. 이메일/닉네임 변경/로그아웃/회원 탈퇴(confirm)
 ```
 
 자산: `tenk_app/assets/fonts/Korean.ttf` (현재 미사용 — 영상 export 자막은 Flutter `TextPainter` + 시스템 폰트 폴백으로 처리. 자막 폰트를 명시 지정하고 싶으면 [tenk_app/assets/fonts/README.md](tenk_app/assets/fonts/README.md) 참고).
@@ -359,6 +374,8 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 | camera 패키지 fork 갱신 | [tenk_app/vendor/camera_patched/camera_android_camerax](tenk_app/vendor/camera_patched/camera_android_camerax) 가 업스트림 `camera_android_camerax` 의 fork. `pubspec.yaml` `dependency_overrides` 로 주입. **패치 두 군데**: `initializeCamera` 의 `bindToLifecycle` 리스트 (`imageAnalysis` 자리에 `videoCapture` 를 넣음) + `stopVideoRecording` 의 `_unbindUseCaseFromLifecycle(videoCapture!)` 제거. 둘 다 `[tenk fork patch]` 주석으로 표시. **사유**: 업스트림은 VideoCapture 를 lazy bind 라 매 녹화 시작마다 Camera2 capture session 이 재구성돼 preview freeze. eager bind 로 전환해 freeze 자체 제거. Tenk 가 image stream 을 안 써서 ImageAnalysis 를 lazy 로 미뤄도 무해. **업스트림 버전 올릴 때**: pub cache 에서 신버전 디렉토리 통째로 vendor 에 덮어쓰고 두 지점 재적용. CameraX UseCase 조합 표 ([공식 문서](https://developer.android.com/media/camera/camerax/architecture#combine-use-cases)) 기준 P+IC+VC 는 LIMITED 이상 지원 — 4-way 는 LEVEL_3 한정이므로 ImageAnalysis 를 같이 추가하지 말 것 |
 | 영상 export 합성 파이프라인 변경 | [VideoComposer](tenk_app/lib/data/export/video_composer.dart) 에서 ffmpeg 명령 구성. **인코더는 sw `mpeg4` 고정 — 바꾸지 말 것**. `h264_mediacodec`(hw silent fail) / `libx264`(GPL · 빌드 미포함) / `libkvazaar`(native crash) 모두 실격됐고 경로는 `_videoEncoder` 주석 + [handoff.md "함정 — H.264/HEVC sw 인코더 다 막힘"](docs/handoff.md) 에 박혀 있다. **자막은 ffmpeg drawtext 대신 Flutter `TextPainter` 로 PNG 그려 `overlay` 필터로 합성 — drawtext 로 회귀하지 말 것** (ffmpeg 8.0 의 multi-codepoint 한글 silent drop 회귀, [handoff.md "함정 — drawtext 한글 회귀"](docs/handoff.md) 참고). 자막 좌표/폰트크기/박스 스타일은 `_drawTextBlock` 안에서 조절. 합성 파라미터(해상도/비트레이트/xfade 길이 등)는 모두 클래스 상단 상수. **결과 카드 마지막 클립**은 `resultCardPngPath` 옵션으로 합성 — `_normalizeStaticImageClip` 가 `-loop 1 -t 3.0` 으로 3초 정지 클립 만들고 `_concatWithXfade` 가 가변 duration 으로 xfade offset 누적 |
 | 결과 카드 도메인 변경 | [ResultCardWidget](tenk_app/lib/presentation/challenge/result_card/result_card_widget.dart) 가 480x864 고정 사이즈로 모든 콘텐츠를 그린다 — 좌표/폰트 크기는 영상 export 해상도와 1:1. **색은 ThemeData 안 쓰고 hardcode** (캡처 시 컨텍스트 영향 회피). 빈 슬롯 (배지 0개 / 무지출 0일) 은 라인 통째 생략 — 자리 흔들리지 않게. 캡처는 [ResultCardCapture](tenk_app/lib/data/export/result_card_capture.dart) 가 Overlay off-screen + RepaintBoundary 패턴으로 처리 (배지 자산 `precacheImage` + 2 frame 대기 필수). 진입점은 ① [ChallengeDetailScreen._finalize](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) 의 finalize 직후 자동 push (배지 큐 뒤) ② [_ResultCardEntryCard](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) (확정 후에만 노출) ③ 영상 export 마지막 클립 (체크박스 기본 ON). 영상용은 `pixelRatio: 1.0` (480x864), 갤러리/공유는 `2.0` (HiDPI). 배지 카탈로그를 바꾸면 결과 카드 안의 `_BadgeRow` (최대 6 + N) 도 같이 검토 |
+| 닉네임 정책 변경 | 진실의 원천은 [UserService.updateNickname](tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserService.java) — trim 후 NICKNAME_FORBIDDEN_CHARS (`\p{Cc}\p{Cf}`) / NICKNAME_MAX_LENGTH (50) / enforceDailyChangeLimit 3단 검증. 거부 패턴/길이를 바꾸려면 클라 측 1차 검증 [NicknameSetupScreen](tenk_app/lib/presentation/profile/nickname_setup_screen.dart) `_forbiddenChars` + [profile_screen.dart](tenk_app/lib/presentation/profile/profile_screen.dart) `_NicknameEditDialog._forbiddenChars` 도 동일하게. 같은 값 PATCH 는 `User.changeNickname` 에서 멱등 no-op — 이걸 깨면 가입 화면 흐름이 1회 제한에 걸린다. 카카오 재로그인 시 닉네임 동기화는 절대 다시 추가하지 말 것 — [AuthService.provisionUser](tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 의 기존 사용자 분기는 `updateEmail` 만 호출. `isNewUser` 가 가입 화면 분기의 trigger 라 응답에서 누락되면 신규 사용자가 카카오 닉네임으로 자동 가입되어 설정 화면을 못 본다 |
+| '내 정보' / 회원 탈퇴 흐름 변경 | 진입점은 [ChallengeListScreen](tenk_app/lib/presentation/challenge/challenge_list_screen.dart) AppBar 의 `account_circle_outlined` IconButton → [ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart) push. 회원 탈퇴는 confirm 다이얼로그 1단계 후 `UserScope.withdraw()` → `AuthScope.logout()` (storage clear) → LoginScreen 으로 `pushAndRemoveUntil`. 백엔드는 [User.withdraw](tenk-backend/src/main/java/com/hjson/tenk/domain/user/User.java) soft delete + RT 무효화만 — challenge/amount/media row 와 디스크 영상은 보존. 사용자 메시지는 "영구히 삭제" 로 안내하므로 hard delete cascade + 개인정보처리방침 작성은 [docs/handoff.md](docs/handoff.md) "운영 고려사항" 향후 작업 |
 
 ## 미해결/다음 단계
 

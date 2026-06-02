@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/scopes.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../profile/nickname_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,10 +18,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _loading = true);
     try {
-      await AuthScope.of(context).loginWithKakao();
+      final isNewUser = await AuthScope.of(context).loginWithKakao();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const ChallengeListScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              isNewUser ? const NicknameSetupScreen() : const ChallengeListScreen(),
+        ),
         (_) => false,
       );
     } on PlatformException catch (e) {

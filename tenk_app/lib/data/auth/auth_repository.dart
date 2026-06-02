@@ -18,11 +18,14 @@ class AuthRepository {
 
   Future<bool> hasSession() async => (await storage.read()) != null;
 
-  Future<void> loginWithKakao() async {
+  /// 카카오 로그인 → 백엔드 JWT 교환. 반환값은 이번 호출이 **신규 가입** 이었는지 여부.
+  /// LoginScreen 에서 true 일 때 NicknameSetupScreen 으로 분기.
+  Future<bool> loginWithKakao() async {
     final OAuthToken kakaoToken = await _kakaoLogin();
     try {
       final tokens = await api.kakaoLogin(kakaoToken.accessToken);
       await storage.save(tokens);
+      return tokens.isNewUser;
     } finally {
       // best-effort: 카카오 SDK 측 토큰 폐기. 실패해도 흐름 진행에는 영향 없음.
       try {

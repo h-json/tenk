@@ -3,6 +3,7 @@
 -- ddl-auto=validate 이므로 운영 전 이 스크립트를 수동 적용해야 함.
 -- ERD 대비 변경 사항:
 --   user             : password 제거, provider/provider_user_id/email 추가
+--                      + nickname_changed_dt (직접 변경 마지막 시각, NULL=미변경) — 하루 1회 제한용
 --   challenge        : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
 --   amount           : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
 --                      + no_spend_day_key (생성 컬럼) + uk_amount_no_spend_day 인덱스로 "무지출 하루 1회" 강제
@@ -23,15 +24,18 @@ DROP TABLE IF EXISTS `challenge`;
 DROP TABLE IF EXISTS `user`;
 
 CREATE TABLE `user` (
-    `user_id`           BIGINT AUTO_INCREMENT                            NOT NULL,
-    `provider`          ENUM('GOOGLE', 'KAKAO', 'NAVER')                 NOT NULL,
-    `provider_user_id`  VARCHAR(255)                                     NOT NULL,
-    `email`             VARCHAR(255)                                     NULL,
-    `nickname`          VARCHAR(255)                                     NOT NULL,
-    `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
-    `updated_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
-    `is_deleted`        TINYINT(1)    DEFAULT 0                          NOT NULL,
-    `deleted_dt`        DATETIME                                         NULL,
+    `user_id`             BIGINT AUTO_INCREMENT                          NOT NULL,
+    `provider`            ENUM('GOOGLE', 'KAKAO', 'NAVER')               NOT NULL,
+    `provider_user_id`    VARCHAR(255)                                   NOT NULL,
+    `email`               VARCHAR(255)                                   NULL,
+    `nickname`            VARCHAR(255)                                   NOT NULL,
+    -- 사용자가 '내 정보' 또는 가입 화면에서 직접 닉네임을 변경한 마지막 시각.
+    -- NULL = 아직 한 번도 변경한 적 없음. 하루 1회 제한은 이 컬럼의 DATE 부분과 오늘을 비교.
+    `nickname_changed_dt` DATETIME                                       NULL,
+    `created_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
+    `updated_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
+    `is_deleted`          TINYINT(1)    DEFAULT 0                        NOT NULL,
+    `deleted_dt`          DATETIME                                       NULL,
     PRIMARY KEY (`user_id`),
     UNIQUE KEY `uk_user_provider` (`provider`, `provider_user_id`)
 );

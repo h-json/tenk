@@ -26,8 +26,8 @@ public class AuthService {
     @Transactional
     public AuthTokens kakaoLogin(String kakaoAccessToken) {
         KakaoUser kakao = kakaoTokenVerifier.verifyAndFetch(kakaoAccessToken);
-        User user = provisionUser(kakao);
-        return issueTokens(user);
+        ProvisionResult provisioned = provisionUser(kakao);
+        return issueTokens(provisioned.user(), provisioned.isNewUser());
     }
 
     @Transactional
@@ -43,7 +43,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.USER_ALREADY_WITHDRAWN);
         }
         stored.revoke();
-        return issueTokens(user);
+        return issueTokens(user, false);
     }
 
     @Transactional
@@ -51,25 +51,30 @@ public class AuthService {
         refreshTokenRepository.revokeAllByUserId(userId);
     }
 
-    private User provisionUser(KakaoUser kakao) {
+    private ProvisionResult provisionUser(KakaoUser kakao) {
         return userRepository
                 .findByProviderAndProviderUserId(AuthProvider.KAKAO, kakao.providerUserId())
                 .map(existing -> {
                     if (existing.isDeleted()) {
                         throw new BusinessException(ErrorCode.USER_ALREADY_WITHDRAWN);
                     }
-                    existing.updateProfile(kakao.email(), kakao.nickname());
-                    return existing;
+                    // 재로그인 시 nickname 은 갱신하지 않는다. 사용자가 '내 정보' 에서 변경한 닉네임이
+                    // 카카오 닉네임으로 덮어쓰이지 않도록. email 만 최신 카카오 값으로 동기화.
+                    existing.updateEmail(kakao.email());
+                    return new ProvisionResult(existing, false);
                 })
-                .orElseGet(() -> userRepository.save(User.create(
-                        AuthProvider.KAKAO,
-                        kakao.providerUserId(),
-                        kakao.email(),
-                        kakao.nickname() == null ? "kakao-" + kakao.providerUserId() : kakao.nickname()
-                )));
+                .orElseGet(() -> new ProvisionResult(
+                        userRepository.save(User.create(
+                                AuthProvider.KAKAO,
+                                kakao.providerUserId(),
+                                kakao.email(),
+                                kakao.nickname() == null ? "kakao-" + kakao.providerUserId() : kakao.nickname()
+                        )),
+                        true
+                ));
     }
 
-    private AuthTokens issueTokens(User user) {
+    private AuthTokens issueTokens(User user, boolean isNewUser) {
         String accessToken = jwtTokenProvider.issueAccessToken(user.getId());
         String refreshTokenRaw = jwtTokenProvider.issueRefreshTokenRaw();
         LocalDateTime expiresDt = LocalDateTime.now().plus(jwtTokenProvider.refreshTokenTtl());
@@ -79,7 +84,10 @@ public class AuthService {
                 refreshTokenRaw,
                 jwtTokenProvider.accessTokenTtl().toSeconds(),
                 user.getId(),
-                user.getNickname()
+                user.getNickname(),
+                isNewUser
         );
     }
+
+    private record ProvisionResult(User user, boolean isNewUser) {}
 }

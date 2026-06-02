@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
-import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../common/async_state.dart';
-import '../login/login_screen.dart';
+import '../profile/profile_screen.dart';
 import '_formatters.dart';
 import 'challenge_create_screen.dart';
 import 'challenge_detail_screen.dart';
@@ -20,8 +19,6 @@ class ChallengeListScreen extends StatefulWidget {
 
 class _ChallengeListScreenState extends State<ChallengeListScreen>
     with AsyncStateMixin<ChallengeListScreen, List<Challenge>> {
-  bool _loggingOut = false;
-
   @override
   Future<List<Challenge>> fetch() => ChallengeScope.of(context).list();
 
@@ -54,23 +51,11 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
     await reload();
   }
 
-  Future<void> _logout() async {
-    setState(() => _loggingOut = true);
-    try {
-      await AuthScope.of(context).logout();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      final msg = toApiException(e).message;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('로그아웃 실패: $msg')));
-    } finally {
-      if (mounted) setState(() => _loggingOut = false);
-    }
+  Future<void> _openProfile() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+    );
+    // 닉네임/이메일 변경은 챌린지 데이터에 영향 없으니 reload 없음.
   }
 
   @override
@@ -80,15 +65,9 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
         title: const Text('내 챌린지'),
         actions: [
           IconButton(
-            tooltip: '로그아웃',
-            onPressed: _loggingOut ? null : _logout,
-            icon: _loggingOut
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.logout),
+            tooltip: '내 정보',
+            onPressed: _openProfile,
+            icon: const Icon(Icons.account_circle_outlined),
           ),
         ],
       ),
