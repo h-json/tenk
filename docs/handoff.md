@@ -3,7 +3,9 @@
 > 다른 컴퓨터/세션에서 이 작업을 이어받는 사람(또는 미래의 나)을 위한 인계 노트.
 > 영구적인 규칙·결정은 [../CLAUDE.md](../CLAUDE.md)에 있고, 이 문서는 **현재 진행 상태와 다음 할 일**만 기록함.
 
-마지막 갱신: 2026-06-02 (**닉네임 도메인 정비 — 신규 가입 닉네임 설정 화면 + '내 정보' 화면 도입**. 백엔드: `User.nickname_changed_dt DATETIME NULL` 컬럼 추가 + [docs/schema.sql](schema.sql) 갱신 (스키마 1회 재적용 필요). `User.updateProfile(email, nickname)` 폐기 → `updateEmail(email)` / `changeNickname(nickname, now)` 로 분리. `UserService.updateNickname` 에 trim·보안 검증(`\p{Cc}\p{Cf}` 거부 — 제어 문자/zero-width/BiDi override)·하루 1회 제한 추가. 새 ErrorCode `USER_NICKNAME_INVALID`/`USER_NICKNAME_CHANGE_TOO_FREQUENT`. `UserResponse` 에 `nicknameChangeAvailableFrom` 노출. **`AuthService.provisionUser` 재로그인 시 nickname 갱신 차단** — 사용자가 '내 정보' 에서 바꾼 값이 카카오 재로그인에 덮어쓰이지 않도록. `AuthTokens` 에 `isNewUser` 필드 추가. Flutter: 신규 [presentation/profile/](../tenk_app/lib/presentation/profile/) 도메인 (NicknameSetupScreen + ProfileScreen). LoginScreen 이 isNewUser=true 면 NicknameSetupScreen 으로 분기 (PopScope canPop=false 로 회피 차단). ChallengeListScreen AppBar 의 로그아웃 IconButton 을 `account_circle_outlined` 로 교체 → ProfileScreen 진입. 클라 측 1차 검증은 같은 RegExp `[\p{Cc}\p{Cf}]`. 회원 탈퇴는 현재 백엔드 `User.withdraw()` soft delete 정책 유지 — 사용자 메시지는 "모든 정보와 기록이 영구히 삭제" 로 안내하지만 실제 데이터 정합은 향후 hard delete cascade 작업 + 개인정보처리방침 작성 필요 (아래 "남은 일 §4 운영 고려사항"). 백엔드 단위 테스트 신규 [UserServiceTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/UserServiceTest.java) 13개 + AuthServiceTest 갱신. **⚠️ 실기기 미검증** — 빌드·런 확인 못 함. 검증 항목은 아래 "남은 일 §1 닉네임 도메인 실기기 검증".)
+마지막 갱신: 2026-06-16 (**닉네임/결과 카드/SafeArea 실기기 검증 전원 통과 + NicknameSetupScreen initState 크래시 픽스**. ① **버그 픽스**: 신규 카카오 로그인 직후 NicknameSetupScreen 이 `initState()` 에서 `_loadInitial()` 을 직접 호출 → 그 안에서 첫 `await` 이전에 `UserScope.of(context)`(InheritedWidget 의존, `dependOnInheritedWidgetOfExactType`)를 동기 실행해 `... called before _NicknameSetupScreenState.initState() completed` 크래시. `_loadInitial()` 을 `WidgetsBinding.instance.addPostFrameCallback` 으로 첫 프레임 이후로 미루고 진입부에 `if (!mounted) return` 가드 추가 ([nickname_setup_screen.dart](../tenk_app/lib/presentation/profile/nickname_setup_screen.dart)). 같은 버그는 이 화면만 — 다른 scope 접근은 `AsyncStateMixin` 의 `didChangeDependencies` 거나 `addPostFrameCallback`(result_card_screen / export_prefetch_screen) 라 안전. CLAUDE.md "코딩 컨벤션 — Flutter" 에 규칙 박음. ② **실기기 검증**: 미검증으로 쌓여 있던 3개 블록 — 닉네임 도메인(가입 화면 분기/멱등 no-op/하루 1회 제한/재로그인 닉네임 보존/내 정보/회원 탈퇴/클라 validation), 결과 카드(SUCCESS·FAIL 색/배지 row/빈 슬롯 생략/finalize 자동 push/영상 마지막 클립), SafeArea(top:false) 11화면 하단 가림 — **실기기에서 전원 통과**. 검증용 시드 SQL 은 [tenk-backend/seed_test_data.sql](../tenk-backend/seed_test_data.sql) (git 미추적, created_dt=2099 마커로 재실행 안전). 백엔드 변경 0. 다음 우선순위는 챌린지 이름 필드 또는 업적 시스템.)
+
+이전 갱신: 2026-06-02 (**닉네임 도메인 정비 — 신규 가입 닉네임 설정 화면 + '내 정보' 화면 도입**. 백엔드: `User.nickname_changed_dt DATETIME NULL` 컬럼 추가 + [docs/schema.sql](schema.sql) 갱신 (스키마 1회 재적용 필요). `User.updateProfile(email, nickname)` 폐기 → `updateEmail(email)` / `changeNickname(nickname, now)` 로 분리. `UserService.updateNickname` 에 trim·보안 검증(`\p{Cc}\p{Cf}` 거부 — 제어 문자/zero-width/BiDi override)·하루 1회 제한 추가. 새 ErrorCode `USER_NICKNAME_INVALID`/`USER_NICKNAME_CHANGE_TOO_FREQUENT`. `UserResponse` 에 `nicknameChangeAvailableFrom` 노출. **`AuthService.provisionUser` 재로그인 시 nickname 갱신 차단** — 사용자가 '내 정보' 에서 바꾼 값이 카카오 재로그인에 덮어쓰이지 않도록. `AuthTokens` 에 `isNewUser` 필드 추가. Flutter: 신규 [presentation/profile/](../tenk_app/lib/presentation/profile/) 도메인 (NicknameSetupScreen + ProfileScreen). LoginScreen 이 isNewUser=true 면 NicknameSetupScreen 으로 분기 (PopScope canPop=false 로 회피 차단). ChallengeListScreen AppBar 의 로그아웃 IconButton 을 `account_circle_outlined` 로 교체 → ProfileScreen 진입. 클라 측 1차 검증은 같은 RegExp `[\p{Cc}\p{Cf}]`. 회원 탈퇴는 현재 백엔드 `User.withdraw()` soft delete 정책 유지 — 사용자 메시지는 "모든 정보와 기록이 영구히 삭제" 로 안내하지만 실제 데이터 정합은 향후 hard delete cascade 작업 + 개인정보처리방침 작성 필요 (아래 "남은 일 §4 운영 고려사항"). 백엔드 단위 테스트 신규 [UserServiceTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/UserServiceTest.java) 13개 + AuthServiceTest 갱신. **⚠️ 실기기 미검증** — 빌드·런 확인 못 함. 검증 항목은 아래 "남은 일 §1 닉네임 도메인 실기기 검증".)
 
 이전 갱신: 2026-05-26 (**챌린지 결과 카드 — 풀스크린 화면 + 영상 export 마지막 클립 통합**. 회의 결정 9개 (진입점, 비율, 영상 포함, 모달 충돌, 닉네임, 색 분기, 카테고리, 표시 형태, 카드 정지 시간) 그대로 반영. **신규 도메인** [presentation/challenge/result_card/](../tenk_app/lib/presentation/challenge/result_card/) (`result_card_widget.dart` + `result_card_screen.dart`) + 캡처 헬퍼 [data/export/result_card_capture.dart](../tenk_app/lib/data/export/result_card_capture.dart) + 신규 데이터 [data/user/](../tenk_app/lib/data/user/) (UserApi + UserScope, `/api/users/me` 로 닉네임 fetch). 진입점 2개: ① finalize 직후 자동 풀스크린 push — 기존 `_finalize` 의 배지 모달 큐 끝난 뒤 ② 챌린지 상세의 "결과 카드" 카드 (확정 후). 영상 export 화면 체크박스 (기본 ON) 로 마지막 3초 정지 클립 합성 — [VideoComposer.compose](../tenk_app/lib/data/export/video_composer.dart) `resultCardPngPath` 옵션 + `_normalizeStaticImageClip` 헬퍼 + `_concatWithXfade` 가 가변 duration 지원하게 시그니처 변경 (`durations: List<double>`, 기존 단일 길이 가정 제거). 캡처 패턴 = Overlay off-screen + RepaintBoundary + 배지 자산 precache + 2 frame 대기 → `toImage(pixelRatio)`. 색은 ThemeData 안 쓰고 위젯에 hardcode — 캡처가 컨텍스트 변동 영향 안 받게. 디테일은 아래 "결과 카드 회의록" 참고. **백엔드 변경 0**. flutter analyze 0 issues. **⚠️ 실기기 미검증** — 직전 SafeArea 픽스와 마찬가지로 작업 환경에서 빌드·런을 못 했음. 검증 항목은 아래 "남은 일 §1 실기기 테스트" 에 추가. 다음 우선순위는 업적 시스템 또는 메모 노출.)
 
@@ -165,7 +167,7 @@
 
 ## 남은 일 (우선순위 순)
 
-> 백엔드 테스트(단위·통합·WebMvc) + 영상 합본 export + 배지 획득 축하 모달 + 카메라 녹화 시작 UX (transitional morph + 효과음 royalty-free MP3 + 탭 즉시 트리거 분리) + 챌린지 결과 카드 (풀스크린 + 영상 마지막 클립 합성) 모두 ✅ 완료. 자세한 건 "완료된 것" 섹션 참고. **카메라 / 결과 카드 도메인 일단락** — 다음은 다른 백로그.
+> 백엔드 테스트(단위·통합·WebMvc) + 영상 합본 export + 배지 획득 축하 모달 + 카메라 녹화 시작 UX (transitional morph + 효과음 royalty-free MP3 + 탭 즉시 트리거 분리) + 챌린지 결과 카드 (풀스크린 + 영상 마지막 클립 합성) 모두 ✅ 완료. 자세한 건 "완료된 것" 섹션 참고. **카메라 / 결과 카드 / 닉네임 도메인 일단락 + 위 3개 블록 실기기 검증 전원 통과 (2026-06-16)** — 다음은 다른 백로그.
 
 ### 1. 앱 UX 다듬기 (백로그)
 - **챌린지 이름 필드 추가** — 챌린지 생성 시 사용자 정의 이름(예: "5월 외식 줄이기", "여행 전 비상금 챌린지") 을 설정할 수 있게. 현재는 `targetAmount` + 기간만 있어 목록에서 챌린지끼리 구분이 어렵다. 구현 범위:
@@ -176,32 +178,11 @@
 - **목록에 메모 노출** — 챌린지 상세의 amount 목록 (`_AmountTile`) 에서 memo 가 있을 때 미리보기(1~2줄 ellipsis) 또는 메모 아이콘 배지. 결정 필요: 본문 노출이 좋은지 아이콘만 노출이 좋은지 (긴 메모가 목록 높이를 흔들 수 있음).
 - **내보낸 영상 자막 위치/스타일 조정** — 현재 [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) `_drawTextBlock` 이 480x864 클립 하단에 반투명 박스 + 텍스트로 합성. 변경: ① **세로 위치 하단 → 중단** (영상 가운데 영역에 자막). ② **배경 박스 제거** — 텍스트만 (가독성은 stroke/shadow 로 보강 검토). 영향 범위: `_drawTextBlock` 의 y 좌표 + 박스 그리는 Paint 호출만. 결과 카드 PNG 와 무관 (별도 위젯). 트레이드오프: 박스 없애면 밝은 배경 영상에서 자막이 묻힐 수 있어 stroke (검은 외곽선) 또는 drop shadow 같이 검토할 것.
 - **실기기 테스트** — `--dart-define=API_BASE_URL=http://192.168.x.x:8080`로 같은 Wi-Fi의 PC IP 주입. 에뮬레이터와 카메라 동작이 미묘하게 다름.
-  - **🚧 SafeArea(top:false) 픽스 검증 (2026-05-26 적용, 미검증)** — 직전 작업으로 11 화면 (amount_record / amount_edit / amount_camera / amount_video_preview / challenge_list / challenge_detail / challenge_create / export_screen / export_prefetch / export_compose / export_result) Scaffold body 에 `SafeArea(top: false)` 를 일관 적용했지만 작업 시점에 실기기 환경이 없어 빌드·런 확인을 못 했다. 검증 항목:
-    1. 모든 화면에서 하단 액션 버튼/콘텐츠가 시스템 내비게이션 바 위로 잘 노출되는지 (가림 없음).
-    2. 제스처 내비 ON 기기 + 3-버튼 내비 기기 양쪽 확인 (inset 값이 다름).
-    3. 키보드 떠 있을 때(TextField 포커스) 의도치 않은 점프/잘림 없는지 (특히 amount_record / amount_edit / challenge_create 의 메모 입력 시).
-    4. padding 이 비좁아 보이는 화면 있으면 그 화면만 추가 EdgeInsets 조정 (현재는 SafeArea 의 viewPadding 만 들어감).
-    5. 가로 방향 inset (제스처 영역) 도 보존되는지 노치/punch-hole 기기에서.
-  - **부작용 확인** — `SafeArea(top: false)` 가 ListView 의 마지막 항목과 시스템 바 사이에 visual gap 을 만든다. 챌린지 목록의 카드, amount 목록의 마지막 row 등이 의도된 만큼 떠 보이는지 확인. 너무 떠 있으면 child 의 padding 조정.
-  - **🚧 결과 카드 검증 (2026-05-26 적용, 미검증)** — finalize 자동 풀스크린 + 진입점 카드 + 영상 export 마지막 클립 합성 모두 빌드·런 검증 미수행. 검증 항목:
-    1. **자동 진입점**: 진행 중 챌린지를 SQL `UPDATE challenge SET start_date = CURDATE() - INTERVAL 1 DAY, end_date = CURDATE() - INTERVAL 1 DAY WHERE id = ?` 로 backdate 후 앱에서 "결과 확정하기" 탭 → 배지 모달(있다면) 뒤 결과 카드 풀스크린이 자동으로 뜨는지. 두 번째 진입 (앱 재진입 시) 엔 자동 push 가 일어나지 않아야 함 — finalize 콜백 경로에서만 push.
-    2. **상세 진입점**: 확정된 챌린지 상세에 "결과 카드" 카드가 영상 만들기 카드 위에 노출되는지. 탭 시 풀스크린 진입.
-    3. **닉네임 fetch**: 카드 헤더가 "○○님의 만원 챌린지" 로 표시되는지 (카카오 닉네임). 백엔드가 느리거나 실패하면 그냥 "만원 챌린지" 로 폴백 — 화면이 안 깨져야 함.
-    4. **갤러리 저장**: 한 번 누른 뒤 "저장됨" 으로 라벨 바뀜 + Tenk 앨범에 PNG 저장 확인. HiDPI 디바이스에서 960x1728 해상도로 저장되는지 (pixel ratio 2.0).
-    5. **공유**: PNG 가 share sheet 에 실리는지. 인스타 스토리·카카오톡 등 앱별 다이얼로그 정상 통과.
-    6. **영상 export 결과 카드 포함**: export 화면의 체크박스 기본 ON 상태에서 영상 만들기 → 합성 결과 영상 끝에 결과 카드가 3초 정지 화면으로 들어가는지. xfade 0.3초로 자연스럽게 들어와야. 체크 해제 시 결과 카드 없이 영상만 생성.
-    7. **빈 슬롯**: 배지 0개 챌린지에서 결과 카드의 배지 row 가 통째 사라지는지 (높이도 안 잡힘). 무지출 0일 챌린지에서 통계 카드의 "무지출" 라인 사라지는지.
-    8. **성공/실패 색**: 성공 = 노랑 그라데이션 + 보라 accent + 🎉. 실패 = 그레이 + 다크 accent + 💪. 캡처된 PNG 도 동일한 색감 (ThemeData 영향 안 받음).
-  - **부작용 확인**: 영상 export 진행 중 PNG 캡처가 추가됐는데 (compose 시작 시점에 한 번) — 진행 표시 화면이 멈춰 보이지 않는지. compose 단계에서 약간의 추가 지연 (≤ 1초) 발생.
-  - **🚧 닉네임 도메인 검증 (2026-06-02 적용, 미검증)** — 스키마 1회 적용 (`mysql -u tenk -p tenk < docs/schema.sql`) 후 진행. 검증 항목:
-    1. **신규 가입 → NicknameSetupScreen**: 카카오 신규 계정으로 로그인 → 자동으로 닉네임 설정 화면 진입 (TextField 에 카카오 프로필 닉네임 pre-fill). 하드웨어/제스처 back 으로 이탈 불가 (PopScope canPop=false). '시작하기' 누르면 ChallengeListScreen 진입.
-    2. **카카오 닉네임 그대로 두기**: 가입 화면에서 값 수정 없이 그대로 '시작하기' → 백엔드가 멱등 no-op → `nickname_changed_dt` NULL 유지 → 같은 날 '내 정보' 에서 1회 자유 변경 가능해야 함.
-    3. **가입 화면에서 닉네임 수정**: 다른 값으로 '시작하기' → `nickname_changed_dt` 박힘 → 같은 날 '내 정보' 에서 변경 시도 시 SnackBar "닉네임은 하루에 한 번만 변경할 수 있어요." 거부.
-    4. **재로그인 시 닉네임 보존**: '내 정보' 에서 'mychoice' 로 변경 → 로그아웃 → 카카오로 재로그인 → 닉네임이 'mychoice' 유지되어야 함 (카카오 프로필 닉네임으로 덮어쓰지 않음). email 만 카카오 최신값으로 동기화.
-    5. **AppBar 진입점**: 챌린지 리스트 우상단의 `account_circle_outlined` 탭 → ProfileScreen. 기존 로그아웃 IconButton 자체가 사라졌는지 확인.
-    6. **'내 정보' 항목**: 이메일 read-only / 닉네임 ListTile 탭 → 다이얼로그 / 로그아웃 / 회원 탈퇴 4개 노출. 변경 불가 상태에선 닉네임 ListTile 에 `lock_outline` + "X년 XX월 XX일 이후에 다시 변경할 수 있어요." 라벨 노출.
-    7. **회원 탈퇴**: confirm 다이얼로그 ("모든 정보와 기록이 영구히 삭제되고 복구할 수 없어요.") → '탈퇴' 누르면 백엔드 soft delete + 로컬 토큰 폐기 + LoginScreen 으로. 같은 카카오로 재로그인 시도하면 USER_ALREADY_WITHDRAWN 으로 401 — 단, 백엔드 soft delete 라 challenge/amount/media 행은 그대로 (운영 §4 의 hard delete cascade 작업 전까지).
-    8. **클라 측 보안 validation**: 닉네임 입력에 줄바꿈/제어 문자 paste → "사용할 수 없는 문자가 포함돼 있어요." 빨간 helper. 이모지·일반 특수문자는 통과.
+  - ✅ **2026-06-16 실기기 검증 전원 통과** — 그동안 미검증으로 쌓여 있던 3개 블록을 실기기에서 모두 확인:
+    - **닉네임 도메인** (2026-06-02 적용): 신규 가입 시 NicknameSetupScreen 분기·카카오 닉네임 pre-fill·back 차단 / 가입 화면 멱등 no-op(같은 날 1회 자유 변경) / 닉네임 수정 시 하루 1회 제한 / 재로그인 시 닉네임 보존(카카오 프로필로 안 덮어씀) / AppBar `account_circle_outlined` → 내 정보 / 회원 탈퇴 soft delete + 재로그인 차단 / 클라 측 제어문자 validation. **검증 중 NicknameSetupScreen initState 크래시 1건 발견·수정** (위 '마지막 갱신' 참고).
+    - **결과 카드** (2026-05-26 적용): finalize 직후 자동 풀스크린 push(배지 모달 뒤) / 상세 진입점 카드 / 닉네임 헤더 fetch·폴백 / SUCCESS=노랑·보라·🎉 vs FAIL=그레이·💪 색 분기 / 배지 row·무지출 라인 빈 슬롯 생략 / 갤러리 저장·공유 / 영상 export 마지막 3초 정지 클립 합성.
+    - **SafeArea(top:false)** (2026-05-26 적용): 11화면(amount_record / amount_edit / amount_camera / amount_video_preview / challenge_list / challenge_detail / challenge_create / export_screen / export_prefetch / export_compose / export_result) 하단 시스템 바 가림 없음 + ListView 마지막 항목 visual gap 적정.
+  - 향후 새 화면 추가 시에도 같은 항목(하단 가림 / 제스처·3버튼 내비 양쪽 / 키보드 inset)을 실기기에서 점검할 것.
 
 ### 2. 페이지네이션 / 정렬
 - `/api/challenges`, `/api/challenges/{id}/amounts`가 전체 목록 반환 중. `Pageable` 도입 시점 결정 (지금은 사용자당 챌린지 수가 적어 무방).

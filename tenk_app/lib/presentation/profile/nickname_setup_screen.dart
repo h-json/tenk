@@ -33,7 +33,9 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitial();
+    // UserScope.of(context) 는 InheritedWidget 의존을 등록하므로 initState 중엔 호출 불가.
+    // 첫 프레임 이후로 미뤄 context 접근을 안전하게 한다 (result_card/export_prefetch 와 동일 패턴).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
   }
 
   @override
@@ -43,6 +45,7 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
   }
 
   Future<void> _loadInitial() async {
+    if (!mounted) return;
     try {
       final me = await UserScope.of(context).getMe();
       if (!mounted) return;
