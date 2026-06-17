@@ -121,7 +121,9 @@ public class AmountService {
             throw new BusinessException(ErrorCode.AMOUNT_NOT_FOUND);
         }
         LocalDate today = LocalDate.now();
-        if (challenge.isFinished(today)) {
+        // 결과 확정 전(result == null)이면 종료일이 지났어도 수정 허용 — 마지막 날 밤늦게 남긴
+        // 기록의 영상/내용을 확정 전까지 보완할 수 있게. 확정 후엔 결과가 잠기므로 차단한다.
+        if (challenge.getResult() != null) {
             throw new BusinessException(ErrorCode.CHALLENGE_ALREADY_FINISHED);
         }
         if (!challenge.isStarted(today)) {

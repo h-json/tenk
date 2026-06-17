@@ -18,6 +18,7 @@ import com.hjson.tenk.domain.amount.dto.AmountUpdateRequest;
 import com.hjson.tenk.domain.amount.dto.AmountUpdateRequest.VideoAction;
 import com.hjson.tenk.domain.amount.event.AmountRecordedEvent;
 import com.hjson.tenk.domain.challenge.Challenge;
+import com.hjson.tenk.domain.challenge.ChallengeResult;
 import com.hjson.tenk.domain.challenge.ChallengeService;
 import com.hjson.tenk.domain.media.LocalFileStorage;
 import com.hjson.tenk.domain.media.LocalFileStorage.StoredFile;
@@ -341,13 +342,35 @@ class AmountServiceTest {
     }
 
     @Test
-    void update_on_finished_challenge_throws_already_finished() {
-        Challenge finished = finishedChallenge();
-        Amount existing = Amount.spend(finished, "food", "lunch", 5_000, null,
-                finished.getStartDate().atTime(9, 0));
+    void update_on_awaiting_finalize_challenge_succeeds() {
+        // 종료일이 지났지만 아직 결과 미확정(awaitsFinalize) → 확정 전이라 수정 허용.
+        Challenge awaiting = finishedChallenge();
+        Amount existing = Amount.spend(awaiting, "food", "lunch", 5_000, null,
+                awaiting.getStartDate().atTime(9, 0));
         ReflectionTestUtils.setField(existing, "id", 42L);
         given(amountRepository.findById(42L)).willReturn(Optional.of(existing));
-        given(challengeService.loadOwned(100L, 1L)).willReturn(finished);
+        given(challengeService.loadOwned(100L, 1L)).willReturn(awaiting);
+        given(mediaFileRepository.findByAmount(existing)).willReturn(List.of());
+
+        AmountUpdateRequest req = new AmountUpdateRequest(
+                "food", "dinner", 7_000, "확정 전 보완", LocalTime.of(10, 0), VideoAction.KEEP);
+        AmountResponse res = service.update(100L, 1L, 42L, req, null);
+
+        assertThat(res.content()).isEqualTo("dinner");
+        assertThat(res.amount()).isEqualTo(7_000);
+        assertThat(res.memo()).isEqualTo("확정 전 보완");
+    }
+
+    @Test
+    void update_on_finalized_challenge_throws_already_finished() {
+        // 결과가 확정된 챌린지는 더 이상 수정 불가.
+        Challenge finalized = finishedChallenge();
+        finalized.markResult(ChallengeResult.SUCCESS);
+        Amount existing = Amount.spend(finalized, "food", "lunch", 5_000, null,
+                finalized.getStartDate().atTime(9, 0));
+        ReflectionTestUtils.setField(existing, "id", 42L);
+        given(amountRepository.findById(42L)).willReturn(Optional.of(existing));
+        given(challengeService.loadOwned(100L, 1L)).willReturn(finalized);
 
         AmountUpdateRequest req = new AmountUpdateRequest(
                 "food", "lunch", 5_000, null, LocalTime.of(10, 0), VideoAction.KEEP);

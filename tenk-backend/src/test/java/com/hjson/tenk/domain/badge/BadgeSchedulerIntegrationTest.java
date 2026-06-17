@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hjson.tenk.domain.challenge.Challenge;
 import com.hjson.tenk.domain.challenge.ChallengeRepository;
-import com.hjson.tenk.domain.challenge.ChallengeResult;
 import com.hjson.tenk.domain.user.AuthProvider;
 import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserRepository;
@@ -16,9 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * {@link BadgeScheduler#dailyReconciliation()} 의 두 책임을 검증한다.
+ * {@link BadgeScheduler#dailyReconciliation()} 을 검증한다.
  * <ul>
- *   <li>{@code challengeService.finalizeAllDue()} : 종료일이 어제까지인 미확정 챌린지를 확정.</li>
+ *   <li>배치는 결과 확정을 하지 않는다 — 확정은 사용자 수동 호출({@code finalize})만.</li>
  *   <li>{@code badgeGrantService.evaluateAllActive()} : 이벤트가 누락된 케이스 보강 (챌린지 단위).</li>
  * </ul>
  *
@@ -35,8 +34,8 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
     @Autowired BadgeScheduler badgeScheduler;
 
     @Test
-    @DisplayName("배치가 미확정 챌린지를 확정하고 CHALLENGE_SUCCESS 배지를 보강한다")
-    void batchFinalizesAndGrantsChallengeSuccess() {
+    @DisplayName("배치는 종료된 챌린지를 자동 확정하지 않는다 (확정은 사용자 수동 호출만)")
+    void batchDoesNotAutoFinalize() {
         Long userId = createUser("kakao-batch-1");
         Long challengeId = createChallenge(userId, LocalDate.now().minusDays(2), LocalDate.now().minusDays(1), 10_000);
 
@@ -46,10 +45,11 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
         badgeScheduler.dailyReconciliation();
 
         Challenge after = challengeRepository.findById(challengeId).orElseThrow();
-        assertThat(after.getResult()).isEqualTo(ChallengeResult.SUCCESS);
+        assertThat(after.getResult()).as("자동 확정 제거 — 결과는 미확정 유지").isNull();
 
         Badge cs = badgeRepository.findByTypeAndConditionValue(BadgeType.CHALLENGE_SUCCESS, 1).orElseThrow();
-        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(after, cs)).isTrue();
+        assertThat(challengeBadgeRepository.existsByChallengeAndBadge(after, cs))
+                .as("확정 안 됐으므로 CHALLENGE_SUCCESS 미지급").isFalse();
     }
 
     @Test

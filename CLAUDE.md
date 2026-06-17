@@ -55,7 +55,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 84개: 단위 62 + `@SpringBootTest` 통합 17 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 85개: 단위 63 + `@SpringBootTest` 통합 17 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
@@ -116,11 +116,11 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 - 상태:
   - **시작 전**: `today < startDate` — 기록 불가
   - **진행 중**: `startDate <= today <= endDate` and `result == null` — 기록 가능
-  - **결과 확정 대기**: `today > endDate` and `result == null` — `finalize` 호출 가능
+  - **결과 확정 대기**: `today > endDate` and `result == null` — `finalize` 호출 가능. **이 상태에서도 기존 기록 수정은 가능** (아래 amount "수정" 참고) — 마지막 날 밤늦게 남긴 기록의 영상/내용을 확정 전까지 보완할 수 있게.
   - **성공/실패**: `result` 설정됨
 - 상태 판별 메서드: `isStarted(today)`, `isFinished(today)`, `containsDate(date)`. `ChallengeResponse`는 `started`/`finished` 둘 다 노출.
 - 종료 시점에 `result` 컬럼 확정: `SUCCESS`(총지출 ≤ target_amount) / `FAIL`. `NULL`이면 진행 중.
-- 확정 트리거는 ① 사용자 호출(`POST /api/challenges/{id}/finalize`) ② 매일 새벽 1시 배치(`BadgeScheduler.dailyReconciliation`) 두 가지.
+- **확정 트리거는 사용자 수동 호출(`POST /api/challenges/{id}/finalize`) 단 하나.** 자동 확정 배치는 두지 않는다 — 종료 후 확정 전까지 기록을 보완할 수 있어야 하고, 확정은 사용자에게 페이오프 모먼트(배지 → 결과 카드)라 본인이 누르는 게 자연스럽다. 새벽 1시 배치(`BadgeScheduler.dailyReconciliation`)는 **배지 재평가(`evaluateAllActive`)만** 하고 확정은 하지 않는다.
 
 ### 지출(amount)
 - **지출 기록**: `category`, `content` NOT BLANK, `amount > 0`, **영상 선택**. `spent_dt`는 클라이언트가 챌린지 기간 안의 임의 일시를 보낼 수 있다.
@@ -129,7 +129,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - **일시 입력 불가** — 클라이언트가 보낸 `dateTime`은 서비스에서 무시되고 서버가 `LocalDateTime.now()`(분초까지)를 박는다. "오늘 하루 지출이 없다"는 행위만 의미 있으므로 과거/미래 무지출은 성립하지 않는다.
   - **하루 1회** — 같은 챌린지 + 같은 날에 두 번째 무지출 등록은 `AMOUNT_NO_SPEND_ALREADY_EXISTS`로 거부. 1차 방어선은 서비스 검증, 2차는 DB `uk_amount_no_spend_day` 생성 컬럼 UNIQUE 인덱스 ([docs/schema.sql](docs/schema.sql) `no_spend_day_key`).
   - **지출 등록 시 자동 삭제** — 같은 날 이미 무지출이 있는 상태에서 그 날에 지출이 등록되면, 무지출 row + 첨부 영상 파일까지 자동 삭제하고 `AmountRecordResult.removedNoSpendCount`로 클라이언트에 통지 (Flutter는 SnackBar로 "오늘 무지출 기록이 취소되었어요" 표기). 그 다음 `AmountRecordedEvent`가 발행돼 배지가 재평가된다.
-- **수정** (`PUT /api/challenges/{cid}/amounts/{aid}`): 진행 중 챌린지에 한해 가능. 카드 탭 → 수정 화면 진입. 영상은 `videoAction` 으로 KEEP/REMOVE/REPLACE 중 하나 (REPLACE 면 새 video part 필수).
+- **수정** (`PUT /api/challenges/{cid}/amounts/{aid}`): **결과 확정 전(`result == null`)이면 가능** — 진행 중은 물론, 종료됐지만 아직 확정 안 한 "결과 확정 대기" 상태에서도 수정할 수 있다 (확정되면 `CHALLENGE_ALREADY_FINISHED`). 게이트는 `isFinished` 가 아니라 `challenge.getResult() != null` ([AmountService.update](tenk-backend/src/main/java/com/hjson/tenk/domain/amount/AmountService.java)). 카드 탭 → 수정 화면 진입. 영상은 `videoAction` 으로 KEEP/REMOVE/REPLACE 중 하나 (REPLACE 면 새 video part 필수).
   - **지출**: 카테고리/내용/금액/메모/**시간만** 변경 가능. **날짜는 고정** — 서버는 클라이언트 `time` (HH:mm:ss) 만 받아서 기존 spentDt 의 LocalDate 와 결합한다. 날짜를 바꾸고 싶으면 삭제 후 재등록.
   - **무지출**: memo + 영상만. 카테고리/내용/금액/시간은 서버가 무시.
   - 배지 재평가는 안 한다. 날짜·noSpend 여부가 그대로라 STREAK/NO_SPEND 가 바뀔 일이 없음. (영상만 바꾸는 케이스도 동일.)
@@ -137,7 +137,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - `spent_dt` (DATETIME, NOT NULL): 지출일 때만 사용자가 고른 "지출이 발생한 일시". **날짜 부분**이 챌린지 기간(`startDate`~`endDate`, 양끝 포함) 안에 있어야 함 (`AMOUNT_DATE_OUT_OF_RANGE`). 기본값은 지금. 배지·집계는 `spentDt.toLocalDate()`를 기준으로 잡는다. 무지출은 위 제약대로 서버 now() 강제.
   - `created_dt` (DATETIME, JPA Auditing): 서버가 자동으로 박는 row 생성 시각. 감사용. 도메인 로직에서 직접 쓰지 않는다.
 - **응답 형태**: `POST /api/challenges/{cid}/amounts` 는 `AmountRecordResult { amount, removedNoSpendCount }`. `PUT` 은 갱신된 `AmountResponse` 단일. list/delete 는 기존대로 `AmountResponse` 직접.
-- 챌린지가 시작 전이거나(`CHALLENGE_NOT_STARTED`) 종료된 상태(`CHALLENGE_ALREADY_FINISHED`)에서는 기록·수정 불가.
+- **신규 기록**(`record`)은 챌린지가 시작 전(`CHALLENGE_NOT_STARTED`)이거나 종료된 상태(`today > endDate` → `CHALLENGE_ALREADY_FINISHED`)에서는 불가. **수정**(`update`)은 위 "수정" 항목대로 확정 전이면 종료 후에도 가능 — record 와 update 의 종료 판정 기준이 다르다(record=`isFinished`, update=`result != null`).
 
 ### 배지 (챌린지 단위)
 배지는 **챌린지 1개에 귀속**된다. 같은 사용자가 챌린지 A 와 B 에서 똑같이 STREAK 7 을 얻으면
