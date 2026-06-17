@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,11 @@ public class Challenge {
     /** 시작일·종료일 포함 최대 30일 (양끝 포함). */
     public static final int MAX_DURATION_DAYS = 30;
 
+    public static final int NAME_MAX_LENGTH = 100;
+
+    /** 제어 문자(\p{Cc}) + 형식 문자(\p{Cf}) 거부 — 닉네임과 동일 정책. */
+    private static final Pattern NAME_FORBIDDEN_CHARS = Pattern.compile("[\\p{Cc}\\p{Cf}]");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "challenge_id")
@@ -44,6 +50,9 @@ public class Challenge {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Column(name = "name", nullable = false, length = NAME_MAX_LENGTH)
+    private String name;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -72,17 +81,23 @@ public class Challenge {
     @Column(name = "deleted_dt")
     private LocalDateTime deletedDt;
 
-    private Challenge(User user, LocalDate startDate, LocalDate endDate, int targetAmount) {
+    private Challenge(User user, String name, LocalDate startDate, LocalDate endDate, int targetAmount) {
         validatePeriod(startDate, endDate);
         this.user = user;
+        this.name = validateAndNormalizeName(name);
         this.startDate = startDate;
         this.endDate = endDate;
         this.targetAmount = targetAmount;
         this.deleted = false;
     }
 
-    public static Challenge create(User user, LocalDate startDate, LocalDate endDate, int targetAmount) {
-        return new Challenge(user, startDate, endDate, targetAmount);
+    public static Challenge create(User user, String name, LocalDate startDate, LocalDate endDate, int targetAmount) {
+        return new Challenge(user, name, startDate, endDate, targetAmount);
+    }
+
+    /** 결과 확정 전까지만 호출 (게이트는 서비스 책임). 같은 값이어도 멱등하게 통과. */
+    public void rename(String name) {
+        this.name = validateAndNormalizeName(name);
     }
 
     /** 종료일이 지난 다음 날부터 "종료"로 본다 (종료일 당일은 아직 진행 중). */
@@ -109,6 +124,20 @@ public class Challenge {
     public void softDelete() {
         this.deleted = true;
         this.deletedDt = LocalDateTime.now();
+    }
+
+    private static String validateAndNormalizeName(String raw) {
+        if (raw == null) {
+            throw new BusinessException(ErrorCode.CHALLENGE_NAME_INVALID);
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty() || trimmed.length() > NAME_MAX_LENGTH) {
+            throw new BusinessException(ErrorCode.CHALLENGE_NAME_INVALID);
+        }
+        if (NAME_FORBIDDEN_CHARS.matcher(trimmed).find()) {
+            throw new BusinessException(ErrorCode.CHALLENGE_NAME_INVALID);
+        }
+        return trimmed;
     }
 
     private static void validatePeriod(LocalDate startDate, LocalDate endDate) {

@@ -54,7 +54,7 @@ class BadgeGrantServiceTest {
 
         // 챌린지 기간은 today-70 ~ today+1 — 모든 시나리오의 spentDt 를 invariant 없이 모킹할 수 있게.
         // endDate >= today 라 endingOn = today.
-        challenge = Challenge.create(user, TODAY, TODAY, 1_000_000);
+        challenge = Challenge.create(user, "테스트 챌린지", TODAY, TODAY, 1_000_000);
         ReflectionTestUtils.setField(challenge, "id", CHALLENGE_ID);
         ReflectionTestUtils.setField(challenge, "startDate", TODAY.minusDays(70));
         ReflectionTestUtils.setField(challenge, "endDate", TODAY.plusDays(1));

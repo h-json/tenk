@@ -140,6 +140,30 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
     );
   }
 
+  Future<void> _rename(Challenge challenge) async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameDialog(initial: challenge.name),
+    );
+    if (newName == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final next = await ChallengeScope.of(context).rename(challenge.id, newName);
+      _changed = true;
+      final current = data;
+      if (current != null) {
+        replaceData((challenge: next, amounts: current.amounts));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = toApiException(e).message;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('이름 변경 실패: $msg')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _delete() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -229,8 +253,17 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('챌린지 상세'),
+          title: Text(data?.challenge.name ?? '챌린지 상세'),
           actions: [
+            // 이름 변경은 결과 확정 전(result == null)까지만.
+            if (data?.challenge.result == null)
+              IconButton(
+                tooltip: '이름 변경',
+                onPressed: _busy || data == null
+                    ? null
+                    : () => _rename(data!.challenge),
+                icon: const Icon(Icons.edit_outlined),
+              ),
             IconButton(
               tooltip: '삭제',
               onPressed: _busy ? null : _delete,
@@ -885,6 +918,76 @@ class _AmountTile extends StatelessWidget {
               )
             : null,
       ),
+    );
+  }
+}
+
+/// 챌린지 이름 변경 다이얼로그. '확인' 시 trim 된 새 이름을 `pop<String>` 으로 반환.
+/// 클라 1차 검증(길이/제어문자)은 서버 검증과 동일 — 진실의 원천은 서버.
+class _RenameDialog extends StatefulWidget {
+  const _RenameDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  static final _forbiddenChars = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
+
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initial);
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.of(context).pop<String>(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('챌린지 이름 변경'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          maxLength: 100,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: '예: 외식 줄이기',
+          ),
+          validator: (raw) {
+            final v = (raw ?? '').trim();
+            if (v.isEmpty) return '이름을 입력해주세요.';
+            if (v.length > 100) return '이름은 100자 이하로 입력해주세요.';
+            if (_forbiddenChars.hasMatch(v)) {
+              return '사용할 수 없는 문자가 포함되어 있어요.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('확인'),
+        ),
+      ],
     );
   }
 }

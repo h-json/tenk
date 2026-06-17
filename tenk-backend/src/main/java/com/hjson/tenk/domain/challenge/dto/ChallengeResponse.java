@@ -8,6 +8,7 @@ import java.util.List;
 
 public record ChallengeResponse(
         Long challengeId,
+        String name,
         LocalDate startDate,
         LocalDate endDate,
         int targetAmount,
@@ -26,6 +27,7 @@ public record ChallengeResponse(
     ) {
         return new ChallengeResponse(
                 challenge.getId(),
+                challenge.getName(),
                 challenge.getStartDate(),
                 challenge.getEndDate(),
                 challenge.getTargetAmount(),

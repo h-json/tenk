@@ -159,7 +159,7 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
     private Long createChallenge(Long userId, LocalDate startDate, LocalDate endDate) {
         return tx.execute(status -> {
             User user = userRepository.findById(userId).orElseThrow();
-            Challenge c = Challenge.create(user, LocalDate.now(), LocalDate.now().plusDays(1), 1_000_000);
+            Challenge c = Challenge.create(user, "테스트 챌린지", LocalDate.now(), LocalDate.now().plusDays(1), 1_000_000);
             Challenge saved = challengeRepository.save(c);
             ReflectionTestUtils.setField(saved, "startDate", startDate);
             ReflectionTestUtils.setField(saved, "endDate", endDate);

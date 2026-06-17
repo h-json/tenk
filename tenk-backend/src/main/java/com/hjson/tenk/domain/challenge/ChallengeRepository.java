@@ -10,6 +10,9 @@ public interface ChallengeRepository extends JpaRepository<Challenge, Long> {
 
     Optional<Challenge> findByIdAndDeletedFalse(Long id);
 
+    /** 기본 이름 "챌린지 N" 의 N 산정용 — 삭제분 제외 현재 챌린지 수. */
+    long countByUserAndDeletedFalse(User user);
+
     List<Challenge> findByUserAndDeletedFalseOrderByStartDateDesc(User user);
 
     /**

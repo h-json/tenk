@@ -31,10 +31,30 @@ public class ChallengeService {
     @Transactional
     public ChallengeResponse create(Long userId, ChallengeCreateRequest request) {
         User user = userService.getActiveUser(userId);
-        Challenge challenge = Challenge.create(user, request.startDate(), request.endDate(), request.targetAmount());
+        String name = resolveName(user, request.name());
+        Challenge challenge = Challenge.create(user, name, request.startDate(), request.endDate(), request.targetAmount());
         Challenge saved = challengeRepository.save(challenge);
         // 새 챌린지엔 배지 없음 — 빈 리스트 인라인
         return ChallengeResponse.of(saved, 0L, LocalDate.now(), List.of());
+    }
+
+    /** 이름이 비어 있으면 "챌린지 N" 기본값. N = 삭제분 제외 현재 챌린지 수 + 1. */
+    private String resolveName(User user, String requested) {
+        if (requested != null && !requested.isBlank()) {
+            return requested;
+        }
+        long count = challengeRepository.countByUserAndDeletedFalse(user);
+        return "챌린지 " + (count + 1);
+    }
+
+    @Transactional
+    public ChallengeResponse rename(Long userId, Long challengeId, String name) {
+        Challenge challenge = loadOwned(userId, challengeId);
+        if (challenge.getResult() != null) {
+            throw new BusinessException(ErrorCode.CHALLENGE_ALREADY_FINISHED);
+        }
+        challenge.rename(name);
+        return toResponse(challenge, LocalDate.now());
     }
 
     public ChallengeResponse getOne(Long userId, Long challengeId) {

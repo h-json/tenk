@@ -10,17 +10,30 @@ class ChallengeApi {
   final Dio _dio;
 
   Future<Challenge> create({
+    String? name,
     required DateTime startDate,
     required DateTime endDate,
     required int targetAmount,
   }) async {
+    final trimmed = name?.trim();
     final res = await _dio.post(
       '/api/challenges',
       data: {
+        // 비우면 서버가 "챌린지 N" 기본값을 만든다 — 빈 값은 아예 전송하지 않음.
+        if (trimmed != null && trimmed.isNotEmpty) 'name': trimmed,
         'startDate': _formatDate(startDate),
         'endDate': _formatDate(endDate),
         'targetAmount': targetAmount,
       },
+    );
+    return Challenge.fromJson(unwrapData(res.data));
+  }
+
+  /// 이름 변경 (결과 확정 전까지만 서버가 허용 — 확정 후엔 CHALLENGE_ALREADY_FINISHED).
+  Future<Challenge> rename(int challengeId, String name) async {
+    final res = await _dio.patch(
+      '/api/challenges/$challengeId',
+      data: {'name': name.trim()},
     );
     return Challenge.fromJson(unwrapData(res.data));
   }

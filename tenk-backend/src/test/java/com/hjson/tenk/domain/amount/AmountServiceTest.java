@@ -67,14 +67,14 @@ class AmountServiceTest {
 
     private Challenge ongoingChallenge() {
         LocalDate today = LocalDate.now();
-        Challenge c = Challenge.create(user, today, today.plusDays(3), 10_000);
+        Challenge c = Challenge.create(user, "테스트 챌린지", today, today.plusDays(3), 10_000);
         ReflectionTestUtils.setField(c, "id", 1L);
         return c;
     }
 
     private Challenge finishedChallenge() {
         LocalDate today = LocalDate.now();
-        Challenge c = Challenge.create(user, today, today, 10_000);
+        Challenge c = Challenge.create(user, "테스트 챌린지", today, today, 10_000);
         ReflectionTestUtils.setField(c, "id", 1L);
         ReflectionTestUtils.setField(c, "startDate", today.minusDays(2));
         ReflectionTestUtils.setField(c, "endDate", today.minusDays(1));
@@ -83,7 +83,7 @@ class AmountServiceTest {
 
     private Challenge notStartedChallenge() {
         LocalDate today = LocalDate.now();
-        Challenge c = Challenge.create(user, today.plusDays(2), today.plusDays(5), 10_000);
+        Challenge c = Challenge.create(user, "테스트 챌린지", today.plusDays(2), today.plusDays(5), 10_000);
         ReflectionTestUtils.setField(c, "id", 1L);
         return c;
     }

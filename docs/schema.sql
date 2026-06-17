@@ -43,6 +43,7 @@ CREATE TABLE `user` (
 CREATE TABLE `challenge` (
     `challenge_id`      BIGINT AUTO_INCREMENT                            NOT NULL,
     `user_id`           BIGINT                                           NOT NULL,
+    `name`              VARCHAR(100)                                     NOT NULL,
     `start_date`        DATE                                             NOT NULL,
     `end_date`          DATE                                             NOT NULL,
     `target_amount`     INT           DEFAULT 10000                      NOT NULL,

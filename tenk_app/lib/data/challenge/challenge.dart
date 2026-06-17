@@ -28,6 +28,7 @@ enum ChallengeResult {
 class Challenge {
   const Challenge({
     required this.id,
+    required this.name,
     required this.startDate,
     required this.endDate,
     required this.targetAmount,
@@ -40,6 +41,7 @@ class Challenge {
   });
 
   final int id;
+  final String name;
   final DateTime startDate;
   final DateTime endDate;
   final int targetAmount;
@@ -65,6 +67,7 @@ class Challenge {
     final badgesRaw = json['badges'] as List?;
     return Challenge(
       id: (json['challengeId'] as num).toInt(),
+      name: json['name'] as String,
       startDate: DateTime.parse(json['startDate'] as String),
       endDate: DateTime.parse(json['endDate'] as String),
       targetAmount: (json['targetAmount'] as num).toInt(),

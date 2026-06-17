@@ -69,7 +69,7 @@ class MediaFileRepositoryIntegrationTest extends IntegrationTestBase {
             User user = userRepository.save(
                     User.create(AuthProvider.KAKAO, providerUserId, providerUserId + "@example.com", "tester"));
             Challenge challenge = challengeRepository.save(
-                    Challenge.create(user, LocalDate.now(), LocalDate.now().plusDays(1), 10_000));
+                    Challenge.create(user, "테스트 챌린지", LocalDate.now(), LocalDate.now().plusDays(1), 10_000));
             Amount amount = amountRepository.save(
                     Amount.spend(challenge, "x", "x", 100, null, LocalDate.now().atTime(12, 0)));
             MediaFile mediaFile = mediaFileRepository.save(

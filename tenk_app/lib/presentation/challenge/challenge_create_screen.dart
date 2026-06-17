@@ -17,8 +17,12 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   /// 양끝 포함 최대 윈도우 — 백엔드 `Challenge.MAX_DURATION_DAYS = 30`과 일치시킬 것.
   static const _maxDurationDays = 30;
 
+  /// 제어 문자(\p{Cc}) + 형식 문자(\p{Cf}) 거부 — 서버 검증과 동일. 진실의 원천은 서버.
+  static final _forbiddenChars = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
+
   late DateTime _startDate;
   late DateTime _endDate;
+  final _nameController = TextEditingController();
   final _amountController = TextEditingController(text: '10000');
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
@@ -37,6 +41,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _amountController.dispose();
     super.dispose();
   }
@@ -82,6 +87,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
     try {
       // 백엔드는 startDate/endDate를 양끝 포함 날짜로 받는다. 별도 보정 없이 그대로 전달.
       final created = await ChallengeScope.of(context).create(
+        name: _nameController.text,
         startDate: _startDate,
         endDate: _endDate,
         targetAmount: amount,
@@ -112,6 +118,27 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              Text('이름', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nameController,
+                maxLength: 100,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '예: 외식 줄이기 (비우면 자동으로 정해져요)',
+                ),
+                validator: (raw) {
+                  final v = (raw ?? '').trim();
+                  if (v.isEmpty) return null; // 비우면 서버가 기본값 생성
+                  if (v.length > 100) return '이름은 100자 이하로 입력해주세요.';
+                  if (_forbiddenChars.hasMatch(v)) {
+                    return '사용할 수 없는 문자가 포함되어 있어요.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               Text('기간', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Row(

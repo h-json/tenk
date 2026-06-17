@@ -11,6 +11,7 @@ import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.amount.AmountRepository;
 import com.hjson.tenk.domain.badge.ChallengeBadgeRepository;
+import com.hjson.tenk.domain.challenge.dto.ChallengeCreateRequest;
 import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
 import com.hjson.tenk.domain.challenge.event.ChallengeFinishedEvent;
 import com.hjson.tenk.domain.user.AuthProvider;
@@ -55,7 +56,7 @@ class ChallengeServiceTest {
 
     private Challenge ongoingChallenge(long id, int target) {
         LocalDate today = LocalDate.now();
-        Challenge c = Challenge.create(user, today, today.plusDays(3), target);
+        Challenge c = Challenge.create(user, "테스트 챌린지", today, today.plusDays(3), target);
         ReflectionTestUtils.setField(c, "id", id);
         return c;
     }
@@ -63,11 +64,59 @@ class ChallengeServiceTest {
     /** invariant를 거친 도메인 객체를 만든 뒤, "어제 종료된 상태"로 강제 — finalize 분기 검증용. */
     private Challenge finishedChallenge(long id, int target) {
         LocalDate today = LocalDate.now();
-        Challenge c = Challenge.create(user, today, today, target);
+        Challenge c = Challenge.create(user, "테스트 챌린지", today, today, target);
         ReflectionTestUtils.setField(c, "id", id);
         ReflectionTestUtils.setField(c, "startDate", today.minusDays(2));
         ReflectionTestUtils.setField(c, "endDate", today.minusDays(1));
         return c;
+    }
+
+    @Test
+    void create_generates_default_name_when_blank() {
+        LocalDate today = LocalDate.now();
+        given(userService.getActiveUser(100L)).willReturn(user);
+        given(challengeRepository.countByUserAndDeletedFalse(user)).willReturn(2L);
+        given(challengeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        ChallengeResponse response = service.create(100L,
+                new ChallengeCreateRequest("   ", today, today.plusDays(2), 10_000));
+
+        // 삭제분 제외 2개 + 1 → "챌린지 3"
+        assertThat(response.name()).isEqualTo("챌린지 3");
+    }
+
+    @Test
+    void create_uses_provided_name() {
+        LocalDate today = LocalDate.now();
+        given(userService.getActiveUser(100L)).willReturn(user);
+        given(challengeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        ChallengeResponse response = service.create(100L,
+                new ChallengeCreateRequest("여행 비상금", today, today.plusDays(2), 10_000));
+
+        assertThat(response.name()).isEqualTo("여행 비상금");
+    }
+
+    @Test
+    void rename_updates_name_when_not_finalized() {
+        Challenge c = ongoingChallenge(1L, 10_000);
+        given(challengeRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(c));
+
+        ChallengeResponse response = service.rename(100L, 1L, "외식 줄이기");
+
+        assertThat(c.getName()).isEqualTo("외식 줄이기");
+        assertThat(response.name()).isEqualTo("외식 줄이기");
+    }
+
+    @Test
+    void rename_throws_when_already_finalized() {
+        Challenge c = finishedChallenge(1L, 10_000);
+        c.markResult(ChallengeResult.SUCCESS);
+        given(challengeRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(c));
+
+        assertThatThrownBy(() -> service.rename(100L, 1L, "새 이름"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.CHALLENGE_ALREADY_FINISHED);
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.hjson.tenk.common.api.ApiResponse;
 import com.hjson.tenk.domain.challenge.dto.ChallengeCreateRequest;
 import com.hjson.tenk.domain.challenge.dto.ChallengeExportResponse;
 import com.hjson.tenk.domain.challenge.dto.ChallengeResponse;
+import com.hjson.tenk.domain.challenge.dto.ChallengeUpdateRequest;
 import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +49,14 @@ public class ChallengeController {
     public ApiResponse<ChallengeResponse> get(@CurrentUserId Long userId,
                                               @PathVariable Long challengeId) {
         return ApiResponse.ok(challengeService.getOne(userId, challengeId));
+    }
+
+    @Operation(summary = "챌린지 이름 변경 (결과 확정 전까지 가능)")
+    @PatchMapping("/{challengeId}")
+    public ApiResponse<ChallengeResponse> rename(@CurrentUserId Long userId,
+                                                 @PathVariable Long challengeId,
+                                                 @Valid @RequestBody ChallengeUpdateRequest request) {
+        return ApiResponse.ok(challengeService.rename(userId, challengeId, request.name()));
     }
 
     @Operation(summary = "챌린지 결과 확정 (종료된 챌린지 대상)")

@@ -71,6 +71,7 @@ class ResultCardWidget extends StatelessWidget {
             children: [
               _Header(
                 nickname: nickname,
+                name: challenge.name,
                 period: formatPeriod(challenge.startDate, challenge.endDate),
                 muted: _muted,
                 accent: _accent,
@@ -110,12 +111,14 @@ class ResultCardWidget extends StatelessWidget {
 class _Header extends StatelessWidget {
   const _Header({
     required this.nickname,
+    required this.name,
     required this.period,
     required this.muted,
     required this.accent,
   });
 
   final String? nickname;
+  final String name;
   final String period;
   final Color muted;
   final Color accent;
@@ -131,15 +134,28 @@ class _Header extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: accent,
+            color: muted,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
+        Text(
+          name,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: accent,
+            height: 1.15,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
         Text(
           period,
           style: TextStyle(

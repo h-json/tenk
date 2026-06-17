@@ -18,7 +18,7 @@ class AmountTest {
 
     private Challenge fiveDayChallenge() {
         LocalDate today = LocalDate.now();
-        return Challenge.create(user, today, today.plusDays(4), 10_000);
+        return Challenge.create(user, "테스트 챌린지", today, today.plusDays(4), 10_000);
     }
 
     @Test

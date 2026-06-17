@@ -30,6 +30,7 @@ public enum ErrorCode {
     CHALLENGE_NOT_OWNER(HttpStatus.FORBIDDEN, "CH0003", "본인 챌린지가 아닙니다."),
     CHALLENGE_ALREADY_FINISHED(HttpStatus.BAD_REQUEST, "CH0004", "이미 종료된 챌린지입니다."),
     CHALLENGE_NOT_STARTED(HttpStatus.BAD_REQUEST, "CH0005", "아직 시작하지 않은 챌린지입니다."),
+    CHALLENGE_NAME_INVALID(HttpStatus.BAD_REQUEST, "CH0006", "챌린지 이름은 1~100자이며 제어 문자를 포함할 수 없습니다."),
 
     AMOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "A0001", "지출 기록을 찾을 수 없습니다."),
     AMOUNT_INVALID_SPEND_VALUE(HttpStatus.BAD_REQUEST, "A0003", "지출 금액은 0보다 커야 합니다."),
