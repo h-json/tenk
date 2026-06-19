@@ -58,5 +58,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Impeller 비활성화 (Skia 폴백). 삼성 실기기에서 video_player 외부 텍스처가
+             초당 10여 회 깜빡이는 Impeller 렌더링 버그 회피. 디코더/컨트롤러는 정상이고
+             텍스처 합성 단계만 깜빡였음 (logcat: 단일 디코더 정상, 화면 전체 아닌 영상만).
+             flutter run 의 no-enable-impeller 플래그로 원인 확정. 같은 프로젝트에서 Impeller
+             텍스트 깨짐 이슈도 기록됨. Impeller 외부 텍스처 버그가 업스트림에서 고쳐지면 제거 검토. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
     </application>
 </manifest>

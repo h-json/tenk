@@ -10,17 +10,16 @@ class ChallengeApi {
   final Dio _dio;
 
   Future<Challenge> create({
-    String? name,
+    required String name,
     required DateTime startDate,
     required DateTime endDate,
     required int targetAmount,
   }) async {
-    final trimmed = name?.trim();
     final res = await _dio.post(
       '/api/challenges',
       data: {
-        // 비우면 서버가 "챌린지 N" 기본값을 만든다 — 빈 값은 아예 전송하지 않음.
-        if (trimmed != null && trimmed.isNotEmpty) 'name': trimmed,
+        // 이름은 필수 — 클라가 "챌린지 N" 기본값을 미리 채워 항상 전송한다.
+        'name': name.trim(),
         'startDate': _formatDate(startDate),
         'endDate': _formatDate(endDate),
         'targetAmount': targetAmount,

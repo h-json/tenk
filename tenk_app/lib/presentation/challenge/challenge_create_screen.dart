@@ -7,7 +7,11 @@ import '../../data/challenge/challenge.dart';
 import '_formatters.dart';
 
 class ChallengeCreateScreen extends StatefulWidget {
-  const ChallengeCreateScreen({super.key});
+  const ChallengeCreateScreen({super.key, required this.defaultName});
+
+  /// 이름 칸에 미리 채워 둘 기본값 (예: "챌린지 3"). 비울 수 없으므로 사용자는
+  /// 이 값을 그대로 쓰거나 수정한다. 산정은 호출부(목록 화면)가 담당.
+  final String defaultName;
 
   @override
   State<ChallengeCreateScreen> createState() => _ChallengeCreateScreenState();
@@ -22,7 +26,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
 
   late DateTime _startDate;
   late DateTime _endDate;
-  final _nameController = TextEditingController();
+  late final _nameController = TextEditingController(text: widget.defaultName);
   final _amountController = TextEditingController(text: '10000');
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
@@ -126,11 +130,11 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  hintText: '예: 외식 줄이기 (비우면 자동으로 정해져요)',
+                  hintText: '예: 외식 줄이기',
                 ),
                 validator: (raw) {
                   final v = (raw ?? '').trim();
-                  if (v.isEmpty) return null; // 비우면 서버가 기본값 생성
+                  if (v.isEmpty) return '이름을 입력해주세요.';
                   if (v.length > 100) return '이름은 100자 이하로 입력해주세요.';
                   if (_forbiddenChars.hasMatch(v)) {
                     return '사용할 수 없는 문자가 포함되어 있어요.';

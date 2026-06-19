@@ -29,11 +29,15 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
   }
 
   Future<void> _openCreate() async {
+    // 기본 이름 "챌린지 N" — N = 삭제분 제외 현재 챌린지 수 + 1. 서버 목록이 이미
+    // 삭제분을 제외하므로 data.length 가 곧 N-1. (삭제 후 재생성 시 중복 가능하나
+    // 사용자가 자유 편집하는 기본값이라 허용 — handoff/CLAUDE.md "챌린지 이름" 참고)
+    final defaultName = '챌린지 ${(data?.length ?? 0) + 1}';
     // Navigator generic 추론 문제로 pop result가 누락되는 경우가 있어,
     // result 의존 없이 push 종료 시점에 무조건 새로고침. (handoff.md "함정 — Flutter" 참고)
     await Navigator.of(context).push<Challenge>(
       MaterialPageRoute<Challenge>(
-        builder: (_) => const ChallengeCreateScreen(),
+        builder: (_) => ChallengeCreateScreen(defaultName: defaultName),
       ),
     );
     if (!mounted) return;

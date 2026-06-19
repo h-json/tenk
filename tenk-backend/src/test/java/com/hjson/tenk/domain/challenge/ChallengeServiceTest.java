@@ -72,17 +72,15 @@ class ChallengeServiceTest {
     }
 
     @Test
-    void create_generates_default_name_when_blank() {
+    void create_rejects_blank_name() {
         LocalDate today = LocalDate.now();
         given(userService.getActiveUser(100L)).willReturn(user);
-        given(challengeRepository.countByUserAndDeletedFalse(user)).willReturn(2L);
-        given(challengeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        ChallengeResponse response = service.create(100L,
-                new ChallengeCreateRequest("   ", today, today.plusDays(2), 10_000));
-
-        // 삭제분 제외 2개 + 1 → "챌린지 3"
-        assertThat(response.name()).isEqualTo("챌린지 3");
+        // 이름은 필수 — 클라이언트가 "챌린지 N" 기본값을 채워 보낸다. blank 면 엔티티가 거부.
+        assertThatThrownBy(() -> service.create(100L,
+                new ChallengeCreateRequest("   ", today, today.plusDays(2), 10_000)))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.CHALLENGE_NAME_INVALID);
     }
 
     @Test
