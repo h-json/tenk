@@ -3,15 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../data/amount/amount.dart';
 import '../../../data/challenge/challenge.dart';
 import '../_formatters.dart';
-import 'export_compose_screen.dart';
-import 'export_plan.dart';
 import 'export_prefetch_screen.dart';
-import 'export_result_screen.dart';
+import 'export_settings_screen.dart';
 
-/// 챌린지 영상 합본 내보내기 화면 (확정된 챌린지에서만 진입).
+/// 챌린지 영상 합본 내보내기 1단계 — 클립 선택 (확정된 챌린지에서만 진입).
 ///
-/// 단계 1: 합본에 포함할 클립을 고르고 각 자막을 편집. 슬라이스 1에서는 ffmpeg 합성을 호출하지 않고
-/// "다음 단계 구현 예정" 안내까지만 띄운다. 실제 합성은 슬라이스 3에서 붙인다.
+/// 합본에 포함할 클립을 고르고 각 자막을 편집한다. "다음" 을 누르면 합성 설정([ExportSettingsScreen])
+/// 으로 넘어가고, 자막 위치·배경·결과 카드 포함 설정과 실제 합성은 거기서 처리한다.
 ///
 /// **상태는 화면 안에서만 산다** — 자막 편집은 `amount.memo` 를 건드리지 않고 세션 동안만 유지.
 /// 사용자가 화면을 떠나면 사라진다. memo 가 진짜 영구 기억, 여기 comment 는 일회용 오버라이드.
@@ -32,10 +30,6 @@ class ExportScreen extends StatefulWidget {
 class _ExportScreenState extends State<ExportScreen> {
   /// 영상 합본에 들어갈 후보 클립. spentDt ASC 로 정렬 — 실제 합성 순서와 일치하게 보여준다.
   late final List<_Clip> _clips;
-
-  /// 결과 카드를 영상 끝에 3초 정지 화면으로 붙일지. 기본 ON.
-  /// 합성 단계에서 [ResultCardCapture] 로 PNG 캡처 → 마지막 클립으로 concat.
-  bool _includeResultCard = true;
 
   @override
   void initState() {
@@ -88,35 +82,18 @@ class _ExportScreenState extends State<ExportScreen> {
     setState(() => clip.comment = result);
   }
 
-  Future<void> _make() async {
+  Future<void> _next() async {
     final items = _clips
         .where((c) => c.selected)
         .map((c) => ExportPrefetchItem(source: c.source, comment: c.comment))
         .toList(growable: false);
-    final plan = await Navigator.of(context).push<ExportPlan>(
-      MaterialPageRoute<ExportPlan>(
-        builder: (_) => ExportPrefetchScreen(
-          challengeId: widget.challenge.id,
-          items: items,
-        ),
-      ),
-    );
-    if (!mounted || plan == null) return;
-
-    final outputPath = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
-        builder: (_) => ExportComposeScreen(
-          challenge: widget.challenge,
-          amounts: widget.amounts,
-          plan: plan,
-          includeResultCard: _includeResultCard,
-        ),
-      ),
-    );
-    if (!mounted || outputPath == null) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ExportResultScreen(videoPath: outputPath),
+        builder: (_) => ExportSettingsScreen(
+          challenge: widget.challenge,
+          amounts: widget.amounts,
+          items: items,
+        ),
       ),
     );
   }
@@ -158,11 +135,6 @@ class _ExportScreenState extends State<ExportScreen> {
                     selectedCount: selectedCount,
                     totalCount: _clips.length,
                   ),
-                  _ResultCardToggle(
-                    value: _includeResultCard,
-                    onChanged: (v) =>
-                        setState(() => _includeResultCard = v),
-                  ),
                   Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -183,11 +155,11 @@ class _ExportScreenState extends State<ExportScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: FilledButton(
-            onPressed: selectedCount > 0 ? _make : null,
+            onPressed: selectedCount > 0 ? _next : null,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            child: Text('영상 만들기 ($selectedCount개)'),
+            child: Text('다음 ($selectedCount개)'),
           ),
         ),
       ),
@@ -242,53 +214,6 @@ class _HeaderBanner extends StatelessWidget {
             '선택 $selectedCount / 전체 $totalCount',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 영상 끝에 결과 카드를 정지 화면으로 붙일지 토글. 기본 ON 으로 시작 — 끄고 싶은 사용자만 끔.
-class _ResultCardToggle extends StatelessWidget {
-  const _ResultCardToggle({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      color: theme.colorScheme.surfaceContainer,
-      padding: const EdgeInsets.fromLTRB(8, 4, 16, 12),
-      child: Row(
-        children: [
-          Checkbox(
-            value: value,
-            onChanged: (v) => onChanged(v ?? false),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '결과 카드를 영상 끝에 포함',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '챌린지 결과 카드를 3초 정지 화면으로 마지막에 추가해요.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -490,7 +415,7 @@ class _CommentEditSheetState extends State<_CommentEditSheet> {
           Text('자막 편집', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            '영상이 재생될 때 하단에 표시돼요. 저장된 메모는 영향받지 않아요.',
+            '영상이 재생될 때 자막으로 표시돼요. 저장된 메모는 영향받지 않아요.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

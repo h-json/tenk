@@ -22,6 +22,8 @@ class ExportComposeScreen extends StatefulWidget {
     required this.amounts,
     required this.plan,
     required this.includeResultCard,
+    required this.subtitlePosition,
+    required this.subtitleBackground,
   });
 
   final Challenge challenge;
@@ -34,6 +36,12 @@ class ExportComposeScreen extends StatefulWidget {
 
   /// true 면 합성 시작 전 [ResultCardCapture] 로 PNG 캡처 후 마지막 정지 클립(3초)으로 concat.
   final bool includeResultCard;
+
+  /// 자막 세로 위치 (영상 전체 단위). 중단/하단.
+  final SubtitlePosition subtitlePosition;
+
+  /// 자막 배경 박스 여부. true=반투명 박스 + 흰 글자, false=흰 글자 + 검은 외곽선.
+  final bool subtitleBackground;
 
   @override
   State<ExportComposeScreen> createState() => _ExportComposeScreenState();
@@ -106,6 +114,8 @@ class _ExportComposeScreenState extends State<ExportComposeScreen> {
         challengeStartDate: widget.challenge.startDate,
         outputPath: outPath,
         resultCardPngPath: resultCardPngPath,
+        subtitlePosition: widget.subtitlePosition,
+        subtitleBackground: widget.subtitleBackground,
         onPhase: (p) {
           if (mounted) setState(() => _progress = p);
         },

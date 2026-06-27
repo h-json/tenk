@@ -10,6 +10,10 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../presentation/challenge/export/export_plan.dart';
 
+/// 내보낸 영상 자막의 세로 위치. 영상 전체 단위 설정(클립별 아님). 상단은 대시보드(Day N + 잔여)와
+/// 겹쳐서 의도적으로 제외 — 중단/하단만 제공.
+enum SubtitlePosition { middle, bottom }
+
 /// 영상 합본 합성 서비스. ffmpeg_kit_flutter_new_video (LGPL) 위에 얇게 올린 래퍼.
 ///
 /// 파이프라인 (2-pass):
@@ -67,6 +71,8 @@ class VideoComposer {
     required String outputPath,
     required void Function(ComposeProgress progress) onPhase,
     String? resultCardPngPath,
+    SubtitlePosition subtitlePosition = SubtitlePosition.bottom,
+    bool subtitleBackground = true,
   }) async {
     _cancelled = false;
 
@@ -96,6 +102,8 @@ class VideoComposer {
         clip: clip,
         dashboardText: dashboardTexts[i],
         outputPath: outPath,
+        subtitlePosition: subtitlePosition,
+        subtitleBackground: subtitleBackground,
       );
       normalizedPaths.add(outPath);
       clipDurations.add(_clipDurationSec);
@@ -199,6 +207,8 @@ class VideoComposer {
     required ExportClipPlan clip,
     required String dashboardText,
     required String outputPath,
+    required SubtitlePosition subtitlePosition,
+    required bool subtitleBackground,
   }) async {
     // 자막은 Flutter TextPainter 로 PNG 를 만들고 ffmpeg overlay 로 합성한다.
     // 사유: ffmpeg 8.0 drawtext 가 multi-codepoint 한글에서 첫 글리프만 그리고 뒤를 silent drop 시키는
@@ -209,6 +219,8 @@ class VideoComposer {
       dashboardText: dashboardText,
       subtitleText: clip.comment,
       outputPath: textPngPath,
+      subtitlePosition: subtitlePosition,
+      subtitleBackground: subtitleBackground,
     );
 
     final localPath = clip.localVideoPath;
@@ -255,13 +267,18 @@ class VideoComposer {
     await _runFfmpeg(cmd);
   }
 
-  /// 480x864 투명 PNG 위에 대시보드(상단) + 자막(하단) + 반투명 박스를 그려 [outputPath] 에 저장.
-  /// 픽셀 좌표·폰트 크기는 기존 drawtext 와 동일하게 맞춤 (24px top margin, 32px bottom margin,
-  /// dashboard fontsize=28, subtitle fontsize=32, box padding=10, boxcolor=black@0.55).
+  /// 480x864 투명 PNG 위에 대시보드(상단) + 자막을 그려 [outputPath] 에 저장.
+  ///
+  /// 대시보드는 항상 상단 고정 + 반투명 박스(black@0.55). 자막은 [subtitlePosition] 으로 세로 위치를,
+  /// [subtitleBackground] 로 스타일을 고른다 — 배경 있음=반투명 박스 + 흰 글자(외곽선 X, 기존 스타일),
+  /// 배경 없음=흰 글자 + 검은 외곽선(stroke)만(박스 X). 픽셀 좌표·폰트 크기는 기존 drawtext 와 동일
+  /// (24px top margin, 32px bottom margin, dashboard fontsize=28, subtitle fontsize=32, box padding=10).
   Future<void> _renderTextOverlayPng({
     required String dashboardText,
     required String subtitleText,
     required String outputPath,
+    required SubtitlePosition subtitlePosition,
+    required bool subtitleBackground,
   }) async {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(
@@ -274,7 +291,14 @@ class VideoComposer {
       canvas,
       subtitleText,
       fontSize: 32,
-      bottomY: _outHeight - 32,
+      bottomY: subtitlePosition == SubtitlePosition.bottom
+          ? _outHeight - 32
+          : null,
+      centerY: subtitlePosition == SubtitlePosition.middle
+          ? _outHeight / 2
+          : null,
+      withBox: subtitleBackground,
+      withOutline: !subtitleBackground,
     );
 
     final picture = recorder.endRecording();
@@ -296,15 +320,23 @@ class VideoComposer {
     }
   }
 
-  /// 흰 글자 + 반투명 검정 박스. [topY] 또는 [bottomY] 중 하나만 지정 (anchor).
+  /// 흰 글자 텍스트 블록. anchor 는 [topY] / [bottomY] / [centerY] 중 정확히 하나만 지정.
+  ///
+  /// [withBox]=true 면 반투명 검정 박스(black@0.55)를 글자 뒤에 깔고, [withOutline]=true 면 글자에
+  /// 검은 외곽선(stroke)을 둘러 박스 없이도 밝은 배경에서 읽히게 한다. 둘은 보통 배타적으로 쓴다
+  /// (박스 있으면 외곽선 불필요). 대시보드는 항상 withBox:true / withOutline:false 로 호출.
   void _drawTextBlock(
     ui.Canvas canvas,
     String text, {
     required double fontSize,
     double? topY,
     double? bottomY,
+    double? centerY,
+    bool withBox = true,
+    bool withOutline = false,
   }) {
-    assert((topY == null) != (bottomY == null), 'topY 또는 bottomY 둘 중 하나만');
+    final anchors = [topY, bottomY, centerY].where((a) => a != null).length;
+    assert(anchors == 1, 'topY / bottomY / centerY 중 정확히 하나만');
     const padding = 10.0; // drawtext boxborderw=10 과 동일
 
     final painter = TextPainter(
@@ -321,16 +353,51 @@ class VideoComposer {
     painter.layout(maxWidth: _outWidth.toDouble() - 2 * padding - 20);
 
     final textX = (_outWidth - painter.width) / 2;
-    final textY = topY ?? (bottomY! - painter.height);
+    final double textY;
+    if (topY != null) {
+      textY = topY;
+    } else if (bottomY != null) {
+      textY = bottomY - painter.height;
+    } else {
+      textY = centerY! - painter.height / 2;
+    }
 
-    final boxRect = Rect.fromLTWH(
-      textX - padding,
-      textY - padding,
-      painter.width + padding * 2,
-      painter.height + padding * 2,
-    );
-    final boxPaint = Paint()..color = const Color(0x8C000000); // black @ 0.55
-    canvas.drawRect(boxRect, boxPaint);
+    if (withBox) {
+      final boxRect = Rect.fromLTWH(
+        textX - padding,
+        textY - padding,
+        painter.width + padding * 2,
+        painter.height + padding * 2,
+      );
+      final boxPaint = Paint()..color = const Color(0x8C000000); // black @ 0.55
+      canvas.drawRect(boxRect, boxPaint);
+    }
+
+    // 외곽선: 같은 텍스트를 검은 stroke 로 한 번 그린 뒤 흰 fill 을 위에 얹는다 (TextPainter 가
+    // stroke+fill 동시 지원을 안 해서 2-pass). drop shadow 도 같이 줘서 어두운 배경에서도 분리.
+    if (withOutline) {
+      final strokePainter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            fontSize: fontSize,
+            shadows: const [
+              Shadow(color: Color(0xB3000000), blurRadius: 4),
+            ],
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 4
+              ..strokeJoin = StrokeJoin.round
+              ..color = const Color(0xFF000000),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      );
+      strokePainter.layout(maxWidth: _outWidth.toDouble() - 2 * padding - 20);
+      strokePainter.paint(canvas, Offset(textX, textY));
+      strokePainter.dispose();
+    }
 
     painter.paint(canvas, Offset(textX, textY));
     painter.dispose();
