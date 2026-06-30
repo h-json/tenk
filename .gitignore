@@ -40,6 +40,8 @@ out/
 
 ### Tenk ###
 tenk-backend/uploads/
+# 배포용 비밀번호 — 절대 추적 금지 (.env.example 만 커밋)
+deploy/.env
 
 ### Flutter (tenk_app/) ###
 # `flutter create`가 tenk_app/.gitignore를 자체 생성하므로 루트에는 안전망용 최소 항목만 둠
