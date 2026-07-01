@@ -210,3 +210,49 @@ curl -I https://tenk.hjson248.com/v3/api-docs           # 이제 -k 없이 200 (
 - ✅ **주의 요함(mixed content) 해결 — `server.forward-headers-strategy=framework`**: 증상은 인증서는 "유효함" 인데 크롬이 "주의 요함". 원인은 스프링부트가 Traefik 뒤에서 `X-Forwarded-Proto=https` 를 안 믿어 springdoc 이 Swagger `Servers` URL 을 `http://tenk.hjson248.com` 로 생성 → HTTPS 페이지 안 http 참조 = mixed content. 적용 위치 2곳: [application-prod.yaml](../tenk-backend/src/main/resources/application-prod.yaml) `server.forward-headers-strategy: framework`(소스 오브 트루스, 다음 이미지 빌드에 반영) + [deploy/docker-compose.yml](../deploy/docker-compose.yml) `SERVER_FORWARD_HEADERS_STRATEGY=framework` env(**이미지 재빌드 없이** `docker compose up -d` 로 즉시 적용). 검증: `curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'` → `https://tenk.hjson248.com`.
   - **함정 — 맥에서 자기 도메인 curl 이 `status=000`**: 공유기 NAT 헤어핀 미지원이라 맥이 자기 공인 IP 로 loopback 을 못 한다. 실사용자(폰 LTE/외부)는 정상. 맥 로컬 검증은 `--resolve tenk.hjson248.com:443:127.0.0.1` 로 Traefik 을 직접 때려 우회.
 - ⏭ **Flutter base URL 전환(남음)**: 실기기가 이제 `https://tenk.hjson248.com` 로 접속 가능. [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 이 도메인으로 바꾸면 LAN IP/cleartext(`network_security_config.xml`) 의존이 사라진다.
+
+---
+
+## 10. 맥에서 Claude Code 로 운영하기 (operator orientation)
+
+> 이 맥미니(`sonhuijun-ui-Macmini`)가 **tenk 운영 서버 그 자체**다. 여기서 도는 Claude Code 는
+> 윈도우 세션과 달리 **docker 명령을 사람 손 거치지 않고 직접 실행**할 수 있다. 이 절은 맥 Claude Code 가
+> 배포를 이어받을 때의 오리엔테이션이고, **실제 런북·아키텍처·함정은 이 문서 §1~§9 가 진실의 원천**이다.
+
+### 10.1 전제 — 맥 = 서버, 리포 = 소스
+- 맥에서 **직접 실행 가능**: `cd ~/tenk && docker compose ...`, `cd ~/traefik && docker compose ...`, `colima ...`, `docker ...`. 상태 확인·재배포·로그·재기동을 Claude Code 가 바로 수행.
+- **리포의 `deploy/` 가 소스 오브 트루스, 맥의 배포 폴더는 그 복사본**이다. 구성을 바꿀 땐 **리포에서 고치고 → 맥으로 복사 → `up -d`**. 맥의 파일을 직접 손대면 리포와 드리프트하니 하지 말 것(급하면 고친 뒤 반드시 리포에 역반영).
+
+### 10.2 맥 로컬 레이아웃 (비-git, 머신 고유)
+```
+~/tenk/                     # tenk 앱 스택 (리포 deploy/ 의 복사본)
+  ├─ docker-compose.yml     # = 리포 deploy/docker-compose.yml
+  ├─ schema.sql             # = 리포 docs/schema.sql
+  └─ .env                   # DB_PASSWORD/DB_ROOT_PASSWORD (커밋 금지, 맥에만)
+~/traefik/                  # 공유 엣지 스택 (리포 deploy/traefik/ 의 복사본)
+  ├─ docker-compose.yml     # = 리포 deploy/traefik/docker-compose.yml
+  └─ letsencrypt/acme.json  # 발급된 LE 인증서 (영속 볼륨, 백업 가치 있음 — 지우면 재발급)
+```
+- 두 스택은 external 네트워크 `web` 로 연결(사전 `docker network create web` 1회). 상세 §9.
+- **이미지 소스코드는 맥에 없다**(§2 "clean server" 원칙). 코드 변경 재배포는 이미지 재빌드가 필요 → §10.4.
+
+### 10.3 첫 진입 루틴 (상태부터 확인, 하드코딩된 상태를 믿지 말 것)
+```bash
+docker compose -f ~/tenk/docker-compose.yml ps        # backend/db 상태
+docker compose -f ~/traefik/docker-compose.yml ps     # traefik 상태
+colima status && docker context show                  # VM·컨텍스트(=colima)
+# 전체 경로(Traefik→backend, X-Forwarded-Proto 포함) 로컬 검증 — NAT 헤어핀 우회
+curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'
+```
+기대값: 컨테이너 3개 Up, 마지막 curl 이 `https://tenk.hjson248.com`. 어긋나면 §6 트러블슈팅 / §9.
+
+### 10.4 자주 하는 운영 (요약 — 상세는 §5·§9)
+- **설정만 바뀜(compose/env/schema)**: 리포에서 수정 → 해당 파일 맥으로 복사(scp/붙여넣기) → `cd ~/tenk && docker compose up -d`(env 바뀌면 컨테이너 재생성). **이미지 재빌드 불필요.**
+- **코드가 바뀜**: 윈도우에서 `docker buildx build --platform linux/arm64 -t hjson248/tenk:latest --push .`(§5.1) → 맥 `cd ~/tenk && docker compose pull && docker compose up -d`. (맥엔 소스가 없어 맥 Claude Code 는 빌드 못 함 — 빌드는 윈도우 세션 담당.)
+- **로그/재기동**: `docker compose logs -f backend|traefik`, `docker compose restart <svc>`.
+- **인증서**: prod 활성. staging 으로 되돌려 흐름만 볼 땐 §9.5 4)/§9.6, `acme.json` 지우면 재발급(prod rate limit 주의).
+
+### 10.5 맥 Claude Code 를 쓰려면 (사용자용)
+- 이 리포를 맥에도 **클론**해 두면(빌드 도구가 아니라 ops 참조용이라 "clean server" 원칙과 무관) Claude Code 가 이 문서·`deploy/` 소스를 다 보고 `~/tenk/`·`~/traefik/` 와 대조·동기화까지 해준다. 클론 위치는 자유(예: `~/code/tenk`).
+- 킥오프 프롬프트 예시는 리포 [README](../README.md)/이 문서를 가리키게. 맥 세션 첫 메시지로:
+  *"나는 이 맥에서 tenk 를 운영해. `docs/docker-deployment.md` §10 먼저 읽고 현재 배포 상태를 확인(§10.3)한 다음 이어서 도와줘."*
