@@ -4,8 +4,10 @@
 #
 # 맥에 둘 파일은 이 폴더 기준 2개뿐:
 #   - docker-compose.yml  (이 파일)
-#   - schema.sql          (리포의 docs/schema.sql 을 같은 폴더에 복사)
+#   - schema.sql          (리포의 docs/schema.sql 을 같은 폴더에 복사 — dbinit 볼륨 시드 원본)
 #   + .env                (.env.example 복사 후 비밀번호 채움)
+
+name: tenk
 
 services:
   db:
@@ -24,7 +26,9 @@ services:
     volumes:
       - db-data:/var/lib/mysql
       # 첫 기동(빈 데이터 디렉토리)일 때만 자동 실행 → tenk 스키마 + 배지 마스터 데이터 적재.
-      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # ~/Documents 밑은 macOS TCC 로 bind mount 불가라 named volume(dbinit) 사용.
+      # dbinit 는 schema.sql 을 01-schema.sql 로 담아 시딩해 둠(리포 docs/schema.sql = 원본).
+      - dbinit:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -70,7 +74,7 @@ services:
       # 업로드된 영상은 컨테이너가 지워져도 보존되게 named volume 에.
       - uploads:/app/uploads
 
-# web 은 Traefik 스택(~/traefik/)과 공유하는 external 네트워크.
+# web 은 Traefik 스택(reverse-proxy/docker-compose.yml)과 공유하는 external 네트워크.
 # 사전에 한 번:  docker network create web
 networks:
   web:
@@ -81,3 +85,4 @@ networks:
 volumes:
   db-data:
   uploads:
+  dbinit:   # schema.sql(→01-schema.sql) 시딩. ~/Documents bind mount 회피용.

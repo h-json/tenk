@@ -1,59 +1,67 @@
-# Traefik 리버스 프록시 — 공유 엣지 스택 (독립 실행).
+# Traefik 공유 엣지(리버스 프록시) 스택 — 모든 앱 위에 걸치는 독립 스택.
 #
-# 이 스택은 tenk 전용이 아니라 "맥에 올라가는 모든 앱 위에 걸치는 공유 엣지"다.
-# 그래서 tenk compose 와 분리해 맥의 ~/traefik/ 에서 따로 띄운다.
-# (tenk 를 재배포해도 이 프록시는 안 죽어야 다른 앱 트래픽이 안 끊긴다.)
+# 이 스택은 tenk 를 포함한 모든 앱의 "외부 진입 + Host 라우팅 + 자동 TLS" 를 담당한다.
+# tenk compose 와 분리해 둬서 tenk 재배포가 다른 앱 트래픽을 끊지 않는다.
 #
-# 앱들은 공유 external 네트워크 `web` 에 join 하고, 각자 라벨로 라우팅을 선언한다.
-# 이 파일 자체엔 앱별 설정이 전혀 없다 — 앱을 추가해도 여기는 안 건드린다.
+# 앱들은 공유 external 네트워크 `web` 에 join 하고, 각 앱이 라우팅을 라벨로 선언한다.
+# 즉 새 앱을 붙여도 이 파일은 수정하지 않고, 앱 compose 에 라벨 4~5줄만 추가한다.
 #
-# 맥에 둘 것: 이 파일 하나 (~/traefik/docker-compose.yml). letsencrypt/ 볼륨은 자동 생성.
-# 사전 준비(한 번): docker network create web
+# 폴더: reverse-proxy 스택 = 맥 ~/Documents/projects/claude/reverse-proxy/.
+# 사전 준비(1회): docker network create web
 #
-# ── Traefik 버전 주의 (Docker 29 호환) ────────────────────────────────
-#  Docker Engine 29.0(2025-11)부터 최소 도커 API 버전이 1.44 로 올라갔다.
-#  Traefik 3.6.1 미만은 옛 SDK(API 1.24)로 접속해 데몬이
-#  "client version 1.24 is too old" 로 거부한다(도커 프로바이더가 라벨을 못 읽음).
-#  3.6.1+ 는 자동 버전 협상이 들어가 해결됨. Colima 는 Docker 29 계열이므로 3.6.1+ 필수.
+# ── acme.json 저장은 named volume(traefik_letsencrypt) ──
+#  bind mount(./letsencrypt)를 쓰지 않는 이유: 이 폴더가 ~/Documents 밑이라
+#  macOS TCC 보호로 Colima VM 이 그 경로를 mount 못 함(operation not permitted).
+#  그래서 인증서는 docker named volume 에 보존한다. 백업은 `docker cp` 로.
 #
-# ── ACME: prod 활성 (2026-07-01 staging 검증 후 prod 전환 완료) ──────────
-#  아래 caserver 줄이 주석 처리돼 기본값(Let's Encrypt prod)으로 발급한다.
-#  다시 staging 으로 흐름만 검증하려면: caserver 줄 주석 해제 → rm ./letsencrypt/acme.json
-#  → docker compose up -d --force-recreate (staging 인증서는 브라우저 "신뢰 안 함"이 정상).
+# ── Traefik 버전 함정 (Docker 29 호환) ──
+#  Docker Engine 29.0(2025-11)이 최소 도커 API 를 1.44 로 올렸다.
+#  Traefik 3.6.1 미만은 옛 SDK(API 1.24)로 접속해 데몬이 거부하며
+#  "client version 1.24 is too old" 가 무한 반복(라우팅 하나도 안 잡힘).
+#  3.6.1+ 는 자동 API 버전 협상이 들어가 근본 해결. Colima 는 Docker 29 계열이라 3.6.1+ 필수.
+#
+# ── staging → prod 전환 (첫 발급 흐름 검증 후) ──
+#  1) 아래 `--certificatesresolvers.le.acme.caserver=...staging...` 줄을 추가해 흐름 검증
+#  2) 검증되면 그 줄 제거 + prod 인증서 재발급: named volume 의 acme.json 을 비우고
+#  3) docker compose up -d --force-recreate
+#  staging 인증서는 브라우저가 "신뢰 안 함" 으로 뜨는 게 정상(락아웃 회피용).
+
+name: traefik
 
 services:
   traefik:
     image: traefik:v3.6.1
     restart: unless-stopped
     command:
-      # ── 도커 프로바이더: 컨테이너 라벨을 읽어 라우팅 자동 발견 ──
+      # 도커 라벨 프로바이더: 실행 중인 컨테이너 라벨로 라우팅 자동 발견
       - --providers.docker=true
-      - --providers.docker.exposedbydefault=false   # traefik.enable=true 붙은 것만 노출
+      - --providers.docker.exposedbydefault=false   # traefik.enable=true 인 것만 노출
       - --providers.docker.network=web
-      # ── 엔트리포인트 ──
+      # 엔트리포인트 정의
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       # http(:80) → https(:443) 전역 리다이렉트
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
-      # ── Let's Encrypt (ACME HTTP-01) ──
+      # Let's Encrypt (ACME HTTP-01) 자동 발급
       - --certificatesresolvers.le.acme.httpchallenge=true
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.le.acme.email=h.json248@gmail.com
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
-      # prod 발급(기본값). 아래 staging 줄은 흐름 검증용 — 필요 시 주석 해제. 파일 상단 안내 참고.
-      # - --certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # 라벨을 읽으려면 도커 소켓 필요(읽기 전용).
+      # 도커 라벨을 읽기 위해 소켓을 읽기전용 마운트.
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # 발급받은 인증서 영속화 — 재기동해도 재발급 안 하게.
-      - ./letsencrypt:/letsencrypt
+      # 발급된 인증서(acme.json)를 named volume 에 보존.
+      - letsencrypt:/letsencrypt
     networks:
       - web
 
 networks:
   web:
     external: true
+
+volumes:
+  letsencrypt:
