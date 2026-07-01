@@ -74,8 +74,9 @@ services:
       # 업로드된 영상은 컨테이너가 지워져도 보존되게 named volume 에.
       - uploads:/app/uploads
 
-# web 은 Traefik 스택(reverse-proxy/docker-compose.yml)과 공유하는 external 네트워크.
-# 사전에 한 번:  docker network create web
+# web 은 리버스 프록시 공유 엣지(별도 리포 `reverse-proxy`)와 공유하는 external 네트워크.
+# 그 엣지 스택이 이 네트워크를 만들고 소유한다. 사전에 한 번:  docker network create web
+# tenk 는 여기에 join + backend 라벨로 라우팅만 선언한다(엣지 파일은 안 건드림).
 networks:
   web:
     external: true
