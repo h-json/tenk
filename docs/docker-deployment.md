@@ -252,7 +252,9 @@ curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/a
 - **로그/재기동**: `docker compose logs -f backend|traefik`, `docker compose restart <svc>`.
 - **인증서**: prod 활성. staging 으로 되돌려 흐름만 볼 땐 §9.5 4)/§9.6, `acme.json` 지우면 재발급(prod rate limit 주의).
 
-### 10.5 맥 Claude Code 를 쓰려면 (사용자용)
-- 이 리포를 맥에도 **클론**해 두면(빌드 도구가 아니라 ops 참조용이라 "clean server" 원칙과 무관) Claude Code 가 이 문서·`deploy/` 소스를 다 보고 `~/tenk/`·`~/traefik/` 와 대조·동기화까지 해준다. 클론 위치는 자유(예: `~/code/tenk`).
-- 킥오프 프롬프트 예시는 리포 [README](../README.md)/이 문서를 가리키게. 맥 세션 첫 메시지로:
-  *"나는 이 맥에서 tenk 를 운영해. `docs/docker-deployment.md` §10 먼저 읽고 현재 배포 상태를 확인(§10.3)한 다음 이어서 도와줘."*
+### 10.5 맥에 둘 것 — 배포 설정만, 앱 소스는 안 둔다
+- **모노레포를 통째로 클론하지 않는다.** 그러면 서버에 앱 소스가 올라가 Docker "clean server" 원칙(§2)이 깨진다 — 도커로 이미지만 받아 돌리는 의미가 사라진다. 맥에는 **배포 설정(§10.2 의 `~/tenk`·`~/traefik`)만** 둔다.
+- 맥 Claude Code 가 컨텍스트를 가지려면 **이 런북 한 파일만 맥으로 복사**한다(compose 파일을 맥으로 복사하는 것과 똑같은 흐름). 예: 이 문서를 `~/tenk/RUNBOOK.md` 로 복사. 소스-상대 링크(`../tenk-backend/...`)는 서버에 소스가 없어 안 열리지만, 명령·아키텍처·함정 본문은 그대로 유효하다.
+- **킥오프**(맥 `~/tenk/` 에서 `claude` 실행 후 첫 메시지):
+  *"나는 이 맥에서 tenk 를 운영해. 여기 `RUNBOOK.md` 의 §10 을 먼저 읽고 §10.3 으로 현재 배포 상태를 확인한 다음 이어서 도와줘. 서버엔 앱 소스가 없고 배포 설정(`~/tenk`·`~/traefik`)만 있다."*
+- **설정을 git 으로 버전관리하고 싶으면(선택)**: `deploy/` 만 담는 **별도 `tenk-deploy` 리포**로 분리하거나, 모노레포를 `deploy/` 경로만 **sparse-checkout**. 둘 다 앱 소스는 안 내려오면서 맥에서 설정 변경을 commit/push 할 수 있다. 셋업 품이 더 드니 필요해질 때 도입.
