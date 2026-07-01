@@ -51,6 +51,10 @@ services:
       SPRING_DATASOURCE_USERNAME: tenk
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       TENK_UPLOAD_DIR: /app/uploads
+      # Traefik(443, TLS 종단) 뒤라서 X-Forwarded-Proto=https 를 신뢰해야 Swagger 가
+      # https 서버 URL 을 만든다. 안 켜면 mixed content 로 "주의 요함" 표시.
+      # (application-prod.yaml 에도 있지만, 이미지 재빌드 없이 즉시 적용되게 env 로도 둠.)
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
     # 외부 접속은 Traefik(443)이 담당. 8080 퍼블리시는 맥 로컬 curl 헬스체크 전용
     # (라우터에서 8080 은 포워딩 안 하므로 인터넷엔 안 열린다).
     ports:

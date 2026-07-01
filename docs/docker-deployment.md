@@ -11,7 +11,7 @@
 
 - ✅ **tenk 백엔드가 M1 맥미니에 컨테이너로 LIVE.** "윈도우 빌드 → Docker Hub → 맥 pull"(경로 B) 완주.
 - ✅ **재부팅 생존 검증 완료** (2026-07-01): Colima autostart(`brew services`) + 자동 로그인 + compose restart policy. 실제 `sudo reboot` 후 무인으로 backend 복귀 확인.
-- ⏭ **다음 작업(진행 중)**: 폰에서 **외부 어디서나 접속 + HTTPS**. 경로 = **Traefik 리버스 프록시(포트포워딩 + Let's Encrypt 자동 TLS)**. 도메인·DNS·CGNAT·포트포워딩 전제 확인 완료. **Traefik 독립 스택(`~/traefik/`) 기동 성공** (2026-07-01, `v3.6.1` — Docker 29 API 버전 삽질 해결, §9.4 교훈). **남은 것**: tenk 스택에 라벨/네트워크 반영 → ACME staging 발급 검증 → prod 전환. 상세 §9.5.
+- ✅ **외부 어디서나 접속 + HTTPS LIVE** (2026-07-01): **Traefik 리버스 프록시(`~/traefik/` 독립 스택, `v3.6.1`) + Let's Encrypt prod 인증서**. `https://tenk.hjson248.com` 폰(LTE)·PC 브라우저 접속 확인. 흐름: staging 발급 검증 → prod 전환(caserver staging 줄 제거 → `rm acme.json` → force-recreate) 완료. **주의 요함(mixed content) 해결**: 스프링부트가 Traefik 의 `X-Forwarded-Proto=https` 를 신뢰하도록 `server.forward-headers-strategy=framework` 적용 — 안 하면 springdoc 이 `http://` 서버 URL 을 만들어 HTTPS 페이지가 "주의 요함". 상세 §9.5·§9.6.
 
 ---
 
@@ -119,7 +119,7 @@ docker compose up -d
 ## 7. 다음 단계
 
 - [x] **폰 접속 방향 결정 (2026-07-01)** — **(나) 외부 어디서나 + HTTPS** 로 결정. 리버스 프록시는 **Traefik**. 근거·아키텍처 §9.
-- [ ] **Traefik 리버스 프록시 + 자동 HTTPS 구축 (진행 중)** — §9 아키텍처대로 Traefik 독립 스택 → tenk 라벨 연결 → `https://tenk.hjson248.com` 검증.
+- [x] **Traefik 리버스 프록시 + 자동 HTTPS 구축 (2026-07-01 완료)** — Traefik 독립 스택 → tenk 라벨 연결 → LE prod 인증서 → `https://tenk.hjson248.com` 검증. `forward-headers-strategy` 로 mixed content("주의 요함")까지 해결. §9.5·§9.6.
 - [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
 - 운영 향후(범위 밖): 회원 탈퇴 hard-delete cascade + 개인정보처리방침 → [handoff.md](handoff.md) "운영 고려사항".
 
@@ -205,6 +205,8 @@ docker compose logs -f traefik      # prod 발급 로그 확인
 curl -I https://tenk.hjson248.com/v3/api-docs           # 이제 -k 없이 200 (신뢰됨)
 ```
 
-### 9.6 검증 후 마무리 (prod TLS 성공 시)
-- **Flutter base URL 전환**: 실기기가 이제 `https://tenk.hjson248.com` 로 접속 가능. [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 이 도메인으로. LAN IP/cleartext(`network_security_config.xml`) 의존이 사라져 셋업이 단순해진다.
-- **문서 갱신**: §1·§7 체크박스를 완료로, `⏭ 진행 중` 을 실제 상태로.
+### 9.6 검증 후 마무리 (prod TLS 성공 — 2026-07-01)
+- ✅ **prod 인증서 발급 확인**: 브라우저 인증서 뷰어 발급기관 `Let's Encrypt (CN=YR2)`, 90일 유효(7/1~9/29). staging 이면 "STAGING"/"Fake LE" 로 떴을 것.
+- ✅ **주의 요함(mixed content) 해결 — `server.forward-headers-strategy=framework`**: 증상은 인증서는 "유효함" 인데 크롬이 "주의 요함". 원인은 스프링부트가 Traefik 뒤에서 `X-Forwarded-Proto=https` 를 안 믿어 springdoc 이 Swagger `Servers` URL 을 `http://tenk.hjson248.com` 로 생성 → HTTPS 페이지 안 http 참조 = mixed content. 적용 위치 2곳: [application-prod.yaml](../tenk-backend/src/main/resources/application-prod.yaml) `server.forward-headers-strategy: framework`(소스 오브 트루스, 다음 이미지 빌드에 반영) + [deploy/docker-compose.yml](../deploy/docker-compose.yml) `SERVER_FORWARD_HEADERS_STRATEGY=framework` env(**이미지 재빌드 없이** `docker compose up -d` 로 즉시 적용). 검증: `curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'` → `https://tenk.hjson248.com`.
+  - **함정 — 맥에서 자기 도메인 curl 이 `status=000`**: 공유기 NAT 헤어핀 미지원이라 맥이 자기 공인 IP 로 loopback 을 못 한다. 실사용자(폰 LTE/외부)는 정상. 맥 로컬 검증은 `--resolve tenk.hjson248.com:443:127.0.0.1` 로 Traefik 을 직접 때려 우회.
+- ⏭ **Flutter base URL 전환(남음)**: 실기기가 이제 `https://tenk.hjson248.com` 로 접속 가능. [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 이 도메인으로 바꾸면 LAN IP/cleartext(`network_security_config.xml`) 의존이 사라진다.

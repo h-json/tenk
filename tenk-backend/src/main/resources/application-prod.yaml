@@ -6,6 +6,12 @@ spring:
     username: TODO_PROD_USER
     password: TODO_PROD_PASSWORD
 
+# Traefik 리버스 프록시 뒤에 있으므로 X-Forwarded-* 헤더(특히 Proto=https)를 신뢰한다.
+# 없으면 springdoc/Swagger 가 내부 요청 스킴(http)으로 서버 URL을 만들어 mixed content →
+# HTTPS 페이지가 "주의 요함" 으로 표시된다. prod 전용(로컬은 프록시 없음).
+server:
+  forward-headers-strategy: framework
+
 tenk:
   auth:
     jwt:

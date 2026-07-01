@@ -16,11 +16,10 @@
 #  "client version 1.24 is too old" 로 거부한다(도커 프로바이더가 라벨을 못 읽음).
 #  3.6.1+ 는 자동 버전 협상이 들어가 해결됨. Colima 는 Docker 29 계열이므로 3.6.1+ 필수.
 #
-# ── staging → prod 전환 (첫 발급 검증 후) ─────────────────────────────
-#  1) 아래 `--certificatesresolvers.le.acme.caserver=...staging...` 줄을 지우거나 주석 처리
-#  2) 스테이징 인증서를 지워 prod 재발급 유도:  rm ./letsencrypt/acme.json
-#  3) docker compose up -d --force-recreate
-#  staging 인증서는 브라우저가 "신뢰 안 함"으로 뜨는 게 정상 — 흐름만 검증하는 용도.
+# ── ACME: prod 활성 (2026-07-01 staging 검증 후 prod 전환 완료) ──────────
+#  아래 caserver 줄이 주석 처리돼 기본값(Let's Encrypt prod)으로 발급한다.
+#  다시 staging 으로 흐름만 검증하려면: caserver 줄 주석 해제 → rm ./letsencrypt/acme.json
+#  → docker compose up -d --force-recreate (staging 인증서는 브라우저 "신뢰 안 함"이 정상).
 
 services:
   traefik:
@@ -42,8 +41,8 @@ services:
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.le.acme.email=h.json248@gmail.com
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
-      # 첫 발급은 staging 으로 흐름 검증. prod 전환은 파일 상단 안내 참고.
-      - --certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+      # prod 발급(기본값). 아래 staging 줄은 흐름 검증용 — 필요 시 주석 해제. 파일 상단 안내 참고.
+      # - --certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
     ports:
       - "80:80"
       - "443:443"
