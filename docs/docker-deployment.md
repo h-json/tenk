@@ -1,11 +1,9 @@
-# Tenk 백엔드 — Docker 배포 & 강의 문서
+# Tenk 백엔드 — Docker 배포 문서
 
-> 이 문서는 두 역할을 한다.
-> 1. **배포 운영 런북** — tenk 백엔드가 맥 서버에 어떻게 떠 있는지, 업데이트·재부팅·문제해결을 어떻게 하는지.
-> 2. **Docker 1:1 강의 재개 지점** — "도커 강의 이어서" 류 요청 시 이 문서를 읽고 아래 **§7 강의 상태**부터 재개.
+> tenk 백엔드가 맥 서버에 어떻게 떠 있는지, 업데이트·재부팅·문제해결을 어떻게 하는지에 대한 **배포 운영 런북**.
 >
-> 강의 시작 2026-06-29 · 배포 완료 2026-06-30.
-> **갱신 규칙**: 배포 구성/명령/좌표가 바뀌거나 강의 진도·결정이 바뀌면 **같은 턴에 이 문서도 갱신**할 것. 일시적 진행상태가 아니라 영구 규칙·구조·런북을 담는다.
+> 배포 완료 2026-06-30.
+> **갱신 규칙**: 배포 구성/명령/좌표가 바뀌면 **같은 턴에 이 문서도 갱신**할 것. 일시적 진행상태가 아니라 영구 규칙·구조·런북을 담는다.
 
 ---
 
@@ -13,8 +11,7 @@
 
 - ✅ **tenk 백엔드가 M1 맥미니에 컨테이너로 LIVE.** "윈도우 빌드 → Docker Hub → 맥 pull"(경로 B) 완주.
 - ✅ **재부팅 생존 검증 완료** (2026-07-01): Colima autostart(`brew services`) + 자동 로그인 + compose restart policy. 실제 `sudo reboot` 후 무인으로 backend 복귀 확인.
-- ⏭ **다음 본선**: 폰에서 접속 — (가) Wi-Fi 내부 / (나) 외부+HTTPS. **미결정**.
-- ⏸ **개념 강의(멀티스테이지 심화 등)는 분리·보류.** 배포부터 끝내기로 합의. §7.4 참고.
+- ⏭ **다음 작업(진행 중)**: 폰에서 **외부 어디서나 접속 + HTTPS**. 경로 = **Traefik 리버스 프록시(포트포워딩 + Let's Encrypt 자동 TLS)**. 도메인·DNS·CGNAT·포트포워딩 전제 확인 완료. **Traefik 독립 스택(`~/traefik/`) 기동 성공** (2026-07-01, `v3.6.1` — Docker 29 API 버전 삽질 해결, §9.4 교훈). **남은 것**: tenk 스택에 라벨/네트워크 반영 → ACME staging 발급 검증 → prod 전환. 상세 §9.5.
 
 ---
 
@@ -115,52 +112,99 @@ docker compose up -d
 | `docker`가 `/var/run/docker.sock` 못 찾음 | 활성 context가 `default`로 튕김 → `docker context use colima` (한 번, `~/.docker`에 영구 저장). |
 | `/v3/api-docs` 500 (`NoSuchMethodError: ControllerAdviceBean.<init>`) | springdoc 2.6.0은 Spring Boot 3용. Spring Boot 4=Spring Framework 7엔 **springdoc 3.0.x**. → `build.gradle` `3.0.3`로 올림(완료). |
 | 로그 `Using generated security password` 경고 | stateless JWT + 커스텀 SecurityConfig라 그 기본 유저는 안 쓰임. **무해**(로컬과 동일). |
+| Traefik 로그 `client version 1.24 is too old` 무한 반복 + 라우팅 안 잡힘 | **Docker Engine 29.0(2025-11)이 최소 도커 API 를 1.44 로 올려** Traefik 3.6.1 미만의 옛 SDK(API 1.24)가 데몬에 거부당함(도커 프로바이더가 라벨을 못 읽음). → **Traefik 을 `v3.6.1`+ 로 올리면 해결**(자동 버전 협상 포함). Colima 는 Docker 29 계열이라 필수. **❌ 안 통한 우회들**: `DOCKER_API_VERSION=1.54` env(Traefik 이 안 읽음), docker-socket-proxy(요청 URL 의 `/v1.24/` 를 그대로 전달해 동일 거부). 상세 §9.4. |
 
 ---
 
-## 7. 강의 상태 & 방식
+## 7. 다음 단계
 
-### 7.1 목표 (우선순위)
-1. **(진짜 목표) 사용자가 혼자서 Docker를 다루는 독립 역량** — Dockerfile을 도움 없이 작성.
-2. **(부수, 달성) tenk 백엔드를 M1 맥에 배포.** iOS 빌드도 같은 맥.
-
-### 7.2 교육 방식 (반드시 지킬 것)
-- **개념**: 강의식 — 비유·AWS 매핑·"왜/원리". 사용자가 이 방식에 만족.
-- **"만드는 법"보다 "언제·왜·용도"를 먼저** (사용자 명시 요청). 산출물 작성법 전에 *언제 만들고 / 왜 / 뭐에 쓰는지*부터. 아는 것(`pull httpd`, `-v` 볼륨)에서 다리 놓기. → `feedback_situate_in_common_best_practice`
-- **실습**: 학생이 직접 산출물 작성, 나는 Socratic 코치. 완성본 떠먹이지 말 것. → `feedback_teaching_hands_on_student_authors`
-- **맥락 항상 제시**: 표준인지/특수케이스인지/더 나은 법.
-- **한 번에 하나씩.** 압도 금지. 명령은 하나씩 주고 결과 확인 후 다음.
-
-### 7.3 사용자 이해 수준
-- **AWS 경험 풍부**: EC2/AMI/ECR, cgroup·namespace 등 시스템 개념 익숙. 비유는 AWS로 들면 잘 통함(이미지↔AMI, 컨테이너↔EC2, 레지스트리↔ECR).
-- **외부 강의(경로 A)를 병행**: httpd 예제로 `run`/`ps`/`stop`/`start`/`logs`/`rm`/`-p` 포트포워딩/`exec -it`/`-v` 볼륨까지 익힘 = 컨테이너 CLI 손맛 완료. 이 강의(경로 B = 배포 직행)는 그 위 2층. **둘은 충돌 아니라 상호보완**(한때 "전혀 다른 방향"이라 혼란 → 정리됨).
-- **이미 잡은 멘탈모델**: 이미지/컨테이너/레지스트리, 포트포워딩, 볼륨, 맥/윈도우의 리눅스 VM 구조, arm64/amd64, **Colima=진짜 도커**, **Dockerfile = 내 앱을 *어디서든 pull해서 도는 이미지*로 굽는 레시피(소비자→생산자 전환)**, 멀티스테이지의 동기(빌드환경 ≠ 실행환경).
-- **주의**: 한 번에 쏟으면 압도("갑자기 어려워졌어"). buildx/`$BUILDPLATFORM` 같은 건 단계적으로.
-
-### 7.4 보류된 개념 강의 토픽 (배포 일단락 후 따로)
-사용자가 "개념 강의 이어서" 류로 원할 때 재개. 멈춘 지점:
-- **멀티스테이지 심화 실습** — 학생이 Dockerfile을 직접 재작성하던 중 중단. **멈춘 질문**: ① 2단계 `FROM`이 왜 JDK 아닌 JRE인지 ② "삭제 명령을 안 썼는데 JDK·Gradle·소스는 최종 이미지에서 어디로 사라지나"(= 앞 스테이지는 최종 이미지에 안 실림). 개념 설명(왜 분리/COPY --from/언제 쓰나)은 이미 1회 강의함.
-- 레이어 캐싱, buildx·`$BUILDPLATFORM` 원리, `docker compose` 개념 정리(이미 실사용 중), HTTPS/리버스 프록시(Caddy).
-- **보너스(시점 봐서)**: Spring Boot buildpacks(`./gradlew bootBuildImage`, Dockerfile 없이 이미지), layered jar(캐싱 최적화).
-
-### 7.5 독립용 사고 틀 (Dockerfile 작성 5질문) — 가르친 것
-1. 최종적으로 뭘 실행? → 최소 런타임 베이스(`FROM`)
-2. 산출물 만드는 도구 ≠ 실행 도구? → 다르면 멀티스테이지
-3. 파일 넣는 순서 → 안 바뀌는 것 위, 자주 바뀌는 것 아래(캐싱)
-4. 실행에 필요한 정보 → 포트(`EXPOSE`)/환경변수(`ENV`)/시작 명령(`ENTRYPOINT`)
-5. 빌드에 안 보낼 것 → `.dockerignore`
-
----
-
-## 8. 다음 단계
-
-- [ ] **폰 접속 방향 결정** — (가) 같은 Wi-Fi 내부 테스트(`http://<맥 LAN IP>:8080` + [network_security_config.xml](../tenk_app/android/app/src/main/res/xml/network_security_config.xml)에 IP 추가) vs (나) 외부 어디서나 + HTTPS(도메인 + Caddy 리버스 프록시).
+- [x] **폰 접속 방향 결정 (2026-07-01)** — **(나) 외부 어디서나 + HTTPS** 로 결정. 리버스 프록시는 **Traefik**. 근거·아키텍처 §9.
+- [ ] **Traefik 리버스 프록시 + 자동 HTTPS 구축 (진행 중)** — §9 아키텍처대로 Traefik 독립 스택 → tenk 라벨 연결 → `https://tenk.hjson248.com` 검증.
 - [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
-- [ ] 개념 강의 재개(멀티스테이지부터) — 사용자가 원할 때.
 - 운영 향후(범위 밖): 회원 탈퇴 hard-delete cascade + 개인정보처리방침 → [handoff.md](handoff.md) "운영 고려사항".
 
-## 9. 기술 사실 (강의 중 확정)
+## 8. 기술 사실
 
 - 백엔드: Spring Boot **4.0.6** / Java 21 / Gradle wrapper. 산출물 `build/libs/tenk-0.0.1-SNAPSHOT.jar`.
 - 빌드 시 **테스트 제외** 필수 → `bootJar`만(`build` 아님). 통합테스트가 실제 MariaDB를 요구해 빌드 컨테이너에선 못 돎.
 - DB는 컨테이너(`mariadb:11`). 맥 1대 self-host라 컨테이너 DB가 합리적. `ddl-auto=validate`라 schema.sql 선적용 필수 → compose가 init 스크립트로 자동 처리.
+
+---
+
+## 9. 외부 접속 + HTTPS (진행 중) — Traefik 리버스 프록시
+
+> 여기부터는 **결정·확인된 사실 + 목표 아키텍처**. 실제 구축은 진행 중.
+
+### 9.1 결정 (2026-07-01)
+- **폰에서 어디서나 접속 + HTTPS** 로 방향 확정. Wi-Fi 내부 접속안은 폐기 — 외부가 상위집합이라 별도로 안 함.
+- **도달성(reachability)**: 공유기 **포트포워딩(80·443 → 맥)** 방식 채택(경로 A-1). Cloudflare Tunnel(A-2)은 포트포워딩이 이미 되어 있어 불필요 — 터널은 "인바운드를 못 여는 상황"의 우회책이라 이 케이스엔 안 맞음.
+- **리버스 프록시 = Traefik.** Caddy·네이티브 nginx도 후보였으나, **"단일 맥에 여러 백엔드 앱을 계속 올린다"** 는 전제라 **라벨 기반 자동 발견 + 자동 TLS** 인 Traefik 선택. nginx(중앙 config 수동 편집 + certbot)·Caddy(중앙 Caddyfile) 대비 **앱 추가 마찰이 가장 적음**.
+- **구조 원칙**: 리버스 프록시는 모든 앱 위에 걸치는 **공유 엣지**라 tenk 스택에 넣지 않는다(넣으면 tenk 재배포 시 다른 앱 트래픽까지 끊김). **독립 스택 `~/traefik/`** 으로 분리하고, 앱들은 **공유 external 도커 네트워크 `web`** 에 join, 각 앱이 자기 라우팅을 **라벨로 선언**.
+
+### 9.2 도메인·네트워크 좌표 (확인 완료)
+- **도메인**: `hjson248.com` (가비아 구매). A레코드 `@`(=apex) + `tenk` 둘 다 → **`222.234.234.207`** (맥 공인 IP). DNS 전파 확인 완료.
+- **CGNAT 아님 확정**: 맥 `curl -s https://api.ipify.org` = `222.234.234.207` = A레코드와 일치(인터넷이 보는 IP = 맥 공인 IP). 게이트웨이 `192.168.0.1`. → 포트포워딩이 실제로 도달함.
+- **포트포워딩**: 공유기 **80·443 → 맥** 완료.
+- **TLS 검증 = Let's Encrypt HTTP-01.** 80 이 열려 있어 성립. **가비아 DNS API 불필요**(DNS-01/와일드카드 회피) — 서브도메인은 개별 A레코드로 충분.
+
+### 9.3 목표 아키텍처
+```
+인터넷 :80/:443 → 공유기(포워딩) → [맥] Traefik (독립 스택 ~/traefik/)
+                                       │ Host 헤더 라우팅 + Let's Encrypt 자동 TLS
+                                       └(도커 web 네트워크)→ backend:8080 → tenk
+  db(mariadb)는 internal 네트워크에 은닉 (Traefik 무관)
+```
+- **Traefik 독립 스택**(`~/traefik/docker-compose.yml`): entrypoints `web(:80)`/`websecure(:443)`, http→https 전역 리다이렉트, certresolver `le`(ACME HTTP-01, `acme.json` 은 `./letsencrypt` 볼륨으로 영속화), 공유 network `web`.
+- **tenk 연결**: backend 를 `web`(Traefik용) + `internal`(db용) **두 네트워크**에 두고, 아래 라벨로 라우팅 선언.
+  ```
+  traefik.enable=true
+  traefik.http.routers.tenk.rule=Host(`tenk.hjson248.com`)
+  traefik.http.routers.tenk.entrypoints=websecure
+  traefik.http.routers.tenk.tls.certresolver=le
+  traefik.http.services.tenk.loadbalancer.server.port=8080
+  traefik.docker.network=web
+  ```
+- **앱 추가 시**: 그 앱 compose 를 `web` 에 join + 같은 4~5줄 라벨만 붙임. **중앙 파일 무편집.**
+- **운영 안전**: 첫 발급은 Let's Encrypt **staging** 으로 흐름 검증 후 prod 로 전환(rate limit 락아웃 회피).
+
+### 9.4 파일 (리포에 작성 완료)
+| 파일 | 역할 |
+|---|---|
+| [deploy/traefik/docker-compose.yml](../deploy/traefik/docker-compose.yml) | Traefik 공유 엣지 스택. 맥 `~/traefik/` 로 복사해 실행. 이미지 **`traefik:v3.6.1`**(Docker 29 호환 필수 — 아래 교훈), ACME 이메일·staging caserver·http→https 리다이렉트·docker 라벨 프로바이더 포함. `/var/run/docker.sock` 읽기전용 마운트. **앱별 설정 없음** — 앱 추가해도 이 파일 무편집. |
+| [deploy/docker-compose.yml](../deploy/docker-compose.yml) | tenk 스택에 `web`/`internal` 네트워크 분리 + backend 에 Traefik 라우팅 라벨 추가. db 는 `internal` 에만 두어 격리. `8080:8080` 퍼블리시는 맥 로컬 헬스체크 전용으로 유지(인터넷 미노출). |
+
+#### 교훈 — Traefik × Docker 29 (하지 말 것 / 할 것)
+2026-07-01 Traefik 기동 시 `client version 1.24 is too old, Minimum supported API version is 1.44` 가 무한 반복되며 라우팅이 하나도 안 잡히는 삽질을 함. **원인은 설정이 아니라 버전 조합**: Docker Engine 29.0(2025-11)이 최소 도커 API 를 1.44 로 올렸는데 Traefik 3.6.1 미만은 옛 도커 SDK(API 1.24)로 접속 → 데몬이 거부. Colima 는 Docker 29 계열이라 그대로 걸린다. 같은 시기 Coolify·Dokploy·Appwrite 등도 동일 이슈([traefik#12253](https://github.com/traefik/traefik/issues/12253)).
+- ✅ **할 것**: Traefik 이미지를 **`v3.6.1` 이상**으로. 자동 API 버전 협상이 들어가 근본 해결. (Docker 엔진을 28.x 로 내리거나 `daemon.json` `min-api-version` 으로 1.24 를 다시 허용하는 우회도 있으나, 서버를 낡은 쪽으로 맞추는 거라 비권장.)
+- ❌ **하지 말 것 1**: `DOCKER_API_VERSION=1.54` 를 Traefik 컨테이너 env 로 박기 — 도커 CLI 용 변수라 Traefik 의 도커 프로바이더는 안 읽는다. env 는 들어가는데(`docker inspect` 로 확인됨) 에러는 그대로.
+- ❌ **하지 말 것 2**: docker-socket-proxy 를 끼워 우회 시도 — 프록시는 요청 URL(`/v1.24/info`)을 그대로 데몬에 전달하므로 동일하게 거부당한다. (소켓 프록시는 *보안 하드닝* 용도로는 유효하지만 이 버전 문제의 해결책이 아니다.)
+- **진단 팁**: `client version 1.24 is too old` 는 **데몬이 만든 메시지** = Traefik 이 실제로 `/v1.24/...` 로 요청을 보내고 있다는 뜻. `curl --unix-socket /var/run/docker.sock http://localhost/version` 은 1.54 로 정상인데 프로바이더만 실패하면 → 클라이언트(=Traefik SDK) 버전 문제로 좁혀진다.
+
+### 9.5 배포 절차 (맥에서 실행)
+```bash
+# ── 0) 공유 네트워크 한 번 생성 (양 스택이 external 로 참조) ──
+docker network create web
+
+# ── 1) Traefik 스택 올리기 (staging 인증서로 흐름 검증) ──
+#   deploy/traefik/docker-compose.yml 을 맥 ~/traefik/ 로 복사(scp) 후:
+cd ~/traefik && docker compose up -d
+docker compose logs -f traefik      # acme staging 발급 로그 확인 (Ctrl-C)
+
+# ── 2) tenk 스택 갱신 (새 라벨/네트워크 반영) ──
+#   갱신된 deploy/docker-compose.yml 을 맥 ~/tenk/ 로 복사 후:
+cd ~/tenk && docker compose up -d
+
+# ── 3) 검증 (staging: 인증서 "신뢰 안 함" 뜨는 게 정상) ──
+curl -k -I https://tenk.hjson248.com/v3/api-docs        # 200
+#   폰(LTE, Wi-Fi 밖)에서 https://tenk.hjson248.com/swagger-ui.html 접속 확인
+
+# ── 4) prod 인증서로 전환 (staging 흐름 OK 확인 후) ──
+#   ~/traefik/docker-compose.yml 의 staging caserver 줄 삭제/주석 후:
+cd ~/traefik && rm ./letsencrypt/acme.json && docker compose up -d --force-recreate
+docker compose logs -f traefik      # prod 발급 로그 확인
+curl -I https://tenk.hjson248.com/v3/api-docs           # 이제 -k 없이 200 (신뢰됨)
+```
+
+### 9.6 검증 후 마무리 (prod TLS 성공 시)
+- **Flutter base URL 전환**: 실기기가 이제 `https://tenk.hjson248.com` 로 접속 가능. [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 이 도메인으로. LAN IP/cleartext(`network_security_config.xml`) 의존이 사라져 셋업이 단순해진다.
+- **문서 갱신**: §1·§7 체크박스를 완료로, `⏭ 진행 중` 을 실제 상태로.

@@ -13,6 +13,9 @@ services:
     restart: unless-stopped
     # 닉네임/메모에 이모지·한글이 들어가므로 서버 기본 문자셋을 utf8mb4 로 강제.
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    # DB 는 internal 네트워크에만 둬서 Traefik/외부와 격리. backend 만 접근한다.
+    networks:
+      - internal
     environment:
       MARIADB_DATABASE: tenk
       MARIADB_USER: tenk
@@ -37,6 +40,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # web = Traefik(공유 엣지)이 라우팅하는 네트워크, internal = db 접근용.
+    networks:
+      - web
+      - internal
     environment:
       SPRING_PROFILES_ACTIVE: prod
       # 이미지에 굽지 않고 런타임 주입 (prod yaml 의 TODO 플레이스홀더를 env 가 덮어씀).
@@ -44,11 +51,28 @@ services:
       SPRING_DATASOURCE_USERNAME: tenk
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       TENK_UPLOAD_DIR: /app/uploads
+    # 외부 접속은 Traefik(443)이 담당. 8080 퍼블리시는 맥 로컬 curl 헬스체크 전용
+    # (라우터에서 8080 은 포워딩 안 하므로 인터넷엔 안 열린다).
     ports:
       - "8080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tenk.rule=Host(`tenk.hjson248.com`)"
+      - "traefik.http.routers.tenk.entrypoints=websecure"
+      - "traefik.http.routers.tenk.tls.certresolver=le"
+      - "traefik.http.services.tenk.loadbalancer.server.port=8080"
+      - "traefik.docker.network=web"
     volumes:
       # 업로드된 영상은 컨테이너가 지워져도 보존되게 named volume 에.
       - uploads:/app/uploads
+
+# web 은 Traefik 스택(~/traefik/)과 공유하는 external 네트워크.
+# 사전에 한 번:  docker network create web
+networks:
+  web:
+    external: true
+  internal:
+    driver: bridge
 
 volumes:
   db-data:
