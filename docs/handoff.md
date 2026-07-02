@@ -5,6 +5,8 @@
 
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
+- **2026-07-03**: 🚀 **Android 테스트 APK 빌드·핵심검증 완료.** 릴리스 keystore/서명/앱이름(Tenk)/키해시 카카오 등록/서명 APK 빌드까지 끝. 실기기(갤럭시 S24, 무선 adb)에서 **카카오 로그인 + 배포 백엔드 연동 확인**. **릴리스에서만 카카오 로그인이 깨지던 버그 발견·수정 = R8 축소가 카카오 SDK Pigeon 클래스 제거 → `isMinifyEnabled=false`**(아래 함정). 남은 스모크(챌린지 생성/카메라/영상 export)는 다음. iOS 무료 빌드 경로(시뮬레이터/개인팀)·SSH 원격빌드 범위 문서화(§0). **커밋 후 iOS 빌드 착수 예정.**
+- **2026-07-02 (2)**: 🚀 **테스트 배포 빌드 준비 착수** — 최우선 작업. 결정: 앱 표시 이름 `Tenk`, Android 배포 채널 = **직접 서명 APK 공유**(Firebase/Play Console 아님), Apple Developer 계정 **미보유 → iOS 는 절차만 문서화하고 보류**, Android 릴리스 keystore **신규 생성**(private 레포에 git 추적 — yaml 자격증명과 동일 방침). 상세·진행은 아래 "남은 일 §0".
 - **2026-07-02**: Flutter 실기기 base URL 을 배포 HTTPS 도메인(`https://tenk.hjson248.com`)으로 전환 — LAN IP·cleartext 예외 제거(에뮬레이터는 `10.0.2.2` 유지, [docker-deployment.md §9.3](docker-deployment.md)). handoff·docker-deployment 문서 부피 축소(회의록은 유지). 리버스 프록시(Traefik)는 별도 리포 `reverse-proxy` 로 분리 확정 — 엣지 문서·기록은 그 리포 소관.
 - **2026-06-27**: 영상 export 흐름 2화면 분리(클립 선택 / 합성 설정) + 자막 위치(중단·하단)·배경 사용자 설정화. 챌린지 이름 필드 에뮬레이터 검증 전원 통과. (에뮬레이터 검증 완료)
 - **2026-06-19**: 영상 프리뷰 깜빡임 = Impeller 외부 텍스처 버그 확정·영구 수정(매니페스트 `EnableImpeller=false`, 아래 "함정 — Flutter" 참고). 챌린지 이름 서버 default-fill 제거(필수화, 클라가 `챌린지 N` pre-fill).
@@ -51,7 +53,7 @@
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
 - ✅ **테스트 현황**: `./gradlew.bat test` 총 **85개** 그린(단위 63 + 통합 17 + WebMvc 4 + 컨텍스트 1). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
-- ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]).
+- ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
 - ✅ **핵심 흐름**: 카카오 로그인 + 챌린지 CRUD + 지출/무지출 기록 + 2초 영상 녹화·업로드(`camera` medium, enableAudio:false) + 일시 picker + finalize. 에뮬레이터 E2E 통과.
@@ -67,6 +69,33 @@
 ## 남은 일 (우선순위 순)
 
 > 백엔드 테스트(단위·통합·WebMvc) + 영상 합본 export + 배지 획득 축하 모달 + 카메라 녹화 시작 UX (transitional morph + 효과음 royalty-free MP3 + 탭 즉시 트리거 분리) + 챌린지 결과 카드 (풀스크린 + 영상 마지막 클립 합성) 모두 ✅ 완료. 자세한 건 "완료된 것" 섹션 참고. **카메라 / 결과 카드 / 닉네임 도메인 일단락 + 위 3개 블록 실기기 검증 전원 통과 (2026-06-16)** — 다음은 다른 백로그.
+
+### 0. 🚀 테스트 배포 빌드 준비 (최우선 · 진행 중, 2026-07-02 착수)
+
+> 목표: Android/iOS 테스트 버전 배포. **결정 사항**은 위 "최근 변경 이력" 참고. 릴리스 빌드 규칙·함정은 [CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 섹션에 영구 규칙으로 박음.
+
+**환경 제약 (중요)**
+- **iOS 빌드는 이 Windows 머신에서 불가** — `flutter build ios/ipa`/`pod install`/Xcode 전부 macOS + Xcode 필수. iOS 작업은 전부 맥에서 (도커 배포하던 그 맥).
+- **iOS 앱스토어/TestFlight 배포만 Apple Developer Program($99/년) 필요** — 미보유라 배포는 보류. 하지만 **빌드·실행은 공짜로 가능**(시뮬레이터=계정 불필요, 본인 아이폰=무료 Apple ID 개인팀). 아래 iOS 항목 참고.
+
+**Android (직접 서명 APK 공유) — ✅ 빌드·핵심검증 완료 (2026-07-02)**
+- [x] 릴리스 keystore(PKCS12) 생성 → `tenk_app/android/tenk-release.keystore` (alias `tenk`, git 추적) + [key.properties](../tenk_app/android/key.properties) (git 추적, 양쪽 .gitignore 무시 해제)
+- [x] [build.gradle.kts](../tenk_app/android/app/build.gradle.kts) key.properties 로드 + `release` signingConfig (없으면 debug 폴백). **R8 축소 OFF**(`isMinifyEnabled=false`/`isShrinkResources=false`) — 아래 함정 참고
+- [x] 앱 표시 이름 `Tenk` (android:label + iOS CFBundleDisplayName)
+- [x] 릴리스 키해시 `NsYpNZftCOyk4LygMWF7mdtowdg=` 추출 → **카카오 콘솔 등록 완료**(debug 와 함께 2개)
+- [x] `flutter build apk --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → app-release.apk (fat, ~165MB). apksigner 로 릴리스 키 서명 확인
+- [x] **실기기 스모크 부분 통과** (SM-S921N 갤럭시 S24, 무선 adb): ✅ 카카오 로그인(릴리스 키해시 유효) / ✅ 배포 백엔드 연동(챌린지 목록 로딩) / ✅ 앱 이름·로그인·목록 화면 정상. **R8 이 카카오 SDK 제거해 릴리스에서만 로그인 깨지던 버그 발견·수정**(아래 함정)
+- [ ] **남은 스모크**(다음): 챌린지 생성 → 지출/무지출 기록 → **카메라 녹화·업로드** → 확정 → 결과 카드 → **영상 export**. (adb input 으로 이어서 구동 가능)
+- [ ] (선택) 앱 아이콘 교체 — 현재 기본 Flutter 아이콘 (`flutter_launcher_icons` 권장)
+- [ ] (선택) APK 크기(~165MB) 줄이려면 `--split-per-abi` (arch별 ~55MB)
+
+**iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**
+- 공통 사전: `xcode-select --install`, `sudo gem install cocoapods`(또는 brew), `cd tenk_app && flutter pub get && (cd ios && pod install)`.
+- 첫 빌드 걸림돌: **ffmpeg_kit/camera pod 의 iOS 최소버전** — `ios/Podfile` 의 `platform :ios, 'xx'` 를 14.0 정도로 올려야 pod install 될 수 있음. 카카오 iOS URL scheme·권한 usage description 은 이미 Info.plist 에 있음. **단 카카오 콘솔에 iOS 플랫폼(번들 ID) 추가 등록 필요**(현재 Android 만 등록). iOS 는 키해시 개념 없음.
+  - **(무료) 시뮬레이터**: `open -a Simulator` → `flutter run --dart-define=API_BASE_URL=https://tenk.hjson248.com`. 계정 불필요. ⚠️ 시뮬레이터엔 카메라 없어 영상 녹화 테스트 불가(로그인·챌린지·기록 흐름은 OK).
+  - **(무료) 본인 아이폰 실기기**: `open ios/Runner.xcworkspace` → Runner 타깃 → Signing & Capabilities → Team=무료 Apple ID(Personal Team), Bundle ID 유니크(예 `com.hjson.tenkApp`), automatic signing. 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → `flutter run -d <iphone>`. 무료 서명은 **7일 만료**(재실행으로 갱신).
+  - **(유료·나중) TestFlight**: Apple Developer Program 가입 → App Store Connect 앱 레코드 → `flutter build ipa --release --dart-define=...` → Transporter 업로드 → 내부 테스터 초대.
+- **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
 
 ### 1. 앱 UX 다듬기 (백로그)
 - ✅ **챌린지 이름 필드 추가** (2026-06-17 구현, 2026-06-19 정책 변경, **2026-06-27 에뮬레이터 검증 통과**). **이름 필수 — 비울 수 없음.** 기본값 `챌린지 N` 은 **클라가 미리 채움**(서버 default-fill `resolveName` 제거, `@NotBlank` 로 빈값 거부), 결과 확정 전까지 변경 가능(`PATCH /api/challenges/{id}`), 결과 카드 헤더에 노출. 상세는 위 "마지막 갱신"(상단 + 2개) + [CLAUDE.md](../CLAUDE.md) "챌린지 도메인 규칙" / 위치별 책임 "챌린지 이름 정책 변경" 행 참고. 에뮬레이터 검증 완료(기본 이름 pre-fill / 빈값 거부 / 확정 전 rename / 확정 후 연필 숨김 / 결과 카드 이름) — 추가 작업 없음.
@@ -108,6 +137,8 @@
 - **통합 테스트가 `tenk` 스키마 데이터를 비움**: [IntegrationTestBase](../tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 의 `@BeforeEach` 가 user/challenge/amount/refresh_token 을 DELETE 한다 (badge 마스터 9행은 유지). `./gradlew test` 후 Flutter 카카오 재로그인 필요. tenk_test 스키마 분리는 일부러 안 함 (다음 운영자가 원하면 그때).
 
 ### Flutter
+- **✅ 해결됨 — 릴리스 APK 에서만 카카오 로그인 실패 = R8 이 카카오 Pigeon 클래스 제거 (2026-07-02, 삼성 실기기 확인)**. 증상: 릴리스 APK 에서 "카카오로 로그인" 탭 → `카카오 로그인 실패: Unable to establish connection on channel: "dev.flutter.pigeon.kakao_flutter_sdk_common.CommonHostApi.isKakaoTalkAvailable"`. 카카오 창이 아예 안 뜨고 즉시 실패. 진단: 최신 Flutter/AGP 가 `flutter build apk --release` 에서 **R8 축소를 기본 ON** 으로 도는데(gradle 에 `minifyEnabled` 명시 없어도 적용), `build/app/outputs/mapping/release/usage.txt` 에 `com.kakao.sdk.flutter.common.CommonHostApi.setUp(...)` 등 카카오 네이티브 58개 항목이 **제거됨**으로 찍혀 있었다 — 채널 핸들러를 등록하는 `setUp` 이 stripped 되어 채널이 안 열림. **키해시와 무관**(키해시 정상 등록돼도 이 에러). 해결: [build.gradle.kts](../tenk_app/android/app/build.gradle.kts) release 블록에 `isMinifyEnabled = false` + `isShrinkResources = false`. 이 앱은 kakao + ffmpeg_kit + camera fork 등 네이티브 플러그인이 무거워 keep 규칙 개별 관리보다 축소 OFF 가 안전(테스트 빌드 기준). **Play Store 정식 출시로 크기 최적화가 필요하면** R8 을 다시 켜고 `proguard-rules.pro` 에 플러그인별 keep 규칙(카카오/ffmpeg/camera) 추가할 것. 진단 명령: `grep -i kakao build/app/outputs/mapping/release/usage.txt`.
+- **릴리스 APK 빌드 시 Kotlin 증분컴파일 스택트레이스는 무해**: `flutter build apk --release` 끝에 `Could not close incremental caches ... this and base files have different roots` 류의 긴 stacktrace 가 찍히는데, **pub 캐시가 `C:` 드라이브(`AppData\Local\Pub\Cache`)·프로젝트가 `D:` 드라이브라** Kotlin 이 상대경로 계산에 실패하는 것뿐이고 **빌드는 성공한다**. 판단 기준은 맨 끝의 `√ Built build\app\outputs\flutter-apk\app-release.apk` 줄. 없애려면 pub 캐시를 같은 드라이브로 옮기거나(`PUB_CACHE`) 무시. APK 산출물·서명엔 영향 없음.
 - **목록/상세 화면의 비동기 데이터는 `AsyncStateMixin` + `AsyncStateView` 사용**, `FutureBuilder` 금지 ([presentation/common/async_state.dart](../tenk_app/lib/presentation/common/async_state.dart)). 한 화면이 두 종류 이상의 비동기 자원을 다루면 mixin 대신 직접 state.
 - **Navigator push/pop의 generic은 양쪽 모두 명시.** `MaterialPageRoute<T>(builder: ...)`로 T를 박지 않으면 result가 null로 빠지는 경우. push 종료 시점에 무조건 refresh하는 패턴이 안전.
 - **에뮬레이터에서 텍스트가 첫 프레임에 안 보이고 화면을 움직이면 나타나면** [[reference-flutter-android-impeller-text-glitch]] — Impeller 텍스트 atlas 버그. `flutter run --no-enable-impeller`로 검증.
@@ -127,6 +158,7 @@
 - (선택) MariaDB 데이터 — 새 환경에서 `schema.sql` 다시 적용해도 무방하면 불필요
 - (선택) `tenk-backend/uploads/` 디렉토리 — 이번 머신 영상이 필요 없으면 무시
 - (참고) `~/.android/debug.keystore`는 머신별로 다른 게 정상 — Android Studio가 새로 만들어줌. 새 키스토어 → 새 키해시 → 카카오 디벨로퍼스에 추가 등록.
+- **릴리스 keystore (`tenk_app/android/tenk-release.keystore`) + `key.properties`** 는 **git 추적**한다 (private 레포 방침 — yaml 자격증명과 동일). 즉 새 머신에서 클론하면 그대로 서명 가능, 별도 이송 불필요. **분실 시 같은 applicationId 로 앱 업데이트 배포 불가**하므로 레포 자체를 잃지 않는 게 곧 백업. (릴리스 keystore 의 키해시는 debug 와 다르므로 카카오 콘솔엔 debug/release 둘 다 등록해야 함.)
 
 ---
 

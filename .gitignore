@@ -54,5 +54,6 @@ tenk_app/ios/Pods/
 tenk_app/ios/.symlinks/
 tenk_app/android/.gradle/
 tenk_app/android/local.properties
-tenk_app/android/key.properties
+# key.properties / tenk-release.keystore 는 private 레포 방침으로 git 추적 (무시 해제).
+# tenk_app/android/key.properties
 tenk_app/**/GeneratedPluginRegistrant.*

@@ -9,6 +9,8 @@ GeneratedPluginRegistrant.java
 
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore
-key.properties
-**/*.keystore
+# Tenk 방침: private 레포에 릴리스 서명 자격증명을 git 추적한다 (yaml 자격증명과 동일).
+# 아래 기본 무시 라인은 의도적으로 주석 처리 — tenk-release.keystore / key.properties 는 추적됨.
+# key.properties
+# **/*.keystore
 **/*.jks

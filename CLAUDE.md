@@ -356,6 +356,20 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 - `tenk_app (emulator)` — `--dart-define=API_BASE_URL=http://10.0.2.2:8080`
 - `tenk_app (device)` — `--dart-define=API_BASE_URL=https://tenk.hjson248.com` (배포된 prod HTTPS). 실기기가 외부 어디서든 붙는다. 로컬 백엔드를 실기기로 붙일 때만 이 값을 임시로 `http://<PC LAN IP>:8080` 으로 바꾸고 network_security_config 에 IP 추가 (위 실기기 항목 참고)
 
+## 릴리스 빌드 / 배포
+
+> 개발용 `flutter run` 과 별개로 **테스트 배포용 서명 빌드**를 만드는 규칙. 진행 상태·체크리스트는 [docs/handoff.md](docs/handoff.md) "남은 일 §0".
+
+- **앱 표시 이름 = `Tenk`**. Android `android:label`([AndroidManifest.xml](tenk_app/android/app/src/main/AndroidManifest.xml)) + iOS `CFBundleDisplayName`([Info.plist](tenk_app/ios/Runner/Info.plist)) 두 곳. `applicationId`/`CFBundleName` 은 `tenk_app` 유지 (내부 식별자, 바꾸면 카카오 URL scheme·서명 다 깨짐).
+- **base URL 은 릴리스 빌드 시 반드시 명시 주입**: `--dart-define=API_BASE_URL=https://tenk.hjson248.com`. 안 주면 기본값 `10.0.2.2`(에뮬레이터 전용)로 나가 실기기에서 백엔드 못 붙는다.
+- **Android 서명 (직접 APK 공유 방침)**:
+  - 릴리스 keystore = `tenk_app/android/tenk-release.keystore` (PKCS12), 자격증명은 `tenk_app/android/key.properties`. **둘 다 git 추적** — private 레포 방침(yaml 자격증명과 동일). Flutter 기본 `.gitignore` 가 `key.properties`/`*.keystore` 를 무시하므로 두 `.gitignore`(루트 + `android/`)에서 해당 라인을 제거해 추적한다.
+  - [build.gradle.kts](tenk_app/android/app/build.gradle.kts) 가 `key.properties` 를 읽어 `release` signingConfig 구성. 파일이 없으면 debug 서명으로 폴백(로컬 `flutter run --release` 용).
+  - 빌드: `flutter build apk --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/flutter-apk/app-release.apk` (fat APK, 직접 공유용). Play Console 로 갈 땐 `appbundle`(AAB).
+  - **R8 축소 OFF** ([build.gradle.kts](tenk_app/android/app/build.gradle.kts) release 블록 `isMinifyEnabled=false`/`isShrinkResources=false`). 최신 Flutter/AGP 는 R8 을 기본 ON 으로 도는데, 카카오 SDK Pigeon 클래스를 제거해 릴리스에서만 카카오 로그인이 `Unable to establish connection on channel ... isKakaoTalkAvailable` 로 깨졌다(2026-07-02, docs/handoff.md 함정 참고). **다시 켜지 말 것** — Play Store 출시로 크기 최적화가 필요할 때만 R8 재활성화 + `proguard-rules.pro` 에 kakao/ffmpeg/camera keep 규칙 추가.
+  - ⚠️ **카카오 릴리스 키해시 필수**: 릴리스 keystore 는 debug 와 **키해시가 달라서**, 카카오 콘솔에 릴리스 키해시를 추가 등록 안 하면 릴리스 빌드에서 로그인만 실패한다(다른 증상은 정상). 추출법은 [[reference-kakao-android-keyhash]] — `keytool -exportcert ... | openssl sha1 -binary | openssl base64`. debug/release 둘 다 등록해 둘 것.
+- **iOS — 이 Windows 머신에서 불가, 전부 macOS + Xcode 필수**. **빌드·실행은 무료**(시뮬레이터=계정 불필요, 본인 아이폰=무료 Apple ID 개인팀, 7일 서명), **TestFlight/앱스토어 배포만 Apple Developer Program($99/년)**. 사전: `flutter pub get` + `cd ios && pod install`(ffmpeg_kit/camera 때문에 `Podfile` 의 `platform :ios` 를 14.0 정도로 올려야 할 수 있음). 카카오 URL scheme·권한은 Info.plist 에 이미 있고 iOS 는 키해시 개념 없음 — 단 **카카오 콘솔에 iOS 플랫폼(번들 ID) 추가 등록 필요**(현재 Android 만). SSH 원격빌드: 컴파일·`xcrun simctl`(시뮬레이터)은 SSH OK지만 코드서명 키체인·개인팀 자동 프로비저닝·실기기 신뢰는 GUI 한 번 필요(화면공유 권장). 상세·명령은 [docs/handoff.md](docs/handoff.md) 남은 일 §0.
+
 ## 위치별 책임 (요약)
 
 | 변경 위치 | 동시에 챙겨야 할 곳 |
@@ -367,6 +381,7 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 | 파일 업로드 | 항상 `LocalFileStorage.store(file, subdir)`을 거치기. 경로를 직접 조립하지 말 것. **호출 전에 null/empty 분기는 도메인에서 하기** — `store()` 는 빈 파일이 들어오면 프로그래머 오류로 `INVALID_INPUT` 을 던진다 |
 | amount 기록 수정 | `PUT /api/challenges/{cid}/amounts/{aid}` ([AmountController.update](tenk-backend/src/main/java/com/hjson/tenk/domain/amount/AmountController.java)). 지출은 시간만, 무지출은 memo + 영상만 갱신. 영상은 `videoAction` (KEEP/REMOVE/REPLACE) 로 분기. Flutter 진입은 챌린지 상세의 [_AmountTile.onTap](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) → [AmountEditScreen](tenk_app/lib/presentation/amount/amount_edit_screen.dart). 영상 섹션은 record 와 같은 [VideoAttachmentSection](tenk_app/lib/presentation/amount/widgets/video_attachment_section.dart) 을 공유하지만 `expandable: true` 로 collapsed 노출 — "영상 보기" 탭 시 [AmountVideoPreviewScreen](tenk_app/lib/presentation/amount/amount_video_preview_screen.dart) 푸시 후 `VideoPreviewAction` 으로 retake/delete 반환 |
 | 환경별로 다른 값 추가 | 공통은 `application.yaml`, 환경별 override는 `application-{local,prod}.yaml`. prod placeholder는 TODO 주석 유지 |
+| 릴리스 빌드/서명/앱이름 변경 | 위 "릴리스 빌드 / 배포" 섹션이 진실의 원천. Android 서명은 `key.properties`+`tenk-release.keystore`(git 추적), 앱 이름은 `Tenk`(android:label + iOS CFBundleDisplayName 두 곳 동시), base URL 은 릴리스 시 `--dart-define=API_BASE_URL=https://tenk.hjson248.com` 필수. **릴리스 keystore 바꾸거나 새로 만들면 카카오 콘솔에 새 키해시 등록** 안 하면 로그인만 실패. iOS 는 맥+Apple 계정 필요 |
 | 보호된 신규 엔드포인트 추가 | 기본적으로 인증 필요 (`SecurityConfig.PERMIT_ALL`에 없으면 자동 보호). 컨트롤러는 `@CurrentUserId Long userId`로 사용자 식별 |
 | 백엔드 도메인/서비스 추가 | `src/test/java/com/hjson/tenk/domain/<name>/` 아래에 단위 테스트도 같이. 패턴은 기존 6개 테스트 (`ChallengeTest`, `ChallengeServiceTest`, `AmountServiceTest`, ...) 참고. 의존 repository는 Mockito `@Mock` + `@InjectMocks`, 도메인 entity는 정적 팩토리로 만들고 id 등 사후 박을 필드는 `ReflectionTestUtils.setField`. `LocalDate.now()` 모킹 불가 — "종료된 챌린지" 같은 상태는 invariant 통과 후 reflection으로 endDate 사후 박는 패턴 (`ChallengeServiceTest.finishedChallenge` 참고) |
 | 새 이벤트 리스너 추가 | `@TransactionalEventListener(AFTER_COMMIT)`로 DB 쓰기를 한다면 리스너 메서드에 **반드시 `@Transactional(propagation = Propagation.REQUIRES_NEW)`** 같이 박을 것. 안 박으면 쓰기가 조용히 사라짐 ([BadgeEventListener](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 참고). 검증은 `@SpringBootTest` 통합 테스트로 — 단위 테스트는 못 잡는다 |
