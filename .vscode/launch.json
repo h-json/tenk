@@ -16,7 +16,7 @@
             "request": "launch",
             "type": "dart",
             "toolArgs": [
-                "--dart-define=API_BASE_URL=http://192.168.0.7:8080"
+                "--dart-define=API_BASE_URL=https://tenk.hjson248.com"
             ]
         }
     ]
