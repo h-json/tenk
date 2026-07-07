@@ -23,6 +23,7 @@ public class SecurityConfig {
     private static final String[] PERMIT_ALL = {
             "/",
             "/error",
+            "/privacy.html",        // 개인정보처리방침 정적 페이지 (Play Console·앱에서 링크)
             "/api/auth/kakao/login",
             "/api/auth/refresh",
             "/swagger-ui.html",

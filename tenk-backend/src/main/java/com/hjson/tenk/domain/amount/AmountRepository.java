@@ -4,6 +4,7 @@ import com.hjson.tenk.domain.challenge.Challenge;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,6 +12,12 @@ public interface AmountRepository extends JpaRepository<Amount, Long> {
 
     /** 챌린지 상세 화면용. 사용자 지정 시각(spentDt) 기준으로 정렬, 동시각이면 입력 순. */
     List<Amount> findByChallengeOrderBySpentDtAscCreatedDtAsc(Challenge challenge);
+
+    /// 계정 파기 배치용 — 해당 유저의 모든 amount row 벌크 삭제. media_file 삭제 후, challenge 삭제 전에 호출.
+    @Modifying
+    @Query("delete from Amount a where a.challenge.id in "
+            + "(select c.id from Challenge c where c.user.id = :userId)")
+    void deleteByUserId(@Param("userId") Long userId);
 
     @Query("""
             select coalesce(sum(a.amount), 0)

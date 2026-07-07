@@ -22,4 +22,10 @@ public interface ChallengeBadgeRepository extends JpaRepository<ChallengeBadge, 
     @Modifying
     @Query("DELETE FROM ChallengeBadge cb WHERE cb.challenge = :challenge AND cb.badge = :badge")
     int deleteByChallengeAndBadge(@Param("challenge") Challenge challenge, @Param("badge") Badge badge);
+
+    /// 계정 파기 배치용 — 해당 유저의 모든 challenge_badge row 벌크 삭제. challenge 삭제 전에 호출.
+    @Modifying
+    @Query("DELETE FROM ChallengeBadge cb WHERE cb.challenge.id in "
+            + "(select c.id from Challenge c where c.user.id = :userId)")
+    void deleteByUserId(@Param("userId") Long userId);
 }

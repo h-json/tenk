@@ -136,7 +136,8 @@ docker compose up -d
 - [x] **폰 접속 방향 결정 (2026-07-01)** — **(나) 외부 어디서나 + HTTPS** 로 결정. 리버스 프록시는 **Traefik**. 근거·아키텍처 §9.
 - [x] **리버스 프록시 + 자동 HTTPS 구축 (2026-07-01 완료)** — 공유 엣지(Traefik)로 `https://tenk.hjson248.com` LE prod 인증서. `forward-headers-strategy` 로 mixed content("주의 요함")까지 해결. **엣지는 별도 리포 `reverse-proxy` 로 분리.** tenk 붙는 법 §9, 엣지 상세 그 리포 README.
 - [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
-- 운영 향후(범위 밖): 회원 탈퇴 hard-delete cascade + 개인정보처리방침 → [handoff.md](handoff.md) "운영 고려사항".
+- [x] **개인정보처리방침 배포 (2026-07-07 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html)(jar static) 재배포로 `https://tenk.hjson248.com/privacy.html` 서빙·브라우저 확인. Play Console 처리방침 URL 이 이 주소.
+- [x] **회원 탈퇴 hard-delete (2026-07-07 배포)** — soft delete + 3개월 보관 후 새벽 배치 물리 삭제. 상세는 [handoff.md](handoff.md) "운영 고려사항".
 
 ## 8. 기술 사실
 
