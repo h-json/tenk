@@ -5,6 +5,7 @@
 
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
+- **2026-07-08**: 🚀 **Play Console 내부 테스트 준비.** 개발자 계정 $25 + **신원 확인 완료** → 앱 생성·게시 가능. AAB 빌드 완료(`app-release.aab`), 개인정보처리방침 `https://tenk.hjson248.com/privacy.html` **LIVE**. 앞서 회원 탈퇴 3개월 hard-delete 배치 + privacy.html 구현·배포·커밋(`9e9e031`). 다음: 앱 만들기 → AAB 업로드 → **Play 앱 서명 키해시 카카오 등록** → 테스터 초대 (§0).
 - **2026-07-03**: 🚀 **Android 테스트 APK 빌드·핵심검증 완료.** 릴리스 keystore/서명/앱이름(Tenk)/키해시 카카오 등록/서명 APK 빌드까지 끝. 실기기(갤럭시 S24, 무선 adb)에서 **카카오 로그인 + 배포 백엔드 연동 확인**. **릴리스에서만 카카오 로그인이 깨지던 버그 발견·수정 = R8 축소가 카카오 SDK Pigeon 클래스 제거 → `isMinifyEnabled=false`**(아래 함정). 남은 스모크(챌린지 생성/카메라/영상 export)는 다음. iOS 무료 빌드 경로(시뮬레이터/개인팀)·SSH 원격빌드 범위 문서화(§0). **커밋 후 iOS 빌드 착수 예정.**
 - **2026-07-02 (2)**: 🚀 **테스트 배포 빌드 준비 착수** — 최우선 작업. 결정: 앱 표시 이름 `Tenk`, Android 배포 채널 = **직접 서명 APK 공유**(Firebase/Play Console 아님), Apple Developer 계정 **미보유 → iOS 는 절차만 문서화하고 보류**, Android 릴리스 keystore **신규 생성**(private 레포에 git 추적 — yaml 자격증명과 동일 방침). 상세·진행은 아래 "남은 일 §0".
 - **2026-07-02**: Flutter 실기기 base URL 을 배포 HTTPS 도메인(`https://tenk.hjson248.com`)으로 전환 — LAN IP·cleartext 예외 제거(에뮬레이터는 `10.0.2.2` 유지, [docker-deployment.md §9.3](docker-deployment.md)). handoff·docker-deployment 문서 부피 축소(회의록은 유지). 리버스 프록시(Traefik)는 별도 리포 `reverse-proxy` 로 분리 확정 — 엣지 문서·기록은 그 리포 소관.
@@ -88,6 +89,16 @@
 - [ ] **남은 스모크**(다음): 챌린지 생성 → 지출/무지출 기록 → **카메라 녹화·업로드** → 확정 → 결과 카드 → **영상 export**. (adb input 으로 이어서 구동 가능)
 - [ ] (선택) 앱 아이콘 교체 — 현재 기본 Flutter 아이콘 (`flutter_launcher_icons` 권장)
 - [ ] (선택) APK 크기(~165MB) 줄이려면 `--split-per-abi` (arch별 ~55MB)
+
+**Play Console 내부 테스트 (2026-07-07 피벗 · 진행 중)** — 직접 APK 공유에 더해 Play 내부 테스트 트랙으로도 배포
+- [x] 개발자 계정 $25 결제 + **신원 확인 완료 (2026-07-08)** → 앱 생성·게시 가능
+- [x] AAB 빌드: `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `tenk_app/build/app/outputs/bundle/release/app-release.aab` (~104MB). 신규앱은 APK 불가·**AAB 필수**
+- [x] 개인정보처리방침 LIVE: `https://tenk.hjson248.com/privacy.html` (위 §4 운영 고려사항 참고)
+- [ ] Play Console → **앱 만들기**(이름 Tenk, 무료) → **앱 콘텐츠**에서 개인정보처리방침 URL 입력 + 데이터 안전·콘텐츠 등급·타겟층 폼 작성
+- [ ] **내부 테스트** 트랙 → 새 버전 → `app-release.aab` 업로드 (첫 업로드 시 **Play App Signing 자동 활성화**)
+- [ ] ⚠️ **Play 앱 서명 키 인증서 SHA-1 → 카카오 콘솔 추가 등록** — Play 는 구글이 재서명하므로 로컬 릴리스 키해시(`NsYpNZftCOyk4LygMWF7mdtowdg=`)로는 Play 설치본 로그인이 실패. Play Console → 앱 무결성 → 앱 서명 키 인증서 SHA-1 을 base64 변환([[reference-kakao-android-keyhash]] 방식)해 **추가** 등록(기존은 유지). 근거 [[reference-play-app-signing-kakao-keyhash]]
+- [ ] 테스터 이메일 등록 → 옵트인 링크 배포 → 설치·카카오 로그인 확인
+- 참고: 신규 개인계정은 프로덕션 출시 전 "비공개 테스트 12명×14일" 요건이 있으나 **내부 테스트 트랙은 면제**(최대 100명 즉시 배포). 승인 전까지도 **직접 APK 설치**(`app-release.apk`)로 테스트 가능
 
 **iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**
 - 공통 사전: `xcode-select --install`, `sudo gem install cocoapods`(또는 brew), `cd tenk_app && flutter pub get && (cd ios && pod install)`.
