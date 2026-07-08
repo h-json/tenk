@@ -6,6 +6,7 @@
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
 - **2026-07-08**: 🚀 **Play Console 내부 테스트 준비.** 개발자 계정 $25 + **신원 확인 완료** → 앱 생성·게시 가능. AAB 빌드 완료(`app-release.aab`), 개인정보처리방침 `https://tenk.hjson248.com/privacy.html` **LIVE**. 앞서 회원 탈퇴 3개월 hard-delete 배치 + privacy.html 구현·배포·커밋(`9e9e031`). 다음: 앱 만들기 → AAB 업로드 → **Play 앱 서명 키해시 카카오 등록** → 테스터 초대 (§0).
+- **2026-07-08**: 🚀 **Play Console 내부 테스트 게시 성공 + 카카오 로그인 확인.** 신규 Play 개발자 계정($25) 신원 확인 완료 → 앱(`com.hjson.tenk_app`) 생성 → 내부 테스트에 AAB(versionCode 2) 업로드 → 게시 → 테스터 링크로 Play 설치 → **카카오 로그인 정상**. **Play App Signing 키해시 함정 넘김**: Play 앱 서명 키 SHA-1 `AF:BB:40:...` → base64 `r7tAXmn5jf61RifLeD82qJVg3Z0=` 를 카카오 Android 플랫폼에 추가 등록([[reference-play-app-signing-kakao-keyhash]]). 개인정보처리방침 URL 은 내부 테스트에선 비필수(프로덕션 전 입력). 첫 업로드 3-오류(번들 없음/업그레이드 불가/번들 미변경)는 versionCode 중복이라 `pubspec` 1.0.0+1→+2 로 해결. 상세 §0.
 - **2026-07-03**: 🚀 **Android 테스트 APK 빌드·핵심검증 완료.** 릴리스 keystore/서명/앱이름(Tenk)/키해시 카카오 등록/서명 APK 빌드까지 끝. 실기기(갤럭시 S24, 무선 adb)에서 **카카오 로그인 + 배포 백엔드 연동 확인**. **릴리스에서만 카카오 로그인이 깨지던 버그 발견·수정 = R8 축소가 카카오 SDK Pigeon 클래스 제거 → `isMinifyEnabled=false`**(아래 함정). 남은 스모크(챌린지 생성/카메라/영상 export)는 다음. iOS 무료 빌드 경로(시뮬레이터/개인팀)·SSH 원격빌드 범위 문서화(§0). **커밋 후 iOS 빌드 착수 예정.**
 - **2026-07-02 (2)**: 🚀 **테스트 배포 빌드 준비 착수** — 최우선 작업. 결정: 앱 표시 이름 `Tenk`, Android 배포 채널 = **직접 서명 APK 공유**(Firebase/Play Console 아님), Apple Developer 계정 **미보유 → iOS 는 절차만 문서화하고 보류**, Android 릴리스 keystore **신규 생성**(private 레포에 git 추적 — yaml 자격증명과 동일 방침). 상세·진행은 아래 "남은 일 §0".
 - **2026-07-02**: Flutter 실기기 base URL 을 배포 HTTPS 도메인(`https://tenk.hjson248.com`)으로 전환 — LAN IP·cleartext 예외 제거(에뮬레이터는 `10.0.2.2` 유지, [docker-deployment.md §9.3](docker-deployment.md)). handoff·docker-deployment 문서 부피 축소(회의록은 유지). 리버스 프록시(Traefik)는 별도 리포 `reverse-proxy` 로 분리 확정 — 엣지 문서·기록은 그 리포 소관.
@@ -89,6 +90,13 @@
 - [ ] **남은 스모크**(다음): 챌린지 생성 → 지출/무지출 기록 → **카메라 녹화·업로드** → 확정 → 결과 카드 → **영상 export**. (adb input 으로 이어서 구동 가능)
 - [ ] (선택) 앱 아이콘 교체 — 현재 기본 Flutter 아이콘 (`flutter_launcher_icons` 권장)
 - [ ] (선택) APK 크기(~165MB) 줄이려면 `--split-per-abi` (arch별 ~55MB)
+
+**Play Console 내부 테스트 (직접 APK 와 병행) — ✅ 게시·로그인 확인 (2026-07-08)**
+- [x] Play 개발자 계정 $25 + **신원 확인 완료**. 앱 생성 (패키지명 = applicationId **`com.hjson.tenk_app`**, 영구 고정 — 백엔드 자바 패키지 `com.hjson.tenk` 와 무관).
+- [x] AAB 빌드: `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/bundle/release/app-release.aab`(~104MB). Play 는 신규앱 APK 불가·AAB 필수. **재업로드 시 `pubspec` versionCode 필히 증가**(현재 1.0.0+2, 다음은 +3).
+- [x] 내부 테스트 트랙 업로드 → 게시 → 테스터 목록 → 참여 링크로 Play 설치. 개인계정 "비공개 12명×14일" 요건은 **프로덕션 전용** — 내부 테스트는 면제(100명 즉시).
+- [x] **⚠️ Play 앱 서명 키해시 카카오 등록 완료** — Play App Signing 이 구글 키로 재서명하므로 앱 서명 키 인증서 SHA-1(`AF:BB:40:5E:...`)을 base64(`r7tAXmn5jf61RifLeD82qJVg3Z0=`)로 변환해 카카오 Android 에 추가. 안 하면 Play 설치분만 로그인 실패. 변환·3종 키해시 목록은 [[reference-play-app-signing-kakao-keyhash]]. **✅ 테스터 폰 Play 설치 → 카카오 로그인 성공 확인.**
+- [ ] (프로덕션 전) 앱 콘텐츠 완성: 개인정보처리방침 URL(`https://tenk.hjson248.com/privacy.html`, 준비됨) + 데이터 안전 폼 + 콘텐츠 등급 + 타겟층. 내부 테스트에선 비필수라 미입력 상태.
 
 **Play Console 내부 테스트 (2026-07-07 피벗 · 진행 중)** — 직접 APK 공유에 더해 Play 내부 테스트 트랙으로도 배포
 - [x] 개발자 계정 $25 결제 + **신원 확인 완료 (2026-07-08)** → 앱 생성·게시 가능
