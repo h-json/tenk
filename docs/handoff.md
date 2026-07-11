@@ -5,6 +5,7 @@
 
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
+- **2026-07-11**: 📝 **UX 다듬기 백로그 8건 접수** (미착수) — 상태색/카테고리 목록화+아이콘/금액입력 보조표시/필수 별표/'메모'→'한 줄 평'/챌린지 색깔 기능/성공 트로피 배지 + 🐛 7/11 날짜 안 됨 제보 조사. 상세는 "남은 일 §1 앱 UX 다듬기 (백로그)" 2026-07-11 배치.
 - **2026-07-11**: 🧪 **테스트 지원(devtools) 추가 + 운영 배포·검증 완료.** 날짜 기반 앱이라 완료/확정 대기 상태를 현실 날짜 없이 즉시 만들려고 도입. `POST /api/auth/test/login {key,slot}`(카카오 없이 `provider=TEST` 계정 즉석 생성, 슬롯별 격리 → 내부 테스터 각자 사용) + `POST /api/dev/seed`(기존 데이터 wipe 후 5종 상태 시딩: 시작 전/진행 중/확정 대기/완료-성공/완료-실패, 배지 포함). 이중 잠금: 서버 `tenk.test.enabled`(prod 는 env `TENK_TEST_ENABLED` 로 토글) + 시크릿 `login-key`, 클라 `--dart-define=TEST_LOGIN_KEY`. Flutter: 로그인 화면 "테스트 로그인"(슬롯 입력) + '내 정보'의 "테스트 데이터 재생성"(TEST 계정만). 챌린지는 reflection 으로 backdate, 금액·배지는 정상 로직 재사용. 통합 테스트 5개 추가(로컬 실DB 전원 통과, `./gradlew test` 90개 그린). 상세는 [CLAUDE.md](../CLAUDE.md) "테스트 지원 (devtools)".
   - **schema 변경**: `user.provider` ENUM 에 `TEST` 추가 ([schema.sql](schema.sql)). `ddl-auto=validate` 라 필수.
   - **prod 배포 완료·검증**: 백엔드 이미지 재빌드·푸시(§5.1) + **라이브 DB 에 `ALTER TABLE user MODIFY provider ENUM(...,'TEST')` 수동 적용**(dbinit 볼륨은 최초 부팅에만 시딩되므로 이미 뜬 DB 는 ALTER 필수 — [docker-deployment.md §5.5](docker-deployment.md)) + 맥 `pull && up -d`. **prod E2E 검증 통과**: `https://tenk.hjson248.com` 에 테스트 로그인 → 시딩 → 5종 상태·배지 확인.
@@ -122,6 +123,17 @@
 - **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
 
 ### 1. 앱 UX 다듬기 (백로그)
+
+**2026-07-11 요청 배치 (UX 다듬기 + 버그 제보)** — 아직 미착수, 결정/구현 전. 착수 시 세부 결정 필요한 항목은 각 줄에 표기.
+- [ ] **챌린지 상태 색 변경** — 상태값(시작 전 / 진행 중 / 확정 대기 / 성공 / 실패)별 색상 재정의. 현재는 [challenge_status.dart](../tenk_app/lib/presentation/challenge/widgets/challenge_status.dart) 기준. 아래 "챌린지 색깔 기능"과 역할 충돌 안 나게 분리(상태색 vs 챌린지별 사용자 지정색).
+- [ ] **카테고리 목록화 + 아이콘** — 지출 카테고리를 자유 입력 대신 **정해진 목록에서 선택**으로 전환 + 카테고리별 아이콘. 결정 필요: 카테고리 카탈로그(항목/개수), 서버 enum 화 여부(현재 `category` 는 자유 문자열), 기존 자유입력 데이터 마이그레이션. 클라 record/edit 폼 + 상세 목록 아이콘까지.
+- [ ] **금액 입력 보조 표시** — 지출 기록 금액 입력 칸 밑에 좌:현재(입력) 금액 / 우:박스(목표) 금액 기준 남는 금액 실시간 표시. [amount_record_screen.dart](../tenk_app/lib/presentation/amount/amount_record_screen.dart). "남는 금액"이 이미 사용한 지출 합계까지 반영할지(목표 − 기존지출 − 입력값) 결정 필요.
+- [ ] **필수/선택 표기를 빨간 별표로** — `(필수)`/`(선택)` 텍스트 대신 필수 항목에 빨간 `*`. 전 폼 일관 적용(record/edit/create/nickname 등) — [[feedback-consistency-over-pinpoint]] 원칙대로 짚어준 화면만 말고 전수.
+- [ ] **'메모' → '한 줄 평' 용어 변경** — UI 라벨만 교체(백엔드 필드명 `memo` 는 유지). export 자막·record/edit 폼·상세 등 노출 위치 전수. CLAUDE.md 의 도메인 설명 용어도 함께 검토.
+- [ ] **챌린지 색깔 기능 추가** — 챌린지별 사용자 지정 색상(목록/상세 구분용). 결정 필요: 프리셋 팔레트 vs 자유 피커, 서버 컬럼 추가(`challenge.color`) + schema.sql, 적용 범위(목록 카드 액센트만 vs 상세까지), 상태색과의 시각 충돌 회피. (원래 "설명 추가"였다가 색깔 기능으로 대체됨.)
+- [ ] **챌린지 성공 트로피 배지** — 성공 확정 시 트로피 배지. 백엔드 `CHALLENGE_SUCCESS` 배지 지급 로직은 이미 존재([BadgeGrantService](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java)) — 신규 로직인지 기존 성공 배지 아이콘을 트로피로 교체/개선하는지 착수 시 확정.
+- [ ] 🐛 **7/11 날짜 제보 조사** — 2026-07-11 00:48 기준 "7월 11일(오늘)이 안 된다"는 제보. 증상 미상. 유력 후보: 자정 경계/타임존에서 "오늘" 기준일이 하루 어긋나 ① 오늘 시작 챌린지 생성이 `startDate >= today` 로 거부되거나 ② 오늘 지출 `spent_dt` 가 `AMOUNT_DATE_OUT_OF_RANGE` 로 걸리는 케이스. 재현·원인 파악 필요.
+
 - ✅ **챌린지 이름 필드 추가** (2026-06-17 구현, 2026-06-19 정책 변경, **2026-06-27 에뮬레이터 검증 통과**). **이름 필수 — 비울 수 없음.** 기본값 `챌린지 N` 은 **클라가 미리 채움**(서버 default-fill `resolveName` 제거, `@NotBlank` 로 빈값 거부), 결과 확정 전까지 변경 가능(`PATCH /api/challenges/{id}`), 결과 카드 헤더에 노출. 상세는 위 "마지막 갱신"(상단 + 2개) + [CLAUDE.md](../CLAUDE.md) "챌린지 도메인 규칙" / 위치별 책임 "챌린지 이름 정책 변경" 행 참고. 에뮬레이터 검증 완료(기본 이름 pre-fill / 빈값 거부 / 확정 전 rename / 확정 후 연필 숨김 / 결과 카드 이름) — 추가 작업 없음.
 - **업적(achievement) 시스템** — 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
 - **목록에 메모 노출** — 챌린지 상세의 amount 목록 (`_AmountTile`) 에서 memo 가 있을 때 미리보기(1~2줄 ellipsis) 또는 메모 아이콘 배지. 결정 필요: 본문 노출이 좋은지 아이콘만 노출이 좋은지 (긴 메모가 목록 높이를 흔들 수 있음).
