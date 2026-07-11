@@ -51,6 +51,15 @@ public class AuthService {
         refreshTokenRepository.revokeAllByUserId(userId);
     }
 
+    /**
+     * 이미 프로비저닝된 사용자에게 AT/RT 를 발급한다. 카카오 검증을 거치지 않는 경로
+     * (테스트 로그인 등)에서 토큰 발급 로직을 중복하지 않도록 노출한 진입점.
+     */
+    @Transactional
+    public AuthTokens issueTokensFor(User user, boolean isNewUser) {
+        return issueTokens(user, isNewUser);
+    }
+
     private ProvisionResult provisionUser(KakaoUser kakao) {
         return userRepository
                 .findByProviderAndProviderUserId(AuthProvider.KAKAO, kakao.providerUserId())

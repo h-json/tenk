@@ -42,7 +42,12 @@ public enum ErrorCode {
     MEDIA_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M0001", "파일 업로드에 실패했습니다."),
     MEDIA_NOT_FOUND(HttpStatus.NOT_FOUND, "M0002", "파일을 찾을 수 없습니다."),
 
-    BADGE_NOT_FOUND(HttpStatus.NOT_FOUND, "B0001", "배지를 찾을 수 없습니다.");
+    BADGE_NOT_FOUND(HttpStatus.NOT_FOUND, "B0001", "배지를 찾을 수 없습니다."),
+
+    TEST_MODE_DISABLED(HttpStatus.NOT_FOUND, "T0001", "테스트 기능이 비활성화되어 있습니다."),
+    TEST_LOGIN_KEY_INVALID(HttpStatus.UNAUTHORIZED, "T0002", "테스트 로그인 키가 올바르지 않습니다."),
+    TEST_SLOT_INVALID(HttpStatus.BAD_REQUEST, "T0003", "테스트 슬롯 이름은 1~20자의 한글·영문·숫자·-·_ 만 가능합니다."),
+    TEST_ONLY_OPERATION(HttpStatus.FORBIDDEN, "T0004", "테스트 계정에서만 사용할 수 있는 기능입니다.");
 
     private final HttpStatus status;
     private final String code;

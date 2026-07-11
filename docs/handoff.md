@@ -5,6 +5,11 @@
 
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
+- **2026-07-11**: 🧪 **테스트 지원(devtools) 추가 + 운영 배포·검증 완료.** 날짜 기반 앱이라 완료/확정 대기 상태를 현실 날짜 없이 즉시 만들려고 도입. `POST /api/auth/test/login {key,slot}`(카카오 없이 `provider=TEST` 계정 즉석 생성, 슬롯별 격리 → 내부 테스터 각자 사용) + `POST /api/dev/seed`(기존 데이터 wipe 후 5종 상태 시딩: 시작 전/진행 중/확정 대기/완료-성공/완료-실패, 배지 포함). 이중 잠금: 서버 `tenk.test.enabled`(prod 는 env `TENK_TEST_ENABLED` 로 토글) + 시크릿 `login-key`, 클라 `--dart-define=TEST_LOGIN_KEY`. Flutter: 로그인 화면 "테스트 로그인"(슬롯 입력) + '내 정보'의 "테스트 데이터 재생성"(TEST 계정만). 챌린지는 reflection 으로 backdate, 금액·배지는 정상 로직 재사용. 통합 테스트 5개 추가(로컬 실DB 전원 통과, `./gradlew test` 90개 그린). 상세는 [CLAUDE.md](../CLAUDE.md) "테스트 지원 (devtools)".
+  - **schema 변경**: `user.provider` ENUM 에 `TEST` 추가 ([schema.sql](schema.sql)). `ddl-auto=validate` 라 필수.
+  - **prod 배포 완료·검증**: 백엔드 이미지 재빌드·푸시(§5.1) + **라이브 DB 에 `ALTER TABLE user MODIFY provider ENUM(...,'TEST')` 수동 적용**(dbinit 볼륨은 최초 부팅에만 시딩되므로 이미 뜬 DB 는 ALTER 필수 — [docker-deployment.md §5.5](docker-deployment.md)) + 맥 `pull && up -d`. **prod E2E 검증 통과**: `https://tenk.hjson248.com` 에 테스트 로그인 → 시딩 → 5종 상태·배지 확인.
+  - **내부 테스트 AAB(versionCode 3) 빌드 완료** — `--dart-define` 에 base URL + `TEST_LOGIN_KEY` 주입, `CN=Tenk` 릴리스 서명 확인. **Play Console 업로드는 사용자 수동**(§0).
+  - **정식 출시 시**: 앱을 `TEST_LOGIN_KEY` 빼고 재빌드 + 맥 compose 에 `TENK_TEST_ENABLED=false`.
 - **2026-07-08**: 🚀 **Play Console 내부 테스트 준비.** 개발자 계정 $25 + **신원 확인 완료** → 앱 생성·게시 가능. AAB 빌드 완료(`app-release.aab`), 개인정보처리방침 `https://tenk.hjson248.com/privacy.html` **LIVE**. 앞서 회원 탈퇴 3개월 hard-delete 배치 + privacy.html 구현·배포·커밋(`9e9e031`). 다음: 앱 만들기 → AAB 업로드 → **Play 앱 서명 키해시 카카오 등록** → 테스터 초대 (§0).
 - **2026-07-08**: 🚀 **Play Console 내부 테스트 게시 성공 + 카카오 로그인 확인.** 신규 Play 개발자 계정($25) 신원 확인 완료 → 앱(`com.hjson.tenk_app`) 생성 → 내부 테스트에 AAB(versionCode 2) 업로드 → 게시 → 테스터 링크로 Play 설치 → **카카오 로그인 정상**. **Play App Signing 키해시 함정 넘김**: Play 앱 서명 키 SHA-1 `AF:BB:40:...` → base64 `r7tAXmn5jf61RifLeD82qJVg3Z0=` 를 카카오 Android 플랫폼에 추가 등록([[reference-play-app-signing-kakao-keyhash]]). 개인정보처리방침 URL 은 내부 테스트에선 비필수(프로덕션 전 입력). 첫 업로드 3-오류(번들 없음/업그레이드 불가/번들 미변경)는 versionCode 중복이라 `pubspec` 1.0.0+1→+2 로 해결. 상세 §0.
 - **2026-07-03**: 🚀 **Android 테스트 APK 빌드·핵심검증 완료.** 릴리스 keystore/서명/앱이름(Tenk)/키해시 카카오 등록/서명 APK 빌드까지 끝. 실기기(갤럭시 S24, 무선 adb)에서 **카카오 로그인 + 배포 백엔드 연동 확인**. **릴리스에서만 카카오 로그인이 깨지던 버그 발견·수정 = R8 축소가 카카오 SDK Pigeon 클래스 제거 → `isMinifyEnabled=false`**(아래 함정). 남은 스모크(챌린지 생성/카메라/영상 export)는 다음. iOS 무료 빌드 경로(시뮬레이터/개인팀)·SSH 원격빌드 범위 문서화(§0). **커밋 후 iOS 빌드 착수 예정.**
@@ -34,7 +39,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 84개 그린 — 단위 62 + 통합 17 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 90개 — 단위 63 + 통합 22 + WebMvc 4 + ContextLoads 1). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -54,7 +59,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **85개** 그린(단위 63 + 통합 17 + WebMvc 4 + 컨텍스트 1). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **90개**(단위 63 + 통합 22 + WebMvc 4 + 컨텍스트 1). 통합 22 = 기존 17 + devtools 시딩/로그인 5(2026-07-11). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -93,7 +98,7 @@
 
 **Play Console 내부 테스트 (직접 APK 와 병행) — ✅ 게시·로그인 확인 (2026-07-08)**
 - [x] Play 개발자 계정 $25 + **신원 확인 완료**. 앱 생성 (패키지명 = applicationId **`com.hjson.tenk_app`**, 영구 고정 — 백엔드 자바 패키지 `com.hjson.tenk` 와 무관).
-- [x] AAB 빌드: `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/bundle/release/app-release.aab`(~104MB). Play 는 신규앱 APK 불가·AAB 필수. **재업로드 시 `pubspec` versionCode 필히 증가**(현재 1.0.0+2, 다음은 +3).
+- [x] AAB 빌드: `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com`(+ 테스트 기능 배포 시 `--dart-define=TEST_LOGIN_KEY=<서버 login-key>`) → `build/app/outputs/bundle/release/app-release.aab`(~104MB). Play 는 신규앱 APK 불가·AAB 필수. **재업로드 시 `pubspec` versionCode 필히 증가**. 이력: +2(2026-07-08 게시) → **+3(2026-07-11, devtools 테스트 기능 포함, 업로드 대기)**.
 - [x] 내부 테스트 트랙 업로드 → 게시 → 테스터 목록 → 참여 링크로 Play 설치. 개인계정 "비공개 12명×14일" 요건은 **프로덕션 전용** — 내부 테스트는 면제(100명 즉시).
 - [x] **⚠️ Play 앱 서명 키해시 카카오 등록 완료** — Play App Signing 이 구글 키로 재서명하므로 앱 서명 키 인증서 SHA-1(`AF:BB:40:5E:...`)을 base64(`r7tAXmn5jf61RifLeD82qJVg3Z0=`)로 변환해 카카오 Android 에 추가. 안 하면 Play 설치분만 로그인 실패. 변환·3종 키해시 목록은 [[reference-play-app-signing-kakao-keyhash]]. **✅ 테스터 폰 Play 설치 → 카카오 로그인 성공 확인.**
 - [ ] (프로덕션 전) 앱 콘텐츠 완성: 개인정보처리방침 URL(`https://tenk.hjson248.com/privacy.html`, 준비됨) + 데이터 안전 폼 + 콘텐츠 등급 + 타겟층. 내부 테스트에선 비필수라 미입력 상태.

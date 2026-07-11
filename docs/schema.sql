@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `user`;
 
 CREATE TABLE `user` (
     `user_id`             BIGINT AUTO_INCREMENT                          NOT NULL,
-    `provider`            ENUM('GOOGLE', 'KAKAO', 'NAVER')               NOT NULL,
+    `provider`            ENUM('GOOGLE', 'KAKAO', 'NAVER', 'TEST')       NOT NULL,
     `provider_user_id`    VARCHAR(255)                                   NOT NULL,
     `email`               VARCHAR(255)                                   NULL,
     `nickname`            VARCHAR(255)                                   NOT NULL,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
+import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
 import '../common/async_state.dart';
@@ -115,6 +116,41 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  Future<void> _reseed() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('테스트 데이터 재생성'),
+        content: const Text(
+          '이 계정의 기존 챌린지·기록을 모두 지우고 상태별(시작 전 / 진행 중 / 확정 대기 / 완료-성공 / 완료-실패) 챌린지를 새로 만들어요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('재생성'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await ChallengeScope.of(context).seedTestData();
+      if (!mounted) return;
+      // 목록 화면이 seed 결과를 반영하도록 true 를 반환하며 pop.
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('재생성 실패: ${toApiException(e).message}');
+      setState(() => _busy = false);
+    }
+  }
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -187,6 +223,16 @@ class _ProfileScreenState extends State<ProfileScreen>
           title: const Text('로그아웃'),
           onTap: _busy ? null : _logout,
         ),
+        if (testToolsEnabled && user.provider == 'TEST') ...[
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.science_outlined, color: Colors.deepPurple),
+            title: const Text('테스트 데이터 재생성',
+                style: TextStyle(color: Colors.deepPurple)),
+            subtitle: const Text('기존 데이터를 지우고 상태별 챌린지 5종 생성'),
+            onTap: _busy ? null : _reseed,
+          ),
+        ],
         const Divider(height: 1),
         ListTile(
           leading: const Icon(Icons.delete_forever, color: Colors.red),

@@ -9,3 +9,7 @@ tenk:
     jwt:
       # 로컬 개발 전용 HS256 키 (Base64, 256bit 이상). prod에서는 절대 사용 금지.
       secret: dGVuay1sb2NhbC1qd3Qtc2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtMTIzNDU2Nzg=
+  test:
+    # 로컬은 항상 켜둠. Flutter 로컬 빌드의 --dart-define=TEST_LOGIN_KEY 와 같은 값이어야 함.
+    enabled: true
+    login-key: tenk-local-test-key

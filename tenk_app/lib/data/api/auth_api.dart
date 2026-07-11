@@ -25,6 +25,15 @@ class AuthApi {
     return AuthTokens.fromJson(unwrapData(res.data));
   }
 
+  /// 테스트 전용 — 카카오 우회 로그인. 백엔드 `tenk.test.enabled` + 키 검증을 거친다. 인증 불필요.
+  Future<AuthTokens> testLogin({required String key, required String slot}) async {
+    final res = await _rawDio.post(
+      '/api/auth/test/login',
+      data: {'key': key, 'slot': slot},
+    );
+    return AuthTokens.fromJson(unwrapData(res.data));
+  }
+
   Future<void> logout() async {
     await _authDio.post('/api/auth/logout');
   }

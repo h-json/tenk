@@ -61,6 +61,12 @@ class ChallengeApi {
     await _dio.delete('/api/challenges/$challengeId');
   }
 
+  /// 테스트 전용 — 호출한 TEST 계정의 기존 데이터를 지우고 상태별 챌린지를 시딩한다.
+  /// 백엔드가 provider=TEST 계정만 허용하므로 실제 카카오 계정에서는 거부된다.
+  Future<void> seedTestData() async {
+    await _dio.post('/api/dev/seed');
+  }
+
   /// 백엔드 `LocalDate`는 `yyyy-MM-dd`를 기대. `DateTime.toIso8601String()`은 시각·타임존이 붙어
   /// 파서가 깨질 수 있으므로 직접 포맷.
   static String _formatDate(DateTime dt) {

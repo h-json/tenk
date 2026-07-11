@@ -5,12 +5,16 @@ import 'package:flutter/foundation.dart';
 class User {
   const User({
     required this.userId,
+    required this.provider,
     required this.email,
     required this.nickname,
     required this.nicknameChangeAvailableFrom,
   });
 
   final int userId;
+
+  /// 로그인 공급자 (`KAKAO` / `TEST` 등). 테스트 데이터 시딩 버튼을 `TEST` 계정에만 노출하는 데 사용.
+  final String? provider;
   final String? email;
   final String? nickname;
 
@@ -22,6 +26,7 @@ class User {
     final raw = json['nicknameChangeAvailableFrom'] as String?;
     return User(
       userId: (json['userId'] as num).toInt(),
+      provider: json['provider'] as String?,
       email: json['email'] as String?,
       nickname: json['nickname'] as String?,
       nicknameChangeAvailableFrom: raw == null ? null : DateTime.parse(raw),

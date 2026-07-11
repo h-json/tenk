@@ -56,10 +56,20 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
   }
 
   Future<void> _openProfile() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+    // 닉네임/이메일 변경은 챌린지 데이터에 영향 없으니 보통은 reload 없음.
+    // 단 테스트 데이터 재생성(pop(true))이 일어났으면 목록을 새로고침한다.
+    final seeded = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const ProfileScreen()),
     );
-    // 닉네임/이메일 변경은 챌린지 데이터에 영향 없으니 reload 없음.
+    if (!mounted) return;
+    if (seeded == true) {
+      await reload();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('테스트 데이터를 생성했어요.')),
+        );
+      }
+    }
   }
 
   @override

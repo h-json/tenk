@@ -11,3 +11,6 @@ tenk:
       secret: dGVuay10ZXN0LWp3dC1zZWNyZXQta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0LTEy
   upload:
     base-dir: ./build/uploads-test
+  test:
+    enabled: true
+    login-key: test-integration-key

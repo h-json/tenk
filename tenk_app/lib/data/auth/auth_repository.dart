@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 // 카카오 SDK의 `AuthApi`는 우리 [AuthApi]와 이름이 겹치므로 가린다.
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' hide AuthApi;
 
+import '../../config/test_config.dart';
 import '../api/auth_api.dart';
 import 'token_storage.dart';
 
@@ -32,6 +33,13 @@ class AuthRepository {
         await UserApi.instance.logout();
       } catch (_) {}
     }
+  }
+
+  /// 테스트 전용 — 카카오 없이 슬롯(테스터 식별자)으로 로그인. 키는 빌드 시 주입된 [testLoginKey].
+  /// 테스트 계정은 닉네임 설정 화면을 거치지 않으므로 반환값(isNewUser)이 없다.
+  Future<void> loginAsTest(String slot) async {
+    final tokens = await api.testLogin(key: testLoginKey, slot: slot);
+    await storage.save(tokens);
   }
 
   Future<void> logout() async {

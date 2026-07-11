@@ -19,3 +19,9 @@ tenk:
       # 키 노출/유출 시: 이 값을 새 키로 교체하면 기존에 발급된 모든 AT/RT가 즉시 무효화됨.
       # private 레포 전제이므로 yaml에 직접 박아 두지만, 리포가 공개로 전환되거나 외부에 새어나가면 즉시 회전(rotate) 필요.
       secret: WVzjLgcdqToIfIflBfiETuAyrzq1D4N0jjEhe+P1IHnAyKGib5khOKw4kHwBoKLRCPO3N78931f3hJdjRAZgUA==
+  test:
+    # 내부 테스트 기간엔 켜둠. 정식 출시 시 docker-compose 에 TENK_TEST_ENABLED=false 를 주고
+    # 컨테이너만 재시작하면 이미지 재빌드 없이 꺼진다 (env 가 이 값을 덮어씀).
+    # login-key 는 Play 내부 테스트 AAB 빌드의 --dart-define=TEST_LOGIN_KEY 와 반드시 같은 값이어야 한다.
+    enabled: ${TENK_TEST_ENABLED:true}
+    login-key: tenk-test-9f3c1a7b5e2d4068c1

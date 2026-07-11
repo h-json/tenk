@@ -116,6 +116,18 @@ cd ~/Documents/projects/claude/tenk && cp .env.example .env   # 비밀번호 채
 docker compose up -d
 ```
 
+### 5.5 라이브 DB 스키마 변경 (⚠️ dbinit 는 최초 부팅에만 적용됨)
+`tenk_dbinit` 볼륨의 `01-schema.sql` 은 **DB 데이터 디렉토리가 비어 있는 첫 기동에만** 실행된다. 즉 **이미 떠서 데이터가 있는 라이브 DB 에는 `docs/schema.sql` 을 고쳐도 반영되지 않는다** (`ddl-auto=validate` 라 엔티티/컬럼을 바꾸면 스키마도 맞춰야 부팅됨). 라이브 DB 에는 **컨테이너 안에서 직접 `ALTER` 를 쳐야** 한다:
+```bash
+cd ~/Documents/projects/claude/tenk
+set -a; . ./.env; set +a
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
+  -e "ALTER TABLE \`user\` MODIFY \`provider\` ENUM('GOOGLE','KAKAO','NAVER','TEST') NOT NULL;"   # 예시
+```
+- 리포 `docs/schema.sql` + 맥 `dbinit` 볼륨의 `01-schema.sql` **양쪽도 같이 갱신**해야 다음 클린 재구축 때 어긋나지 않는다.
+- enum 값을 **끝에 추가**하는 ALTER 는 메타데이터만 바뀌어 즉시·무손실. 컬럼 추가/타입 변경은 데이터·다운타임 영향 검토 후.
+- 실적용 사례: 2026-07-11 `provider` ENUM 에 `TEST` 추가(devtools 테스트 계정용).
+
 ---
 
 ## 6. 트러블슈팅 (실제로 겪은 것)
