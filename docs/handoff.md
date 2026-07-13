@@ -5,8 +5,9 @@
 
 **최근 변경 이력** — 최신순 한 줄 요약. 상세는 git log / 아래 "완료된 것" 섹션 / 회의록 참고.
 
+- **2026-07-13**: ✅ **Android 릴리스 실기기 전체 흐름 스모크 완료** — 챌린지 생성 → 지출/무지출 기록 → 카메라 녹화·업로드 → 확정 → 결과 카드 → 영상 export 전 경로 통과. §0 테스트 배포 빌드의 Android 트랙은 이제 콘텐츠 잔여(앱 아이콘/APK 분할)만 선택 항목으로 남음. **이 스모크에서 §1 UX 다듬기 백로그(2026-07-11 배치)가 도출됨** — 다음 작업은 그 백로그.
 - **2026-07-13**: 🐛✅ **서버 타임존 KST 고정 — 자정~오전 9시 날짜 하루 밀림 해결·배포** (`f30d358`). 7/11 "날짜 안 됨" 제보의 원인이 Docker 컨테이너 UTC 타임존이었음 확정 (`LocalDate.now()` 가 한국 자정~오전 9시 사이 전날로 잡혀 "오늘 시작" 챌린지가 "시작 전"). `TenkApplication` `TimeZone.setDefault` + compose `TZ` env 두 겹 고정. 이미지 재빌드·push + 맥 `pull && up -d` 배포·검증 완료. 상세는 §1 백로그 해당 항목 + [CLAUDE.md](../CLAUDE.md) "서버 타임존".
-- **2026-07-11**: 📝 **UX 다듬기 백로그 8건 접수** (미착수) — 상태색/카테고리 목록화+아이콘/금액입력 보조표시/필수 별표/'메모'→'한 줄 평'/챌린지 색깔 기능/성공 트로피 배지 + 🐛 7/11 날짜 안 됨 제보 조사. 상세는 "남은 일 §1 앱 UX 다듬기 (백로그)" 2026-07-11 배치.
+- **2026-07-11**: 📝 **UX 다듬기 백로그 8건 접수** (실기기 스모크 중 도출, 2026-07-13 스모크 완료로 착수 대기) — 상태색/카테고리 목록화+아이콘/금액입력 보조표시/필수 별표/'메모'→'한 줄 평'/챌린지 색깔 기능/성공 트로피 배지 + 🐛 7/11 날짜 안 됨 제보 조사. '한 줄 평'·타임존 버그 2건 완료, 나머지 6건 미착수. 상세는 "남은 일 §1 앱 UX 다듬기 (백로그)" 2026-07-11 배치.
 - **2026-07-11**: 🧪 **테스트 지원(devtools) 추가 + 운영 배포·검증 완료.** 날짜 기반 앱이라 완료/확정 대기 상태를 현실 날짜 없이 즉시 만들려고 도입. `POST /api/auth/test/login {key,slot}`(카카오 없이 `provider=TEST` 계정 즉석 생성, 슬롯별 격리 → 내부 테스터 각자 사용) + `POST /api/dev/seed`(기존 데이터 wipe 후 5종 상태 시딩: 시작 전/진행 중/확정 대기/완료-성공/완료-실패, 배지 포함). 이중 잠금: 서버 `tenk.test.enabled`(prod 는 env `TENK_TEST_ENABLED` 로 토글) + 시크릿 `login-key`, 클라 `--dart-define=TEST_LOGIN_KEY`. Flutter: 로그인 화면 "테스트 로그인"(슬롯 입력) + '내 정보'의 "테스트 데이터 재생성"(TEST 계정만). 챌린지는 reflection 으로 backdate, 금액·배지는 정상 로직 재사용. 통합 테스트 5개 추가(로컬 실DB 전원 통과, `./gradlew test` 90개 그린). 상세는 [CLAUDE.md](../CLAUDE.md) "테스트 지원 (devtools)".
   - **schema 변경**: `user.provider` ENUM 에 `TEST` 추가 ([schema.sql](schema.sql)). `ddl-auto=validate` 라 필수.
   - **prod 배포 완료·검증**: 백엔드 이미지 재빌드·푸시(§5.1) + **라이브 DB 에 `ALTER TABLE user MODIFY provider ENUM(...,'TEST')` 수동 적용**(dbinit 볼륨은 최초 부팅에만 시딩되므로 이미 뜬 DB 는 ALTER 필수 — [docker-deployment.md §5.5](docker-deployment.md)) + 맥 `pull && up -d`. **prod E2E 검증 통과**: `https://tenk.hjson248.com` 에 테스트 로그인 → 시딩 → 5종 상태·배지 확인.
@@ -79,7 +80,7 @@
 
 > 백엔드 테스트(단위·통합·WebMvc) + 영상 합본 export + 배지 획득 축하 모달 + 카메라 녹화 시작 UX (transitional morph + 효과음 royalty-free MP3 + 탭 즉시 트리거 분리) + 챌린지 결과 카드 (풀스크린 + 영상 마지막 클립 합성) 모두 ✅ 완료. 자세한 건 "완료된 것" 섹션 참고. **카메라 / 결과 카드 / 닉네임 도메인 일단락 + 위 3개 블록 실기기 검증 전원 통과 (2026-06-16)** — 다음은 다른 백로그.
 
-### 0. 🚀 테스트 배포 빌드 준비 (최우선 · 진행 중, 2026-07-02 착수)
+### 0. 🚀 테스트 배포 빌드 준비 (2026-07-02 착수 · Android 스모크 ✅ 완료 2026-07-13 · iOS/Play 콘텐츠만 잔여)
 
 > 목표: Android/iOS 테스트 버전 배포. **결정 사항**은 위 "최근 변경 이력" 참고. 릴리스 빌드 규칙·함정은 [CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 섹션에 영구 규칙으로 박음.
 
@@ -87,14 +88,14 @@
 - **iOS 빌드는 이 Windows 머신에서 불가** — `flutter build ios/ipa`/`pod install`/Xcode 전부 macOS + Xcode 필수. iOS 작업은 전부 맥에서 (도커 배포하던 그 맥).
 - **iOS 앱스토어/TestFlight 배포만 Apple Developer Program($99/년) 필요** — 미보유라 배포는 보류. 하지만 **빌드·실행은 공짜로 가능**(시뮬레이터=계정 불필요, 본인 아이폰=무료 Apple ID 개인팀). 아래 iOS 항목 참고.
 
-**Android (직접 서명 APK 공유) — ✅ 빌드·핵심검증 완료 (2026-07-02)**
+**Android (직접 서명 APK 공유) — ✅ 빌드·전체 흐름 스모크 완료 (2026-07-13)**
 - [x] 릴리스 keystore(PKCS12) 생성 → `tenk_app/android/tenk-release.keystore` (alias `tenk`, git 추적) + [key.properties](../tenk_app/android/key.properties) (git 추적, 양쪽 .gitignore 무시 해제)
 - [x] [build.gradle.kts](../tenk_app/android/app/build.gradle.kts) key.properties 로드 + `release` signingConfig (없으면 debug 폴백). **R8 축소 OFF**(`isMinifyEnabled=false`/`isShrinkResources=false`) — 아래 함정 참고
 - [x] 앱 표시 이름 `Tenk` (android:label + iOS CFBundleDisplayName)
 - [x] 릴리스 키해시 `NsYpNZftCOyk4LygMWF7mdtowdg=` 추출 → **카카오 콘솔 등록 완료**(debug 와 함께 2개)
 - [x] `flutter build apk --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → app-release.apk (fat, ~165MB). apksigner 로 릴리스 키 서명 확인
 - [x] **실기기 스모크 부분 통과** (SM-S921N 갤럭시 S24, 무선 adb): ✅ 카카오 로그인(릴리스 키해시 유효) / ✅ 배포 백엔드 연동(챌린지 목록 로딩) / ✅ 앱 이름·로그인·목록 화면 정상. **R8 이 카카오 SDK 제거해 릴리스에서만 로그인 깨지던 버그 발견·수정**(아래 함정)
-- [ ] **남은 스모크**(다음): 챌린지 생성 → 지출/무지출 기록 → **카메라 녹화·업로드** → 확정 → 결과 카드 → **영상 export**. (adb input 으로 이어서 구동 가능)
+- [x] **남은 스모크 완료 (2026-07-13)**: 챌린지 생성 → 지출/무지출 기록 → 카메라 녹화·업로드 → 확정 → 결과 카드 → 영상 export 실기기 전 흐름 통과. **이 스모크 과정에서 §1 UX 다듬기 백로그(2026-07-11 배치)가 도출됨.**
 - [ ] (선택) 앱 아이콘 교체 — 현재 기본 Flutter 아이콘 (`flutter_launcher_icons` 권장)
 - [ ] (선택) APK 크기(~165MB) 줄이려면 `--split-per-abi` (arch별 ~55MB)
 
@@ -125,7 +126,7 @@
 
 ### 1. 앱 UX 다듬기 (백로그)
 
-**2026-07-11 요청 배치 (UX 다듬기 + 버그 제보)** — 아직 미착수, 결정/구현 전. 착수 시 세부 결정 필요한 항목은 각 줄에 표기.
+**2026-07-11 요청 배치 (UX 다듬기 + 버그 제보)** — **2026-07-13 Android 실기기 전체 흐름 스모크 도중 도출된 피드백.** 스모크 자체는 완료(§0), 아래 UX 항목은 아직 미착수·결정/구현 전. 착수 시 세부 결정 필요한 항목은 각 줄에 표기.
 - [ ] **챌린지 상태 색 변경** — 상태값(시작 전 / 진행 중 / 확정 대기 / 성공 / 실패)별 색상 재정의. 현재는 [challenge_status.dart](../tenk_app/lib/presentation/challenge/widgets/challenge_status.dart) 기준. 아래 "챌린지 색깔 기능"과 역할 충돌 안 나게 분리(상태색 vs 챌린지별 사용자 지정색).
 - [ ] **카테고리 목록화 + 아이콘** — 지출 카테고리를 자유 입력 대신 **정해진 목록에서 선택**으로 전환 + 카테고리별 아이콘. 결정 필요: 카테고리 카탈로그(항목/개수), 서버 enum 화 여부(현재 `category` 는 자유 문자열), 기존 자유입력 데이터 마이그레이션. 클라 record/edit 폼 + 상세 목록 아이콘까지.
 - [ ] **금액 입력 보조 표시** — 지출 기록 금액 입력 칸 밑에 좌:현재(입력) 금액 / 우:박스(목표) 금액 기준 남는 금액 실시간 표시. [amount_record_screen.dart](../tenk_app/lib/presentation/amount/amount_record_screen.dart). "남는 금액"이 이미 사용한 지출 합계까지 반영할지(목표 − 기존지출 − 입력값) 결정 필요.
