@@ -50,6 +50,10 @@ services:
       - internal
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      # 컨테이너 기본 타임존은 UTC 라 LocalDate.now() 가 한국 자정~오전 9시 사이 하루 밀린다
+      # ("오늘 시작" 챌린지가 "시작 전" 으로 보이는 버그). KST 로 고정.
+      # (앱 코드 TenkApplication 에도 setDefault 로 고정돼 있지만, env 로도 둬 이중 안전망.)
+      TZ: Asia/Seoul
       # 이미지에 굽지 않고 런타임 주입 (prod yaml 의 TODO 플레이스홀더를 env 가 덮어씀).
       SPRING_DATASOURCE_URL: "jdbc:mariadb://db:3306/tenk?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul"
       SPRING_DATASOURCE_USERNAME: tenk
