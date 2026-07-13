@@ -300,7 +300,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
             children: [
               if (!noSpend) ..._buildDateTimeSection(theme),
               if (!noSpend) ..._buildSpendFields(theme),
-              Text('메모 (선택)', style: theme.textTheme.titleMedium),
+              Text('한 줄 평 (선택)', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _memoController,

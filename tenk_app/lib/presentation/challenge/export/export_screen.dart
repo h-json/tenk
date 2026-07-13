@@ -206,7 +206,7 @@ class _HeaderBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '자막은 기록을 탭해서 편집할 수 있어요. (저장된 메모는 안 바뀌어요.)',
+            '자막은 기록을 탭해서 편집할 수 있어요. (저장된 한 줄 평은 안 바뀌어요.)',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -415,7 +415,7 @@ class _CommentEditSheetState extends State<_CommentEditSheet> {
           Text('자막 편집', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            '영상이 재생될 때 자막으로 표시돼요. 저장된 메모는 영향받지 않아요.',
+            '영상이 재생될 때 자막으로 표시돼요. 저장된 한 줄 평은 영향받지 않아요.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

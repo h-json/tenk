@@ -189,7 +189,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 const SizedBox(height: 24),
               ],
               if (!widget.noSpend) ..._buildSpendFields(theme),
-              Text('메모 (선택)', style: theme.textTheme.titleMedium),
+              Text('한 줄 평 (선택)', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _memoController,
