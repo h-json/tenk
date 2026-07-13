@@ -150,6 +150,7 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
 - [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
 - [x] **개인정보처리방침 배포 (2026-07-07 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html)(jar static) 재배포로 `https://tenk.hjson248.com/privacy.html` 서빙·브라우저 확인. Play Console 처리방침 URL 이 이 주소.
 - [x] **회원 탈퇴 hard-delete (2026-07-07 배포)** — soft delete + 3개월 보관 후 새벽 배치 물리 삭제. 상세는 [handoff.md](handoff.md) "운영 고려사항".
+- [x] **서버 타임존 KST 고정 (2026-07-13 배포)** — 컨테이너 기본 UTC 라 `LocalDate.now()` 가 한국 자정~오전 9시 사이 전날로 잡혀 "오늘 시작" 챌린지가 "시작 전" 으로 보이던 버그(7/11 제보) 해결. 두 겹 고정: [TenkApplication](../tenk-backend/src/main/java/com/hjson/tenk/TenkApplication.java) `TimeZone.setDefault` (이미지 재빌드로 반영) + [docker-compose.yml](../deploy/docker-compose.yml) backend `TZ: Asia/Seoul` env (맥 compose 복사본 갱신 → `up -d`). 검증: `docker compose exec backend date` → KST. 커밋 `f30d358`.
 
 ## 8. 기술 사실
 
