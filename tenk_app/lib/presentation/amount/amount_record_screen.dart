@@ -9,6 +9,7 @@ import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
 import 'amount_camera_screen.dart';
+import 'spend_category.dart';
 import 'widgets/budget_hint_row.dart';
 import 'widgets/video_attachment_section.dart';
 
@@ -32,7 +33,6 @@ class AmountRecordScreen extends StatefulWidget {
 
 class _AmountRecordScreenState extends State<AmountRecordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _categoryController = TextEditingController();
   final _contentController = TextEditingController();
   final _amountController = TextEditingController();
   final _amountFocus = FocusNode();
@@ -41,6 +41,9 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
   late DateTime _spentDt;
   String? _videoPath;
   bool _submitting = false;
+
+  /// 선택된 지출 카테고리 코드 (예: `FOOD`). null = 미선택.
+  String? _selectedCategoryCode;
 
   /// 우측 "잔액" 표시에 반영되는 확정 금액. 매 타이핑이 아니라 금액 칸 포커스가
   /// 빠질 때만 갱신한다 (실시간 카운트다운이 산만해서). null = 아직 입력 없음.
@@ -80,7 +83,6 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
   void dispose() {
     // 사용자가 촬영만 하고 저장 안 한 채 뒤로 가면 임시 파일 정리.
     _disposeLocalVideo();
-    _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
     _amountFocus.dispose();
@@ -141,7 +143,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         challengeId: widget.challenge.id,
         noSpend: widget.noSpend,
         dateTime: widget.noSpend ? null : _spentDt,
-        category: widget.noSpend ? null : _categoryController.text.trim(),
+        category: widget.noSpend ? null : _selectedCategoryCode,
         content: widget.noSpend ? null : _contentController.text.trim(),
         amount: widget.noSpend ? null : int.parse(_amountController.text),
         memo: memo.isEmpty ? null : memo,
@@ -253,14 +255,28 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     return [
       Text('카테고리', style: theme.textTheme.titleMedium),
       const SizedBox(height: 8),
-      TextFormField(
-        controller: _categoryController,
+      DropdownButtonFormField<String>(
+        initialValue: _selectedCategoryCode,
+        isExpanded: true,
         decoration: const InputDecoration(
           border: OutlineInputBorder(),
-          hintText: '예) 식비, 교통, 카페',
+          hintText: '카테고리 선택',
         ),
-        validator: (raw) =>
-            (raw == null || raw.trim().isEmpty) ? '카테고리를 입력해주세요.' : null,
+        items: [
+          for (final category in kSpendCategories)
+            DropdownMenuItem(
+              value: category.code,
+              child: Row(
+                children: [
+                  Icon(category.icon, size: 20),
+                  const SizedBox(width: 12),
+                  Text(category.label),
+                ],
+              ),
+            ),
+        ],
+        onChanged: (code) => setState(() => _selectedCategoryCode = code),
+        validator: (code) => code == null ? '카테고리를 선택해주세요.' : null,
       ),
       const SizedBox(height: 24),
       Text('내용', style: theme.textTheme.titleMedium),

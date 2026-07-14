@@ -116,8 +116,8 @@ public class TestSupportService {
 
         // 2) 진행 중 — 5일 연속 기록(STREAK 3) + 무지출 3일(NO_SPEND 3). 총지출 < 목표.
         Challenge ongoing = newChallenge(user, "진행 중 챌린지", today.minusDays(4), today.plusDays(5), null);
-        spend(ongoing, "식비", "점심 김밥", 3_000, today.minusDays(4));
-        spend(ongoing, "교통", "버스", 1_200, today.minusDays(3));
+        spend(ongoing, "FOOD", "점심 김밥", 3_000, today.minusDays(4));
+        spend(ongoing, "TRANSPORT", "버스", 1_200, today.minusDays(3));
         noSpend(ongoing, today.minusDays(2));
         noSpend(ongoing, today.minusDays(1));
         noSpend(ongoing, today);
@@ -125,7 +125,7 @@ public class TestSupportService {
 
         // 3) 확정 대기 — 종료됐지만 미확정. finalize 누르면 SUCCESS (총지출 < 목표). 배지도 미리 형성.
         Challenge pending = newChallenge(user, "확정 대기 챌린지", today.minusDays(12), today.minusDays(2), null);
-        spend(pending, "쇼핑", "양말", 3_000, today.minusDays(12));
+        spend(pending, "SHOPPING", "양말", 3_000, today.minusDays(12));
         noSpend(pending, today.minusDays(4));
         noSpend(pending, today.minusDays(3));
         noSpend(pending, today.minusDays(2));
@@ -133,9 +133,9 @@ public class TestSupportService {
 
         // 4) 완료-성공 — 총지출 5,500 ≤ 목표. CHALLENGE_SUCCESS + STREAK/NO_SPEND 배지.
         Challenge success = newChallenge(user, "성공 완료 챌린지", today.minusDays(25), today.minusDays(15), ChallengeResult.SUCCESS);
-        spend(success, "식비", "커피", 2_000, today.minusDays(25));
-        spend(success, "생활", "세제", 1_500, today.minusDays(24));
-        spend(success, "교통", "지하철", 2_000, today.minusDays(23));
+        spend(success, "FOOD", "커피", 2_000, today.minusDays(25));
+        spend(success, "LIVING", "세제", 1_500, today.minusDays(24));
+        spend(success, "TRANSPORT", "지하철", 2_000, today.minusDays(23));
         noSpend(success, today.minusDays(17));
         noSpend(success, today.minusDays(16));
         noSpend(success, today.minusDays(15));
@@ -144,8 +144,8 @@ public class TestSupportService {
 
         // 5) 완료-실패 — 총지출 12,000 > 목표.
         Challenge fail = newChallenge(user, "실패 완료 챌린지", today.minusDays(25), today.minusDays(15), ChallengeResult.FAIL);
-        spend(fail, "쇼핑", "신발", 6_000, today.minusDays(25));
-        spend(fail, "외식", "저녁", 6_000, today.minusDays(24));
+        spend(fail, "SHOPPING", "신발", 6_000, today.minusDays(25));
+        spend(fail, "FOOD", "저녁", 6_000, today.minusDays(24));
         evaluate(fail);
     }
 

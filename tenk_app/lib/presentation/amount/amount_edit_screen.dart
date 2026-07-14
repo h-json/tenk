@@ -11,6 +11,7 @@ import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
 import 'amount_camera_screen.dart';
 import 'amount_video_preview_screen.dart';
+import 'spend_category.dart';
 import 'widgets/budget_hint_row.dart';
 import 'widgets/video_attachment_section.dart';
 
@@ -39,7 +40,6 @@ class AmountEditScreen extends StatefulWidget {
 
 class _AmountEditScreenState extends State<AmountEditScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _categoryController;
   late final TextEditingController _contentController;
   late final TextEditingController _amountController;
   final _amountFocus = FocusNode();
@@ -50,6 +50,10 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   /// 우측 "잔액" 표시에 반영되는 확정 금액. 금액 칸 포커스가 빠질 때만 갱신 (실시간 X).
   /// 진입 시 필드가 기존 금액으로 pre-fill 돼 있으므로 그 값으로 초기화한다.
   int? _committedAmount;
+
+  /// 선택된 지출 카테고리 코드 (예: `FOOD`). null = 미선택.
+  /// 진입 시 기존 값이 9종 코드면 pre-select, 옛 자유 텍스트면 null(재선택 유도).
+  String? _selectedCategoryCode;
 
   /// 영상 처리 액션. 진입 시 KEEP, 사용자가 손대면 REPLACE/REMOVE 로 전이.
   VideoAction _videoAction = VideoAction.keep;
@@ -67,7 +71,9 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   void initState() {
     super.initState();
     final o = widget.original;
-    _categoryController = TextEditingController(text: o.category ?? '');
+    // 기존 카테고리가 9종 코드 중 하나면 pre-select, 아니면(옛 자유 텍스트) null 로 두고 재선택 유도.
+    _selectedCategoryCode =
+        kSpendCategories.any((c) => c.code == o.category) ? o.category : null;
     _contentController = TextEditingController(text: o.content ?? '');
     _amountController = TextEditingController(
       text: o.noSpend ? '' : o.amount.toString(),
@@ -88,7 +94,6 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   void dispose() {
     _disposeLocalVideo();
     _disposeServerPreview();
-    _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
     _amountFocus.dispose();
@@ -237,7 +242,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
         challengeId: widget.challenge.id,
         amountId: widget.original.id,
         noSpend: widget.original.noSpend,
-        category: widget.original.noSpend ? null : _categoryController.text.trim(),
+        category: widget.original.noSpend ? null : _selectedCategoryCode,
         content: widget.original.noSpend ? null : _contentController.text.trim(),
         amount: widget.original.noSpend ? null : int.parse(_amountController.text),
         memo: memo.isEmpty ? null : memo,
@@ -414,14 +419,28 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     return [
       Text('카테고리', style: theme.textTheme.titleMedium),
       const SizedBox(height: 8),
-      TextFormField(
-        controller: _categoryController,
+      DropdownButtonFormField<String>(
+        initialValue: _selectedCategoryCode,
+        isExpanded: true,
         decoration: const InputDecoration(
           border: OutlineInputBorder(),
-          hintText: '예) 식비, 교통, 카페',
+          hintText: '카테고리 선택',
         ),
-        validator: (raw) =>
-            (raw == null || raw.trim().isEmpty) ? '카테고리를 입력해주세요.' : null,
+        items: [
+          for (final category in kSpendCategories)
+            DropdownMenuItem(
+              value: category.code,
+              child: Row(
+                children: [
+                  Icon(category.icon, size: 20),
+                  const SizedBox(width: 12),
+                  Text(category.label),
+                ],
+              ),
+            ),
+        ],
+        onChanged: (code) => setState(() => _selectedCategoryCode = code),
+        validator: (code) => code == null ? '카테고리를 선택해주세요.' : null,
       ),
       const SizedBox(height: 24),
       Text('내용', style: theme.textTheme.titleMedium),

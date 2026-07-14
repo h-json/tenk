@@ -6,6 +6,7 @@ import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../amount/amount_edit_screen.dart';
 import '../amount/amount_record_screen.dart';
+import '../amount/spend_category.dart';
 import '../common/async_state.dart';
 import '_formatters.dart';
 import 'export/export_screen.dart';
@@ -880,6 +881,7 @@ class _AmountTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasVideo = amount.mediaFiles.isNotEmpty;
+    final category = spendCategoryForCode(amount.category);
     return Card(
       child: ListTile(
         onTap: onTap,
@@ -888,16 +890,16 @@ class _AmountTile extends StatelessWidget {
               ? theme.colorScheme.secondaryContainer
               : theme.colorScheme.primaryContainer,
           child: Icon(
-            amount.noSpend
-                ? Icons.do_not_disturb_on_outlined
-                : Icons.payments_outlined,
+            amount.noSpend ? Icons.do_not_disturb_on_outlined : category.icon,
             color: amount.noSpend
                 ? theme.colorScheme.onSecondaryContainer
                 : theme.colorScheme.onPrimaryContainer,
           ),
         ),
         title: Text(
-          amount.noSpend ? '무지출' : '${amount.category ?? ''} · ${amount.content ?? ''}',
+          amount.noSpend
+              ? '무지출'
+              : '${category.label} · ${amount.content ?? ''}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

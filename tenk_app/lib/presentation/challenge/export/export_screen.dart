@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/amount/amount.dart';
 import '../../../data/challenge/challenge.dart';
+import '../../amount/spend_category.dart';
 import '../_formatters.dart';
 import 'export_prefetch_screen.dart';
 import 'export_settings_screen.dart';
@@ -299,7 +300,7 @@ class _ClipTile extends StatelessWidget {
                       Text(
                         isNoSpend
                             ? '무지출'
-                            : '${a.category ?? ''} · ${a.content ?? ''}',
+                            : '${spendCategoryForCode(a.category).label} · ${a.content ?? ''}',
                         style: theme.textTheme.titleSmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

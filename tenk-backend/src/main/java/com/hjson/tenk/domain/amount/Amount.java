@@ -95,6 +95,7 @@ public class Amount {
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
+        SpendCategory.requireValidCode(category);
         return new Amount(challenge, category, content, amount, false, memo, spentDt);
     }
 
@@ -124,6 +125,7 @@ public class Amount {
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
+        SpendCategory.requireValidCode(category);
         this.category = category;
         this.content = content;
         this.amount = amount;
