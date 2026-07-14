@@ -11,6 +11,7 @@ import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
 import 'amount_camera_screen.dart';
 import 'amount_video_preview_screen.dart';
+import 'widgets/budget_hint_row.dart';
 import 'widgets/video_attachment_section.dart';
 
 /// 기록 수정 화면. 카드 탭으로 진입한다.
@@ -41,9 +42,14 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   late final TextEditingController _categoryController;
   late final TextEditingController _contentController;
   late final TextEditingController _amountController;
+  final _amountFocus = FocusNode();
   late final TextEditingController _memoController;
 
   late TimeOfDay _time;
+
+  /// 우측 "잔액" 표시에 반영되는 확정 금액. 금액 칸 포커스가 빠질 때만 갱신 (실시간 X).
+  /// 진입 시 필드가 기존 금액으로 pre-fill 돼 있으므로 그 값으로 초기화한다.
+  int? _committedAmount;
 
   /// 영상 처리 액션. 진입 시 KEEP, 사용자가 손대면 REPLACE/REMOVE 로 전이.
   VideoAction _videoAction = VideoAction.keep;
@@ -66,8 +72,16 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     _amountController = TextEditingController(
       text: o.noSpend ? '' : o.amount.toString(),
     );
+    _committedAmount = o.noSpend ? null : o.amount;
+    _amountFocus.addListener(_handleAmountFocusChange);
     _memoController = TextEditingController(text: o.memo ?? '');
     _time = TimeOfDay.fromDateTime(o.spentDt);
+  }
+
+  void _handleAmountFocusChange() {
+    if (!_amountFocus.hasFocus) {
+      setState(() => _committedAmount = int.tryParse(_amountController.text));
+    }
   }
 
   @override
@@ -77,6 +91,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
+    _amountFocus.dispose();
     _memoController.dispose();
     super.dispose();
   }
@@ -425,6 +440,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _amountController,
+        focusNode: _amountFocus,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: const InputDecoration(
@@ -439,12 +455,13 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
         onChanged: (_) => setState(() {}),
       ),
       const SizedBox(height: 8),
-      Builder(
-        builder: (_) {
-          final parsed = int.tryParse(_amountController.text);
-          if (parsed == null) return const SizedBox.shrink();
-          return Text(formatWon(parsed), style: theme.textTheme.bodySmall);
-        },
+      // 좌측 에코는 실시간, 우측 잔액은 포커스 확정값(_committedAmount).
+      // balance 는 이 기록을 이미 포함하므로 기존금액을 되더한 뒤 확정값을 뺀다.
+      BudgetHintRow(
+        entered: int.tryParse(_amountController.text),
+        remaining: widget.challenge.balance +
+            widget.original.amount -
+            (_committedAmount ?? 0),
       ),
       const SizedBox(height: 32),
     ];

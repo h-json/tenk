@@ -271,7 +271,8 @@ lib/
     │   ├── amount_camera_screen.dart    # 2초 녹화 + 녹화 후 video_player 자동 재생(loop). "사용" pop<String>(path)
     │   ├── amount_video_preview_screen.dart  # 기존/새 영상 전용 미리보기 화면. pop<VideoPreviewAction>(retake/delete)
     │   └── widgets/
-    │       └── video_attachment_section.dart  # 영상 첨부 상태 위젯. `expandable=false` (record) 즉시 모드 / `expandable=true` (edit) "영상 보기" 버튼만
+    │       ├── video_attachment_section.dart  # 영상 첨부 상태 위젯. `expandable=false` (record) 즉시 모드 / `expandable=true` (edit) "영상 보기" 버튼만
+    │       └── budget_hint_row.dart  # 지출 금액칸 하단 보조: 좌 입력 에코(실시간)/우 "잔액 ○원"(포커스 아웃 커밋, 초과 시 error색). record/edit 공유
     └── profile/                      # 신규 가입 닉네임 설정 + '내 정보'
         ├── nickname_setup_screen.dart   # 신규 가입자 전용 (LoginScreen 이 isNewUser=true 면 분기). PopScope canPop=false 로 회피 차단. 카카오 닉네임 pre-fill
         └── profile_screen.dart          # AppBar 사람 아이콘 진입점. 이메일/닉네임 변경/로그아웃/회원 탈퇴(confirm)

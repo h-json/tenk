@@ -9,6 +9,7 @@ import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../challenge/_formatters.dart';
 import 'amount_camera_screen.dart';
+import 'widgets/budget_hint_row.dart';
 import 'widgets/video_attachment_section.dart';
 
 /// 지출/무지출 기록 추가 화면. 영상 첨부는 양쪽 모두 **선택** ([AmountCameraScreen] 으로 위임).
@@ -34,16 +35,28 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
   final _categoryController = TextEditingController();
   final _contentController = TextEditingController();
   final _amountController = TextEditingController();
+  final _amountFocus = FocusNode();
   final _memoController = TextEditingController();
 
   late DateTime _spentDt;
   String? _videoPath;
   bool _submitting = false;
 
+  /// 우측 "잔액" 표시에 반영되는 확정 금액. 매 타이핑이 아니라 금액 칸 포커스가
+  /// 빠질 때만 갱신한다 (실시간 카운트다운이 산만해서). null = 아직 입력 없음.
+  int? _committedAmount;
+
   @override
   void initState() {
     super.initState();
     _spentDt = _defaultSpentDt();
+    _amountFocus.addListener(_handleAmountFocusChange);
+  }
+
+  void _handleAmountFocusChange() {
+    if (!_amountFocus.hasFocus) {
+      setState(() => _committedAmount = int.tryParse(_amountController.text));
+    }
   }
 
   /// 기본값: 지금. 날짜 부분이 챌린지 기간 밖이면 가장 가까운 챌린지 날짜로 옮기고 시각은 유지.
@@ -70,6 +83,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     _categoryController.dispose();
     _contentController.dispose();
     _amountController.dispose();
+    _amountFocus.dispose();
     _memoController.dispose();
     super.dispose();
   }
@@ -265,6 +279,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _amountController,
+        focusNode: _amountFocus,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: const InputDecoration(
@@ -279,12 +294,10 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         onChanged: (_) => setState(() {}),
       ),
       const SizedBox(height: 8),
-      Builder(
-        builder: (_) {
-          final parsed = int.tryParse(_amountController.text);
-          if (parsed == null) return const SizedBox.shrink();
-          return Text(formatWon(parsed), style: theme.textTheme.bodySmall);
-        },
+      // 좌측 에코는 실시간(_amountController), 우측 잔액은 포커스 확정값(_committedAmount).
+      BudgetHintRow(
+        entered: int.tryParse(_amountController.text),
+        remaining: widget.challenge.balance - (_committedAmount ?? 0),
       ),
       const SizedBox(height: 32),
     ];
