@@ -389,6 +389,10 @@ class _DetailBody extends StatelessWidget {
             onTap: busy ? null : onOpenExport,
           ),
         ],
+        if (challenge.totalSpent > 0) ...[
+          const SizedBox(height: 28),
+          _CategoryBreakdown(amounts: amounts, total: challenge.totalSpent),
+        ],
         const SizedBox(height: 28),
         Row(
           children: [
@@ -905,6 +909,113 @@ class _TodaySpendSummaryCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 카테고리별 지출 분포 (뱅크샐러드식 가로 바). 지출 기록에서 클라 계산 — 백엔드 무관.
+/// 무지출/0원은 제외, 금액 큰 순 정렬.
+class _CategoryBreakdown extends StatelessWidget {
+  const _CategoryBreakdown({required this.amounts, required this.total});
+
+  final List<Amount> amounts;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final byCategory = <String, int>{};
+    for (final a in amounts) {
+      if (a.noSpend || a.amount <= 0) continue;
+      final code = a.category ?? 'ETC';
+      byCategory[code] = (byCategory[code] ?? 0) + a.amount;
+    }
+    if (byCategory.isEmpty || total <= 0) return const SizedBox.shrink();
+
+    final entries = byCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('카테고리별 지출', style: AppTypo.title),
+          const SizedBox(height: 16),
+          for (var i = 0; i < entries.length; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            _CategoryRow(
+              code: entries[i].key,
+              amount: entries[i].value,
+              total: total,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.code,
+    required this.amount,
+    required this.total,
+  });
+
+  final String code;
+  final int amount;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = spendCategoryForCode(code);
+    final ratio = (amount / total).clamp(0.0, 1.0);
+    final percent = (ratio * 100).round();
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(category.icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(category.label,
+                style: AppTypo.body.copyWith(fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Text(formatWon(amount), style: AppTypo.body),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              child: Text(
+                '$percent%',
+                style: AppTypo.caption,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: Container(
+            height: 8,
+            color: AppColors.primaryTint,
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: ratio,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
