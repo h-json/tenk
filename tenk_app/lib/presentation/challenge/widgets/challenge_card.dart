@@ -5,6 +5,7 @@ import '../../../design/tokens.dart';
 import '../_formatters.dart';
 import 'challenge_badges.dart';
 import 'challenge_status.dart';
+import 'progress_bar.dart';
 
 /// 목록의 챌린지 한 장. 상태를 한눈에 읽히게 하는 게 목적:
 /// 좌측 상태색 스트라이프 + 우상단 D-day/시작/확정 마커 + 진행률 바.
@@ -117,7 +118,7 @@ class ChallengeCard extends StatelessWidget {
         ),
         if (!challenge.isBeforeStart) ...[
           const SizedBox(height: 12),
-          _ProgressBar(ratio: ratio, over: overBudget),
+          ChallengeProgressBar(ratio: ratio, over: overBudget),
           const SizedBox(height: 8),
           Text(
             '목표 ${formatWon(challenge.targetAmount)} · 사용 ${formatWon(challenge.totalSpent)}',
@@ -244,30 +245,3 @@ class ChallengeCard extends StatelessWidget {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.ratio, required this.over});
-
-  final double ratio;
-  final bool over;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: Container(
-        height: 8,
-        color: over ? AppColors.dangerTint : AppColors.primaryTint,
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: over ? 1.0 : ratio,
-          child: Container(
-            decoration: BoxDecoration(
-              color: over ? AppColors.danger : AppColors.primary,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

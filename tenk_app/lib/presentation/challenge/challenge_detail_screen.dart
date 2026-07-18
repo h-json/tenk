@@ -4,6 +4,7 @@ import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
+import '../../design/tokens.dart';
 import '../amount/amount_edit_screen.dart';
 import '../amount/amount_record_screen.dart';
 import '../amount/spend_category.dart';
@@ -14,6 +15,7 @@ import 'result_card/result_card_screen.dart';
 import 'widgets/badge_celebration_dialog.dart';
 import 'widgets/challenge_badges.dart';
 import 'widgets/challenge_status.dart';
+import 'widgets/progress_bar.dart';
 
 /// 챌린지 1건 + 그 챌린지의 지출 기록 목록을 함께 다룬다.
 /// `AsyncStateMixin`은 단일 자원 가정이라 둘을 record로 묶어 한 번에 fetch한다.
@@ -339,95 +341,25 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final progress = challenge.targetAmount == 0
-        ? 0.0
-        : (challenge.totalSpent / challenge.targetAmount).clamp(0.0, 1.0);
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        ChallengeStatusBanner(challenge: challenge),
-        const SizedBox(height: 24),
-        Text(
-          formatPeriod(challenge.startDate, challenge.endDate),
-          style: theme.textTheme.titleSmall,
-        ),
-        if (challenge.badges.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ChallengeBadgesRow(badges: challenge.badges, iconSize: 36),
-        ],
-        const SizedBox(height: 24),
-        Text('잔액', style: theme.textTheme.labelLarge),
-        const SizedBox(height: 4),
-        Text(
-          formatWon(challenge.balance),
-          style: theme.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: challenge.balance < 0
-                ? theme.colorScheme.error
-                : theme.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            color: progress >= 1.0
-                ? theme.colorScheme.error
-                : theme.colorScheme.primary,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('누적 지출 ${formatWon(challenge.totalSpent)}',
-                style: theme.textTheme.bodyMedium),
-            Text('목표 ${formatWon(challenge.targetAmount)}',
-                style: theme.textTheme.bodyMedium),
-          ],
-        ),
+        _SummaryCard(challenge: challenge),
         if (onFinalize != null) ...[
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: busy ? null : onFinalize,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-            ),
-            child: busy
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('결과 확정하기'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '챌린지가 종료됐어요. 결과를 확정해서 배지를 받을 수 있어요.',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
+          const SizedBox(height: 16),
+          _FinalizeCard(busy: busy, onFinalize: onFinalize!),
         ],
         if (challenge.isBeforeStart) ...[
-          const SizedBox(height: 32),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                '아직 시작하지 않은 챌린지예요.\n시작일(${formatDate(challenge.startDate)})부터 기록할 수 있어요.',
-                style: theme.textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ),
+          const SizedBox(height: 16),
+          _InfoCard(
+            icon: Icons.schedule_outlined,
+            text:
+                '아직 시작하지 않은 챌린지예요.\n${formatDate(challenge.startDate)}부터 기록할 수 있어요.',
           ),
         ],
         if (challenge.isInProgress) ...[
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           _TodayActionPanel(
             amounts: amounts,
             busy: busy,
@@ -436,22 +368,43 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
         if (onOpenResultCard != null) ...[
-          const SizedBox(height: 32),
-          _ResultCardEntryCard(onTap: busy ? null : onOpenResultCard),
+          const SizedBox(height: 16),
+          _EntryCard(
+            icon: Icons.celebration_outlined,
+            title: '결과 카드',
+            subtitle: '챌린지 결과를 카드 한 장으로. 갤러리 저장·공유까지.',
+            tint: AppColors.rewardSuccessTop,
+            fg: const Color(0xFF8A6100),
+            onTap: busy ? null : onOpenResultCard,
+          ),
         ],
         if (onOpenExport != null) ...[
           const SizedBox(height: 12),
-          _ExportEntryCard(onTap: busy ? null : onOpenExport),
+          _EntryCard(
+            icon: Icons.movie_creation_outlined,
+            title: '영상 만들기',
+            subtitle: '기록 영상을 시간순으로 합쳐 하나의 영상으로.',
+            tint: AppColors.primaryTint,
+            fg: AppColors.statusSuccess,
+            onTap: busy ? null : onOpenExport,
+          ),
         ],
-        const SizedBox(height: 32),
-        Text('기록 (${amounts.length})', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Text('기록', style: AppTypo.title),
+            const SizedBox(width: 6),
+            Text('${amounts.length}',
+                style: AppTypo.title.copyWith(color: AppColors.inkMuted)),
+          ],
+        ),
         const SizedBox(height: 8),
         if (amounts.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 32),
             child: Text(
               '아직 기록이 없어요.',
-              style: theme.textTheme.bodySmall,
+              style: AppTypo.body.copyWith(color: AppColors.inkMuted),
               textAlign: TextAlign.center,
             ),
           )
@@ -600,7 +553,6 @@ class _NoSpendTodayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final nextStep = _ladder.firstWhere(
       (s) => s > noSpendDays,
       orElse: () => _ladder.last,
@@ -610,67 +562,178 @@ class _NoSpendTodayCard extends StatelessWidget {
     final progress = (noSpendDays / goal).clamp(0.0, 1.0);
     final daysToGo = (nextStep - noSpendDays).clamp(0, _ladder.last);
 
-    return Card(
-      color: theme.colorScheme.secondaryContainer,
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-        child: Column(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        children: [
+          const Text('🌱', style: TextStyle(fontSize: 44)),
+          const SizedBox(height: 10),
+          Text(
+            '오늘은 무지출!',
+            style: AppTypo.title.copyWith(
+              fontSize: 20,
+              color: AppColors.statusSuccess,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            reachedMax
+                ? '챌린지 풀 무지출 $noSpendDays일 달성!'
+                : '이번 챌린지 무지출 $noSpendDays일째 누적 중',
+            style: AppTypo.body.copyWith(color: AppColors.inkSub),
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            child: Container(
+              height: 10,
+              color: AppColors.surface,
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$noSpendDays / $goal일', style: AppTypo.caption),
+              Text(
+                reachedMax ? '최고 단계 달성 🎉' : '다음 배지까지 $daysToGo일',
+                style: AppTypo.caption.copyWith(
+                  color: AppColors.statusSuccess,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 상세 상단 히어로 요약 카드. 목록 카드와 같은 언어(좌측 상태 스트라이프 + 남은 금액
+/// 히어로 + 진행률 바)로 목록↔상세 일관성을 만든다.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.challenge});
+
+  final Challenge challenge;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = ChallengeStatusStyle.of(challenge);
+    final overBudget = challenge.balance < 0;
+    final ratio = challenge.targetAmount <= 0
+        ? 0.0
+        : (challenge.totalSpent / challenge.targetAmount).clamp(0.0, 1.0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1223211D),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(
-              Icons.emoji_events,
-              size: 56,
-              color: theme.colorScheme.onSecondaryContainer,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '오늘은 무지출!',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              reachedMax
-                  ? '챌린지 풀 무지출 $noSpendDays일 달성!'
-                  : '이번 챌린지 무지출 $noSpendDays일째 누적 중',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                color: theme.colorScheme.onSecondaryContainer,
-                backgroundColor: theme.colorScheme.onSecondaryContainer
-                    .withValues(alpha: 0.18),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$noSpendDays / $goal일',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
+            Container(width: 5, color: status.color),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: status.tint,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.pill),
+                          ),
+                          child: Text(
+                            status.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: status.color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          formatShortPeriod(
+                              challenge.startDate, challenge.endDate),
+                          style: AppTypo.caption,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    const Text('남은 금액', style: AppTypo.caption),
+                    const SizedBox(height: 2),
+                    RichText(
+                      text: TextSpan(
+                        style: AppTypo.amountHero.copyWith(
+                          fontSize: 36,
+                          color:
+                              overBudget ? AppColors.danger : AppColors.ink,
+                        ),
+                        children: [
+                          TextSpan(text: formatNumber(challenge.balance)),
+                          TextSpan(
+                            text: '원',
+                            style: AppTypo.amountUnit.copyWith(
+                              fontSize: 20,
+                              color: overBudget
+                                  ? AppColors.danger
+                                  : AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ChallengeProgressBar(ratio: ratio, over: overBudget),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('사용 ${formatWon(challenge.totalSpent)}',
+                            style: AppTypo.caption),
+                        Text('목표 ${formatWon(challenge.targetAmount)}',
+                            style: AppTypo.caption),
+                      ],
+                    ),
+                    if (challenge.badges.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ChallengeBadgesRow(
+                          badges: challenge.badges, iconSize: 32),
+                    ],
+                  ],
                 ),
-                Text(
-                  reachedMax
-                      ? '최고 단계 달성 🎉'
-                      : '다음 배지까지 $daysToGo일',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -679,115 +742,137 @@ class _NoSpendTodayCard extends StatelessWidget {
   }
 }
 
-/// 확정된 챌린지에서만 노출되는 결과 카드 진입 카드.
-class _ResultCardEntryCard extends StatelessWidget {
-  const _ResultCardEntryCard({required this.onTap});
+/// 확정 대기 상태의 강조 카드 — 앰버 틴트 + 확정 버튼 + 안내.
+class _FinalizeCard extends StatelessWidget {
+  const _FinalizeCard({required this.busy, required this.onFinalize});
 
-  final VoidCallback? onTap;
+  final bool busy;
+  final VoidCallback onFinalize;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.primaryContainer,
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-          child: Row(
-            children: [
-              Icon(
-                Icons.celebration_outlined,
-                size: 36,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '결과 카드',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '챌린지 결과를 카드 한 장으로. 갤러리 저장·공유까지.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.warnTint,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '챌린지가 종료됐어요.\n결과를 확정하면 배지를 받을 수 있어요.',
+            style: AppTypo.body.copyWith(color: const Color(0xFF8A5A00)),
+            textAlign: TextAlign.center,
           ),
-        ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: busy ? null : onFinalize,
+              child: busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('결과 확정하기'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// 확정된 챌린지에서만 노출되는 영상 합본 진입 카드. 회의 결정 #2 (노출 시점 = 확정 후) 와 일치.
-class _ExportEntryCard extends StatelessWidget {
-  const _ExportEntryCard({required this.onTap});
+/// 정보성 안내 카드 (시작 전 등). 뉴트럴 틴트.
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.icon, required this.text});
 
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.inkMuted, size: 24),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypo.body.copyWith(color: AppColors.inkSub),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 확정 후 노출되는 진입 카드(결과 카드 / 영상 만들기 공용). 아이콘 + 제목/부제 + chevron.
+class _EntryCard extends StatelessWidget {
+  const _EntryCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.tint,
+    required this.fg,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color tint;
+  final Color fg;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.tertiaryContainer,
-      elevation: 0,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.line),
+      ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-          child: Row(
-            children: [
-              Icon(
-                Icons.movie_creation_outlined,
-                size: 36,
-                color: theme.colorScheme.onTertiaryContainer,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '영상 만들기',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onTertiaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '기록 영상을 시간순으로 합쳐 하나의 영상으로.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onTertiaryContainer,
-                      ),
-                    ),
-                  ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: tint,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                  child: Icon(icon, size: 24, color: fg),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onTertiaryContainer,
-              ),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppTypo.title),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: AppTypo.caption),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+              ],
+            ),
           ),
         ),
       ),
@@ -802,28 +887,23 @@ class _TodaySpendSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.primaryContainer,
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        child: Row(
-          children: [
-            Icon(Icons.today,
-                color: theme.colorScheme.onPrimaryContainer),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '오늘 ${formatWon(total)} 지출했어요',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.today, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '오늘 ${formatWon(total)} 지출했어요',
+              style: AppTypo.title,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -842,25 +922,17 @@ class _DaySectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            formatDayHeader(day),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(formatDayHeader(day), style: AppTypo.label),
           Text(
             isNoSpend ? '무지출' : formatWon(spendTotal),
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: isNoSpend
-                  ? theme.colorScheme.secondary
-                  : theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
+            style: AppTypo.label.copyWith(
+              color: isNoSpend ? AppColors.statusSuccess : AppColors.ink,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -879,46 +951,85 @@ class _AmountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final hasVideo = amount.mediaFiles.isNotEmpty;
     final category = spendCategoryForCode(amount.category);
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: amount.noSpend
-              ? theme.colorScheme.secondaryContainer
-              : theme.colorScheme.primaryContainer,
-          child: Icon(
-            amount.noSpend ? Icons.do_not_disturb_on_outlined : category.icon,
-            color: amount.noSpend
-                ? theme.colorScheme.onSecondaryContainer
-                : theme.colorScheme.onPrimaryContainer,
+    final noSpend = amount.noSpend;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+        border: Border.all(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: noSpend
+                        ? AppColors.successTint
+                        : AppColors.primaryTint,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                  child: Icon(
+                    noSpend
+                        ? Icons.do_not_disturb_on_outlined
+                        : category.icon,
+                    size: 22,
+                    color: noSpend
+                        ? AppColors.statusSuccess
+                        : AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        noSpend
+                            ? '무지출'
+                            : '${category.label} · ${amount.content ?? ''}',
+                        style: AppTypo.body.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(formatDateTime(amount.spentDt),
+                              style: AppTypo.caption),
+                          if (hasVideo) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.videocam_outlined,
+                                size: 14, color: AppColors.inkMuted),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (!noSpend) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    formatWon(amount.amount),
+                    style: AppTypo.title.copyWith(fontSize: 15),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
-        title: Text(
-          amount.noSpend
-              ? '무지출'
-              : '${category.label} · ${amount.content ?? ''}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Row(
-          children: [
-            Text(formatDateTime(amount.spentDt)),
-            if (hasVideo) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.videocam_outlined,
-                  size: 14, color: theme.colorScheme.outline),
-            ],
-          ],
-        ),
-        trailing: !amount.noSpend
-            ? Text(
-                formatWon(amount.amount),
-                style: theme.textTheme.titleSmall,
-              )
-            : null,
       ),
     );
   }
