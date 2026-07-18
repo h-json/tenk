@@ -7,6 +7,7 @@ import 'app/navigator_key.dart';
 import 'app/scopes.dart';
 import 'app/session_gate.dart';
 import 'config/kakao_config.dart';
+import 'design/app_theme.dart';
 import 'data/amount/amount_api.dart';
 import 'data/api/auth_api.dart';
 import 'data/api/dio_client.dart';
@@ -86,11 +87,7 @@ class TenkApp extends StatelessWidget {
               child: MaterialApp(
                 title: 'Tenk',
                 navigatorKey: navigatorKey,
-                theme: ThemeData(
-                  colorScheme:
-                      ColorScheme.fromSeed(seedColor: const Color(0xFFFEE500)),
-                  useMaterial3: true,
-                ),
+                theme: buildTenkTheme(),
                 home: const SessionGate(),
               ),
             ),

@@ -1,22 +1,50 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/challenge/challenge.dart';
+import '../../../design/tokens.dart';
 
-/// 챌린지 상태(시작 전 / 진행 중 / 결과 확정 대기 / 성공 / 실패)에 따른 라벨·색 매핑.
-/// 두 표현(chip, banner)이 공유한다.
-({String label, Color color}) _statusOf(BuildContext context, Challenge c) {
-  final theme = Theme.of(context);
-  return switch (c) {
-    Challenge(result: ChallengeResult.success) =>
-      (label: '성공', color: theme.colorScheme.primary),
-    Challenge(result: ChallengeResult.fail) =>
-      (label: '실패', color: theme.colorScheme.error),
-    Challenge(awaitsFinalize: true) =>
-      (label: '결과 확정 대기', color: theme.colorScheme.tertiary),
-    Challenge(isBeforeStart: true) =>
-      (label: '시작 전', color: theme.colorScheme.outline),
-    _ => (label: '진행 중', color: theme.colorScheme.secondary),
-  };
+/// 챌린지 상태(시작 전 / 진행 중 / 결과 확정 대기 / 성공 / 실패)의 표시 스타일.
+/// 라벨 + 텍스트색(color) + 옅은 배경(tint) 세 값을 담는다. 칩·배너·카드 스트라이프가 공유.
+class ChallengeStatusStyle {
+  const ChallengeStatusStyle({
+    required this.label,
+    required this.color,
+    required this.tint,
+  });
+
+  final String label;
+  final Color color;
+  final Color tint;
+
+  factory ChallengeStatusStyle.of(Challenge c) {
+    return switch (c) {
+      Challenge(result: ChallengeResult.success) => const ChallengeStatusStyle(
+        label: '성공',
+        color: AppColors.statusSuccess,
+        tint: AppColors.statusSuccessTint,
+      ),
+      Challenge(result: ChallengeResult.fail) => const ChallengeStatusStyle(
+        label: '실패',
+        color: AppColors.statusFail,
+        tint: AppColors.statusFailTint,
+      ),
+      Challenge(awaitsFinalize: true) => const ChallengeStatusStyle(
+        label: '결과 확정 대기',
+        color: AppColors.statusAwait,
+        tint: AppColors.statusAwaitTint,
+      ),
+      Challenge(isBeforeStart: true) => const ChallengeStatusStyle(
+        label: '시작 전',
+        color: AppColors.statusBefore,
+        tint: AppColors.statusBeforeTint,
+      ),
+      _ => const ChallengeStatusStyle(
+        label: '진행 중',
+        color: AppColors.statusActive,
+        tint: AppColors.statusActiveTint,
+      ),
+    };
+  }
 }
 
 /// 리스트 카드 상단에 박는 컴팩트한 라벨.
@@ -27,19 +55,19 @@ class ChallengeStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = _statusOf(context, challenge);
+    final status = ChallengeStatusStyle.of(challenge);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
+        color: status.tint,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         status.label,
-        style: theme.textTheme.labelMedium?.copyWith(
+        style: TextStyle(
+          fontSize: 12,
           color: status.color,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -54,13 +82,12 @@ class ChallengeStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = _statusOf(context, challenge);
+    final status = ChallengeStatusStyle.of(challenge);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
+        color: status.tint,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -69,9 +96,10 @@ class ChallengeStatusBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             status.label,
-            style: theme.textTheme.titleSmall?.copyWith(
+            style: TextStyle(
+              fontSize: 14,
               color: status.color,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

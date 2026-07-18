@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
 import '../../data/challenge/challenge.dart';
+import '../../design/tokens.dart';
 import '../common/async_state.dart';
 import '../profile/profile_screen.dart';
-import '_formatters.dart';
 import 'challenge_create_screen.dart';
 import 'challenge_detail_screen.dart';
-import 'widgets/challenge_badges.dart';
-import 'widgets/challenge_status.dart';
+import 'widgets/challenge_card.dart';
 
 class ChallengeListScreen extends StatefulWidget {
   const ChallengeListScreen({super.key});
@@ -74,155 +73,251 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 챌린지'),
-        actions: [
-          IconButton(
-            tooltip: '내 정보',
-            onPressed: _openProfile,
-            icon: const Icon(Icons.account_circle_outlined),
+    final all = data ?? const <Challenge>[];
+    final awaitingCount = all.where((c) => c.awaitsFinalize).length;
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('내 챌린지'),
+          actions: [
+            IconButton(
+              tooltip: '내 정보',
+              onPressed: _openProfile,
+              icon: const Icon(Icons.account_circle_outlined),
+            ),
+          ],
+          bottom: TabBar(
+            tabs: [
+              Tab(child: _InProgressTabLabel(awaitingCount: awaitingCount)),
+              const Tab(text: '완료'),
+            ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: RefreshIndicator(
-          onRefresh: reload,
+        ),
+        body: SafeArea(
+          top: false,
           child: AsyncStateView<List<Challenge>>(
             data: data,
             error: error,
             loading: loading,
             onRetry: reload,
-            builder: (_, challenges) => challenges.isEmpty
-                ? const _EmptyView()
-                : ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: challenges.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (_, i) => _ChallengeCard(
-                      challenge: challenges[i],
-                      onTap: () => _openDetail(challenges[i]),
-                    ),
-                  ),
+            builder: (_, challenges) => TabBarView(
+              children: [
+                _ActiveTab(
+                  challenges: challenges,
+                  onRefresh: reload,
+                  onTapChallenge: _openDetail,
+                  onCreate: _openCreate,
+                ),
+                _DoneTab(
+                  challenges: challenges,
+                  onRefresh: reload,
+                  onTapChallenge: _openDetail,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCreate,
-        icon: const Icon(Icons.add),
-        label: const Text('새 챌린지'),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _openCreate,
+          icon: const Icon(Icons.add),
+          label: const Text('새 챌린지'),
+        ),
       ),
     );
   }
 }
 
-class _ChallengeCard extends StatelessWidget {
-  const _ChallengeCard({required this.challenge, required this.onTap});
+/// "진행 중" 탭 라벨 — 확정 대기가 있으면 옆에 카운트 뱃지를 붙여 놓치지 않게.
+class _InProgressTabLabel extends StatelessWidget {
+  const _InProgressTabLabel({required this.awaitingCount});
 
-  final Challenge challenge;
-  final VoidCallback onTap;
+  final int awaitingCount;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ChallengeStatusChip(challenge: challenge),
-                  const Spacer(),
-                  Text(
-                    formatPeriod(challenge.startDate, challenge.endDate),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                challenge.name,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('잔액', style: theme.textTheme.labelSmall),
-                        const SizedBox(height: 2),
-                        Text(
-                          formatWon(challenge.balance),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: challenge.balance < 0
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('목표', style: theme.textTheme.labelSmall),
-                      const SizedBox(height: 2),
-                      Text(
-                        formatWon(challenge.targetAmount),
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (challenge.badges.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ChallengeBadgesRow(
-                  badges: challenge.badges,
-                  iconSize: 26,
-                  maxItems: 5,
-                ),
-              ],
-            ],
+    if (awaitingCount == 0) return const Text('진행 중');
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('진행 중'),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          decoration: BoxDecoration(
+            color: AppColors.warn,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            '$awaitingCount',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// 진행 중 탭: 확정 대기 → 진행 중 → 시작 전 순으로 그룹핑.
+class _ActiveTab extends StatelessWidget {
+  const _ActiveTab({
+    required this.challenges,
+    required this.onRefresh,
+    required this.onTapChallenge,
+    required this.onCreate,
+  });
+
+  final List<Challenge> challenges;
+  final Future<void> Function() onRefresh;
+  final void Function(Challenge) onTapChallenge;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final awaiting = challenges.where((c) => c.awaitsFinalize).toList()
+      ..sort((a, b) => a.endDate.compareTo(b.endDate));
+    final inProgress = challenges.where((c) => c.isInProgress).toList()
+      ..sort((a, b) => a.endDate.compareTo(b.endDate));
+    final before = challenges.where((c) => c.isBeforeStart).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final hasAny = awaiting.isNotEmpty || inProgress.isNotEmpty || before.isNotEmpty;
+
+    final children = <Widget>[];
+    void addSection(String label, List<Challenge> list) {
+      if (list.isEmpty) return;
+      children.add(_SectionHeader(label: label, count: list.length));
+      for (final c in list) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ChallengeCard(challenge: c, onTap: () => onTapChallenge(c)),
+          ),
+        );
+      }
+    }
+
+    addSection('확정 대기', awaiting);
+    addSection('진행 중', inProgress);
+    addSection('시작 전', before);
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: hasAny
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: children,
+            )
+          : _EmptyScroll(
+              message: challenges.isEmpty
+                  ? '아직 챌린지가 없어요.\n아래 + 버튼으로 첫 챌린지를 시작해보세요.'
+                  : '진행 중인 챌린지가 없어요.\n[완료] 탭에서 지난 챌린지를 볼 수 있어요.',
+              actionLabel: challenges.isEmpty ? '새 챌린지 시작' : null,
+              onAction: challenges.isEmpty ? onCreate : null,
+            ),
+    );
+  }
+}
+
+/// 완료 탭: 성공/실패를 종료일 최신순으로. (히스토리라 시간순 하나면 충분)
+class _DoneTab extends StatelessWidget {
+  const _DoneTab({
+    required this.challenges,
+    required this.onRefresh,
+    required this.onTapChallenge,
+  });
+
+  final List<Challenge> challenges;
+  final Future<void> Function() onRefresh;
+  final void Function(Challenge) onTapChallenge;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = challenges.where((c) => c.result != null).toList()
+      ..sort((a, b) => b.endDate.compareTo(a.endDate));
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: done.isEmpty
+          ? const _EmptyScroll(message: '아직 완료한 챌린지가 없어요.')
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              itemCount: done.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (_, i) => ChallengeCard(
+                challenge: done[i],
+                onTap: () => onTapChallenge(done[i]),
+              ),
+            ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+      child: Row(
+        children: [
+          Text(label, style: AppTypo.label),
+          const SizedBox(width: 6),
+          Text(
+            '$count',
+            style: AppTypo.label.copyWith(color: AppColors.inkMuted),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
+class _EmptyScroll extends StatelessWidget {
+  const _EmptyScroll({
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      children: const [
-        SizedBox(height: 120),
-        Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              '아직 챌린지가 없어요.\n오른쪽 아래 + 버튼으로 첫 챌린지를 시작해보세요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, height: 1.5),
-            ),
+      children: [
+        const SizedBox(height: 120),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            children: [
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypo.body.copyWith(color: AppColors.inkSub),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
         ),
       ],
