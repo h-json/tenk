@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../data/badge/badge.dart';
+import '../../../design/tokens.dart';
 
 const String _confettiAsset = 'assets/lottie/confetti.json';
 
@@ -180,7 +181,6 @@ class _BadgeWithGlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       width: 180,
       height: 180,
@@ -188,9 +188,9 @@ class _BadgeWithGlow extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.45 * glow),
-            blurRadius: 48 * glow,
-            spreadRadius: 12 * glow,
+            color: AppColors.rewardGlow.withValues(alpha: 0.55 * glow),
+            blurRadius: 52 * glow,
+            spreadRadius: 14 * glow,
           ),
         ],
       ),
@@ -209,18 +209,17 @@ class _BadgeWithGlow extends StatelessWidget {
 class _IconFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: theme.colorScheme.primary.withValues(alpha: 0.2),
-        border: Border.all(color: theme.colorScheme.primary, width: 2),
+        color: AppColors.rewardGlow.withValues(alpha: 0.2),
+        border: Border.all(color: AppColors.rewardGlow, width: 2),
       ),
       alignment: Alignment.center,
-      child: Icon(
+      child: const Icon(
         Icons.emoji_events,
         size: 80,
-        color: theme.colorScheme.primary,
+        color: AppColors.rewardGlow,
       ),
     );
   }

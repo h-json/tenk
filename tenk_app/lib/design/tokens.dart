@@ -44,12 +44,17 @@ class AppColors {
   static const statusFailTint = Color(0xFFF6E9E9);
 
   // ── Reward (페이오프 전용 — 평소엔 안 씀) ──
-  static const rewardSuccessTop = Color(0xFFFFE6A0);
-  static const rewardSuccessBottom = Color(0xFFFFC247);
-  static const rewardPurple = Color(0xFF8B72FF);
-  static const rewardFailTop = Color(0xFFE9EAEE);
-  static const rewardFailBottom = Color(0xFFC7CAD1);
-  static const rewardFailInk = Color(0xFF4A4E58);
+  // 값은 [ResultCardWidget] 의 hardcode 색과 정합(캡처 규칙상 카드는 ThemeData 를 안 쓴다).
+  // 카드 색을 바꾸면 여기도 같이 맞출 것 — 둘이 어긋나면 리워드 색 언어가 갈라진다.
+  static const rewardSuccessTop = Color(0xFFFFF6CE);
+  static const rewardSuccessBottom = Color(0xFFFFE680);
+  static const rewardPurple = Color(0xFF5B3F90);
+  static const rewardFailTop = Color(0xFFF4F4F6);
+  static const rewardFailBottom = Color(0xFFE5E5EA);
+  static const rewardFailInk = Color(0xFF4D4D4D);
+
+  /// 배지 획득 모달 등 어두운 배경 위 페이오프의 글로우 골드 (더 채도 높은 축하색).
+  static const rewardGlow = Color(0xFFFFC94D);
 }
 
 /// 8pt 기반 여백 스케일.
