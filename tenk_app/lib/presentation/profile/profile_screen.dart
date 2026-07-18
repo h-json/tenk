@@ -4,6 +4,7 @@ import '../../app/scopes.dart';
 import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
+import '../../design/tokens.dart';
 import '../common/async_state.dart';
 import '../login/login_screen.dart';
 
@@ -89,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: const Text('취소'),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('탈퇴'),
           ),
@@ -202,9 +203,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               if (!canChange)
-                const Icon(Icons.lock_outline, size: 18, color: Colors.black38),
+                const Icon(Icons.lock_outline,
+                    size: 18, color: AppColors.inkMuted),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right),
+              const Icon(Icons.chevron_right, color: AppColors.inkMuted),
             ],
           ),
           onTap: _busy ? null : () => _openNicknameDialog(user),
@@ -214,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
             child: Text(
               _nextChangeMessage(user.nicknameChangeAvailableFrom),
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: const TextStyle(fontSize: 12, color: AppColors.inkSub),
             ),
           ),
         const Divider(height: 1),
@@ -235,8 +237,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
         const Divider(height: 1),
         ListTile(
-          leading: const Icon(Icons.delete_forever, color: Colors.red),
-          title: const Text('회원 탈퇴', style: TextStyle(color: Colors.red)),
+          leading: const Icon(Icons.delete_forever, color: AppColors.danger),
+          title: const Text('회원 탈퇴', style: TextStyle(color: AppColors.danger)),
           onTap: _busy ? null : _confirmWithdraw,
         ),
         if (_busy)
@@ -312,8 +314,7 @@ class _NicknameEditDialogState extends State<_NicknameEditDialog> {
             autofocus: true,
             maxLength: _maxLength,
             decoration: InputDecoration(
-              labelText: '새 닉네임',
-              border: const OutlineInputBorder(),
+              hintText: '새 닉네임',
               errorText: _error,
             ),
             onChanged: (_) {
@@ -324,7 +325,7 @@ class _NicknameEditDialogState extends State<_NicknameEditDialog> {
           const SizedBox(height: 4),
           const Text(
             '변경 후 24시간 동안은 다시 변경할 수 없어요.',
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+            style: TextStyle(fontSize: 12, color: AppColors.inkSub),
           ),
         ],
       ),

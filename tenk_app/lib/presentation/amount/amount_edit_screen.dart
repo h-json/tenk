@@ -8,7 +8,9 @@ import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
+import '../../design/tokens.dart';
 import '../challenge/_formatters.dart';
+import '../common/field_label.dart';
 import 'amount_camera_screen.dart';
 import 'amount_video_preview_screen.dart';
 import 'spend_category.dart';
@@ -320,7 +322,7 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
             children: [
               if (!noSpend) ..._buildDateTimeSection(theme),
               if (!noSpend) ..._buildSpendFields(theme),
-              Text('한 줄 평 (선택)', style: theme.textTheme.titleMedium),
+              const FieldLabel('한 줄 평', optional: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _memoController,
@@ -329,14 +331,13 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
                 minLines: 1,
                 textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
                   hintText: noSpend
                       ? '예) 오늘 잘 참았다'
                       : '예) 회식이라 어쩔 수 없었음',
                 ),
               ),
               const SizedBox(height: 24),
-              Text('영상 (선택, 2초)', style: theme.textTheme.titleMedium),
+              const FieldLabel('영상 (2초)', optional: true),
               const SizedBox(height: 8),
               VideoAttachmentSection(
                 hasVideo: _hasAttachedVideo,
@@ -382,30 +383,41 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
 
   List<Widget> _buildDateTimeSection(ThemeData theme) {
     return [
-      Text('일시', style: theme.textTheme.titleMedium),
+      const FieldLabel('일시'),
       const SizedBox(height: 8),
       Row(
         children: [
           Expanded(
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: '날짜 (변경 불가)',
-                border: OutlineInputBorder(),
-              ),
-              child: Text(formatDate(widget.original.spentDt)),
+            child: _ReadonlyField(
+              icon: Icons.event_busy_outlined,
+              text: formatDate(widget.original.spentDt),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: InkWell(
-              onTap: _pickTime,
-              borderRadius: BorderRadius.circular(4),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: '시간',
-                  border: OutlineInputBorder(),
+            child: Material(
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.chip),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _pickTime,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 15),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_outlined,
+                          size: 20, color: AppColors.inkMuted),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(_time.format(context),
+                            style: AppTypo.body),
+                      ),
+                      const Icon(Icons.expand_more,
+                          color: AppColors.inkMuted),
+                    ],
+                  ),
                 ),
-                child: Text(_time.format(context)),
               ),
             ),
           ),
@@ -417,13 +429,12 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
 
   List<Widget> _buildSpendFields(ThemeData theme) {
     return [
-      Text('카테고리', style: theme.textTheme.titleMedium),
+      const FieldLabel('카테고리', required: true),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         initialValue: _selectedCategoryCode,
         isExpanded: true,
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           hintText: '카테고리 선택',
         ),
         items: [
@@ -443,19 +454,18 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
         validator: (code) => code == null ? '카테고리를 선택해주세요.' : null,
       ),
       const SizedBox(height: 24),
-      Text('내용', style: theme.textTheme.titleMedium),
+      const FieldLabel('내용', required: true),
       const SizedBox(height: 8),
       TextFormField(
         controller: _contentController,
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           hintText: '예) 김밥 한 줄',
         ),
         validator: (raw) =>
             (raw == null || raw.trim().isEmpty) ? '내용을 입력해주세요.' : null,
       ),
       const SizedBox(height: 24),
-      Text('금액', style: theme.textTheme.titleMedium),
+      const FieldLabel('금액', required: true),
       const SizedBox(height: 8),
       TextFormField(
         controller: _amountController,
@@ -463,7 +473,6 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           suffixText: '원',
         ),
         validator: (raw) {
@@ -484,5 +493,39 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
       ),
       const SizedBox(height: 32),
     ];
+  }
+}
+
+/// 편집 불가 읽기 전용 필드 (지출 날짜). 톤다운된 채움 스타일.
+class _ReadonlyField extends StatelessWidget {
+  const _ReadonlyField({
+    required this.icon,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.chip),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.inkMuted),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypo.body.copyWith(color: AppColors.inkMuted),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

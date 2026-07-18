@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
+import '../../design/tokens.dart';
+import '../common/field_label.dart';
 import '_formatters.dart';
 
 class ChallengeCreateScreen extends StatefulWidget {
@@ -122,14 +124,13 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
             child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Text('이름', style: theme.textTheme.titleMedium),
+              const FieldLabel('이름', required: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
                 maxLength: 100,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   hintText: '예: 외식 줄이기',
                 ),
                 validator: (raw) {
@@ -142,8 +143,8 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              Text('기간', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 24),
+              const FieldLabel('기간', required: true),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -170,14 +171,13 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 32),
-              Text('목표 금액', style: theme.textTheme.titleMedium),
+              const FieldLabel('목표 금액', required: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
                   suffixText: '원',
                 ),
                 validator: (raw) {
@@ -233,15 +233,29 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
+    return Material(
+      color: AppColors.surfaceAlt,
+      borderRadius: BorderRadius.circular(AppRadius.chip),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppTypo.caption),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(child: Text(formatDate(date), style: AppTypo.body)),
+                  const Icon(Icons.event_outlined,
+                      size: 18, color: AppColors.inkMuted),
+                ],
+              ),
+            ],
+          ),
         ),
-        child: Text(formatDate(date)),
       ),
     );
   }

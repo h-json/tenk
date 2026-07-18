@@ -7,7 +7,9 @@ import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
+import '../../design/tokens.dart';
 import '../challenge/_formatters.dart';
+import '../common/field_label.dart';
 import 'amount_camera_screen.dart';
 import 'spend_category.dart';
 import 'widgets/budget_hint_row.dart';
@@ -190,7 +192,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 ),
                 const SizedBox(height: 24),
               ] else ...[
-                Text('일시', style: theme.textTheme.titleMedium),
+                const FieldLabel('일시'),
                 const SizedBox(height: 8),
                 _DateTimeField(
                   label: '기록 일시',
@@ -205,7 +207,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 const SizedBox(height: 24),
               ],
               if (!widget.noSpend) ..._buildSpendFields(theme),
-              Text('한 줄 평 (선택)', style: theme.textTheme.titleMedium),
+              const FieldLabel('한 줄 평', optional: true),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _memoController,
@@ -214,14 +216,13 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 minLines: 1,
                 textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
                   hintText: widget.noSpend
                       ? '예) 오늘 잘 참았다'
                       : '예) 회식이라 어쩔 수 없었음',
                 ),
               ),
               const SizedBox(height: 24),
-              Text('영상 (선택, 2초)', style: theme.textTheme.titleMedium),
+              const FieldLabel('영상 (2초)', optional: true),
               const SizedBox(height: 8),
               VideoAttachmentSection(
                 hasVideo: _videoPath != null,
@@ -253,13 +254,12 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
 
   List<Widget> _buildSpendFields(ThemeData theme) {
     return [
-      Text('카테고리', style: theme.textTheme.titleMedium),
+      const FieldLabel('카테고리', required: true),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         initialValue: _selectedCategoryCode,
         isExpanded: true,
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           hintText: '카테고리 선택',
         ),
         items: [
@@ -279,19 +279,18 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         validator: (code) => code == null ? '카테고리를 선택해주세요.' : null,
       ),
       const SizedBox(height: 24),
-      Text('내용', style: theme.textTheme.titleMedium),
+      const FieldLabel('내용', required: true),
       const SizedBox(height: 8),
       TextFormField(
         controller: _contentController,
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           hintText: '예) 김밥 한 줄',
         ),
         validator: (raw) =>
             (raw == null || raw.trim().isEmpty) ? '내용을 입력해주세요.' : null,
       ),
       const SizedBox(height: 24),
-      Text('금액', style: theme.textTheme.titleMedium),
+      const FieldLabel('금액', required: true),
       const SizedBox(height: 8),
       TextFormField(
         controller: _amountController,
@@ -299,7 +298,6 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: const InputDecoration(
-          border: OutlineInputBorder(),
           suffixText: '원',
         ),
         validator: (raw) {
@@ -333,15 +331,24 @@ class _DateTimeField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
+    return Material(
+      color: AppColors.surfaceAlt,
+      borderRadius: BorderRadius.circular(AppRadius.chip),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
+            children: [
+              const Icon(Icons.event_outlined,
+                  size: 20, color: AppColors.inkMuted),
+              const SizedBox(width: 12),
+              Expanded(child: Text(formatDateTime(dt), style: AppTypo.body)),
+              const Icon(Icons.expand_more, color: AppColors.inkMuted),
+            ],
+          ),
         ),
-        child: Text(formatDateTime(dt)),
       ),
     );
   }

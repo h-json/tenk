@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
+import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../common/field_label.dart';
 
 /// 신규 가입자 전용 닉네임 확정 화면.
 ///
@@ -152,18 +154,19 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Tenk 에서 사용할 닉네임을 정해주세요.\n카카오 프로필 이름이 자동으로 채워져 있어요.',
-            style: TextStyle(fontSize: 14, height: 1.5, color: Colors.black54),
+            style: AppTypo.body.copyWith(color: AppColors.inkSub),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
+          const FieldLabel('닉네임', required: true),
+          const SizedBox(height: 8),
           TextField(
             controller: _controller,
             enabled: !_saving,
             maxLength: _maxLength,
             decoration: InputDecoration(
-              labelText: '닉네임',
-              border: const OutlineInputBorder(),
+              hintText: '닉네임을 입력해주세요',
               errorText: _validationError,
             ),
             onChanged: (_) {
@@ -177,19 +180,19 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFFD54F)),
+              color: AppColors.warnTint,
+              borderRadius: BorderRadius.circular(AppRadius.chip),
             ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 18, color: Color(0xFFFFA000)),
+                Icon(Icons.info_outline, size: 18, color: AppColors.warn),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '확정 후 24시간 동안은 닉네임을 다시 변경할 수 없어요.',
-                    style: TextStyle(fontSize: 13, height: 1.4),
+                    style: TextStyle(
+                        fontSize: 13, height: 1.4, color: Color(0xFF8A5A00)),
                   ),
                 ),
               ],

@@ -1077,7 +1077,6 @@ class _RenameDialogState extends State<_RenameDialog> {
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => _submit(),
           decoration: const InputDecoration(
-            border: OutlineInputBorder(),
             hintText: '예: 외식 줄이기',
           ),
           validator: (raw) {
