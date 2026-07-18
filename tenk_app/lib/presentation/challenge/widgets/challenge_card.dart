@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../data/challenge/challenge.dart';
 import '../../../design/tokens.dart';
 import '../_formatters.dart';
-import 'challenge_badges.dart';
-import 'challenge_status.dart';
 import 'progress_bar.dart';
 
-/// 목록의 챌린지 한 장. 상태를 한눈에 읽히게 하는 게 목적:
-/// 좌측 상태색 스트라이프 + 우상단 D-day/시작/확정 마커 + 진행률 바.
-/// 완료(성공/실패)는 톤다운해 진행 중 카드가 시각적으로 튀게 한다.
+/// 목록의 챌린지 한 장.
+///
+/// 탭+섹션이 이미 상태로 분류하므로 카드는 좌측 색 스트라이프 없이 **동일한 구조**로 그린다
+/// (모든 상태가 같은 행 수 → 높이 일관). 상태색은 우상단 마커에만 남긴다.
+/// 배지는 카드에서 빼고(상세에서만 노출) 높이 변동을 없앤다.
 class ChallengeCard extends StatelessWidget {
   const ChallengeCard({
     super.key,
@@ -24,38 +24,85 @@ class ChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = ChallengeStatusStyle.of(challenge);
+    final done = _isDone;
+    final beforeStart = challenge.isBeforeStart;
+    final overBudget = !beforeStart && challenge.balance < 0;
+    final ratio = (beforeStart || challenge.targetAmount <= 0)
+        ? 0.0
+        : (challenge.totalSpent / challenge.targetAmount).clamp(0.0, 1.0);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: _isDone
+        border: Border.all(color: AppColors.line),
+        boxShadow: done
             ? null
             : const [
                 BoxShadow(
-                  color: Color(0x1223211D),
-                  blurRadius: 16,
-                  offset: Offset(0, 6),
+                  color: Color(0x0F1C1D21),
+                  blurRadius: 14,
+                  offset: Offset(0, 4),
                 ),
               ],
-        border: _isDone ? Border.all(color: AppColors.line) : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 5, color: status.color),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                    child: _isDone ? _doneBody(status) : _activeBody(status),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        challenge.name,
+                        style: done
+                            ? AppTypo.title.copyWith(color: AppColors.inkSub)
+                            : AppTypo.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _marker(),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(beforeStart ? '목표' : '남은 금액', style: AppTypo.caption),
+                const SizedBox(height: 2),
+                RichText(
+                  text: TextSpan(
+                    style: AppTypo.amountHero.copyWith(
+                      fontSize: 26,
+                      color: overBudget ? AppColors.danger : AppColors.ink,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: formatNumber(
+                          beforeStart
+                              ? challenge.targetAmount
+                              : challenge.balance,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '원',
+                        style: AppTypo.amountUnit.copyWith(
+                          fontSize: 16,
+                          color: overBudget ? AppColors.danger : AppColors.ink,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                ChallengeProgressBar(ratio: ratio, over: overBudget),
+                const SizedBox(height: 8),
+                Text(_caption(done, beforeStart), style: _captionStyle(done)),
               ],
             ),
           ),
@@ -64,153 +111,42 @@ class ChallengeCard extends StatelessWidget {
     );
   }
 
-  // ── 진행 중 / 시작 전 / 확정 대기 ──
-  Widget _activeBody(ChallengeStatusStyle status) {
-    final overBudget = challenge.balance < 0;
-    final ratio = challenge.targetAmount <= 0
-        ? 0.0
-        : (challenge.totalSpent / challenge.targetAmount).clamp(0.0, 1.0);
+  String _caption(bool done, bool beforeStart) {
+    if (beforeStart) {
+      return formatShortPeriod(challenge.startDate, challenge.endDate);
+    }
+    if (done) {
+      final saved = challenge.balance.abs();
+      return challenge.result == ChallengeResult.success
+          ? '${formatWon(saved)} 아꼈어요'
+          : '${formatWon(saved)} 초과했어요';
+    }
+    return '목표 ${formatWon(challenge.targetAmount)} · 사용 ${formatWon(challenge.totalSpent)}';
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                challenge.name,
-                style: AppTypo.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            _marker(),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          challenge.isBeforeStart ? '목표' : '남은 금액',
-          style: AppTypo.caption,
-        ),
-        const SizedBox(height: 2),
-        RichText(
-          text: TextSpan(
-            style: AppTypo.amountHero.copyWith(
-              color: overBudget ? AppColors.danger : AppColors.ink,
-            ),
-            children: [
-              TextSpan(
-                text: formatNumber(
-                  challenge.isBeforeStart
-                      ? challenge.targetAmount
-                      : challenge.balance,
-                ),
-              ),
-              TextSpan(
-                text: '원',
-                style: AppTypo.amountUnit.copyWith(
-                  color: overBudget ? AppColors.danger : AppColors.ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (!challenge.isBeforeStart) ...[
-          const SizedBox(height: 12),
-          ChallengeProgressBar(ratio: ratio, over: overBudget),
-          const SizedBox(height: 8),
-          Text(
-            '목표 ${formatWon(challenge.targetAmount)} · 사용 ${formatWon(challenge.totalSpent)}',
-            style: AppTypo.caption,
-          ),
-        ] else ...[
-          const SizedBox(height: 8),
-          Text(
-            formatShortPeriod(challenge.startDate, challenge.endDate),
-            style: AppTypo.caption,
-          ),
-        ],
-        if (challenge.badges.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          ChallengeBadgesRow(
-            badges: challenge.badges,
-            iconSize: 24,
-            maxItems: 5,
-          ),
-        ],
-      ],
+  TextStyle _captionStyle(bool done) {
+    if (!done) return AppTypo.caption;
+    return AppTypo.caption.copyWith(
+      color: challenge.result == ChallengeResult.success
+          ? AppColors.statusSuccess
+          : AppColors.statusFail,
+      fontWeight: FontWeight.w700,
     );
   }
 
-  // ── 완료 (성공/실패) — 톤다운 ──
-  Widget _doneBody(ChallengeStatusStyle status) {
-    final saved = challenge.balance; // 목표-사용. 양수=절약, 음수=초과.
-    final isSuccess = challenge.result == ChallengeResult.success;
-    final resultLine = isSuccess
-        ? '${formatWon(saved.abs())} 아꼈어요'
-        : '${formatWon(saved.abs())} 초과했어요';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                challenge.name,
-                style: AppTypo.title.copyWith(color: AppColors.inkSub),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: status.tint,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: Text(
-                status.label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: status.color,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          resultLine,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: isSuccess ? AppColors.statusSuccess : AppColors.statusFail,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          formatShortPeriod(challenge.startDate, challenge.endDate),
-          style: AppTypo.caption,
-        ),
-        if (challenge.badges.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          ChallengeBadgesRow(
-            badges: challenge.badges,
-            iconSize: 22,
-            maxItems: 6,
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// 우상단 마커 — 진행 중=D-day, 시작 전=시작일, 확정 대기="확정하기".
+  /// 우상단 마커 — 상태색을 담는 유일한 곳.
   Widget _marker() {
     final (String text, Color color, Color tint) = switch (challenge) {
+      Challenge(result: ChallengeResult.success) => (
+        '성공',
+        AppColors.statusSuccess,
+        AppColors.statusSuccessTint,
+      ),
+      Challenge(result: ChallengeResult.fail) => (
+        '실패',
+        AppColors.statusFail,
+        AppColors.statusFailTint,
+      ),
       Challenge(awaitsFinalize: true) => (
         '확정하기',
         AppColors.statusAwait,
@@ -244,4 +180,3 @@ class ChallengeCard extends StatelessWidget {
     );
   }
 }
-

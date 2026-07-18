@@ -644,103 +644,78 @@ class _SummaryCard extends StatelessWidget {
         : (challenge.totalSpent / challenge.targetAmount).clamp(0.0, 1.0);
 
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1223211D),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: AppColors.line),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 5, color: status.color),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: status.tint,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: Text(
-                            status.label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: status.color,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          formatShortPeriod(
-                              challenge.startDate, challenge.endDate),
-                          style: AppTypo.caption,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    const Text('남은 금액', style: AppTypo.caption),
-                    const SizedBox(height: 2),
-                    RichText(
-                      text: TextSpan(
-                        style: AppTypo.amountHero.copyWith(
-                          fontSize: 36,
-                          color:
-                              overBudget ? AppColors.danger : AppColors.ink,
-                        ),
-                        children: [
-                          TextSpan(text: formatNumber(challenge.balance)),
-                          TextSpan(
-                            text: '원',
-                            style: AppTypo.amountUnit.copyWith(
-                              fontSize: 20,
-                              color: overBudget
-                                  ? AppColors.danger
-                                  : AppColors.ink,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ChallengeProgressBar(ratio: ratio, over: overBudget),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('사용 ${formatWon(challenge.totalSpent)}',
-                            style: AppTypo.caption),
-                        Text('목표 ${formatWon(challenge.targetAmount)}',
-                            style: AppTypo.caption),
-                      ],
-                    ),
-                    if (challenge.badges.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      ChallengeBadgesRow(
-                          badges: challenge.badges, iconSize: 32),
-                    ],
-                  ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: status.tint,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  status.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: status.color,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const Spacer(),
+              Text(
+                formatShortPeriod(challenge.startDate, challenge.endDate),
+                style: AppTypo.caption,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text('남은 금액', style: AppTypo.caption),
+          const SizedBox(height: 2),
+          RichText(
+            text: TextSpan(
+              style: AppTypo.amountHero.copyWith(
+                fontSize: 36,
+                color: overBudget ? AppColors.danger : AppColors.ink,
+              ),
+              children: [
+                TextSpan(text: formatNumber(challenge.balance)),
+                TextSpan(
+                  text: '원',
+                  style: AppTypo.amountUnit.copyWith(
+                    fontSize: 20,
+                    color: overBudget ? AppColors.danger : AppColors.ink,
+                  ),
+                ),
+              ],
             ),
+          ),
+          const SizedBox(height: 16),
+          ChallengeProgressBar(ratio: ratio, over: overBudget),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('사용 ${formatWon(challenge.totalSpent)}',
+                  style: AppTypo.caption),
+              Text('목표 ${formatWon(challenge.targetAmount)}',
+                  style: AppTypo.caption),
+            ],
+          ),
+          if (challenge.badges.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ChallengeBadgesRow(badges: challenge.badges, iconSize: 32),
           ],
-        ),
+        ],
       ),
     );
   }

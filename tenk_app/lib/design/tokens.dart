@@ -9,13 +9,14 @@ class AppColors {
   AppColors._();
 
   // ── Neutral (평소 UI 90%) ──
-  static const bg = Color(0xFFFAF9F6); // 화면 배경 (웜 크림)
-  static const surface = Color(0xFFFFFFFF); // 카드 표면
-  static const surfaceAlt = Color(0xFFF3F1EA); // 입력칸 등 옅은 채움
-  static const ink = Color(0xFF23211D); // 주 텍스트 · 숫자 (웜 차콜)
-  static const inkSub = Color(0xFF6E6A61); // 보조 라벨
-  static const inkMuted = Color(0xFFA9A49A); // placeholder · 3차
-  static const line = Color(0xFFECE8E0); // 구분선 · 보더
+  // 베이스는 흰색 + 쿨 그레이 — 민트 accent 와 톤이 맞는다. (웜 크림은 민트와 충돌해 폐기.)
+  static const bg = Color(0xFFFFFFFF); // 화면 배경 (화이트)
+  static const surface = Color(0xFFFFFFFF); // 카드 표면 (bg 와 동일 → 카드는 보더로 구분)
+  static const surfaceAlt = Color(0xFFF1F3F6); // 입력칸 등 옅은 채움 (쿨 그레이)
+  static const ink = Color(0xFF1C1D21); // 주 텍스트 · 숫자 (쿨 차콜)
+  static const inkSub = Color(0xFF5E6572); // 보조 라벨
+  static const inkMuted = Color(0xFF9AA0AD); // placeholder · 3차
+  static const line = Color(0xFFEAECEF); // 구분선 · 보더
 
   // ── Primary (민트) ──
   static const primary = Color(0xFF1FBE9C); // 버튼 채움 · 활성

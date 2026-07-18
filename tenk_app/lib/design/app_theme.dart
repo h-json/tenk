@@ -62,8 +62,10 @@ ThemeData buildTenkTheme() {
       elevation: 0,
       margin: EdgeInsets.zero,
       surfaceTintColor: Colors.transparent,
+      // bg 와 surface 가 둘 다 흰색이라 카드는 보더로 구분한다.
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.card),
+        side: const BorderSide(color: AppColors.line),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
