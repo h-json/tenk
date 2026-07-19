@@ -27,4 +27,4 @@
 원래 이 디렉토리는 ffmpeg `drawtext` 의 `fontfile=` 인자용이었지만, ffmpeg 8.0 drawtext 에 multi-codepoint
 한글이 첫 글리프 이후 silent drop 되는 회귀가 있어 (`text=`, `textfile=`, `text_shaping=0`, font 교체 모두
 무효) PNG overlay 로 갈아엎으면서 ffmpeg 측 폰트 사용을 폐기. 자세한 회의록·진단 경로는
-[docs/handoff.md](../../../docs/handoff.md) "영상 내보내기 회의록" 및 "함정 — drawtext 한글 회귀" 참고.
+[docs/decisions.md](../../../docs/decisions.md) "영상 내보내기 회의록" 및 "함정 — drawtext 한글 회귀" 참고.
