@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/scopes.dart';
+import '../../config/legal_config.dart';
 import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
+import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../legal/consent_gate_screen.dart';
+import '../legal/consent_section.dart';
 import '../profile/nickname_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,13 +24,20 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _loading = true);
     try {
-      final isNewUser = await AuthScope.of(context).loginWithKakao();
+      final outcome = await AuthScope.of(context).loginWithKakao();
       if (!mounted) return;
+      // 신규 가입 → 동의 화면 → (동의 후) 닉네임 설정 / 기존 미동의 → 동의 게이트 → 홈 / 그 외 → 홈.
+      // 동의와 닉네임 설정은 별도 화면으로 분리한다.
+      final Widget destination;
+      if (outcome.isNewUser) {
+        destination = const ConsentGateScreen(next: NicknameSetupScreen());
+      } else if (outcome.consentRequired) {
+        destination = const ConsentGateScreen();
+      } else {
+        destination = const ChallengeListScreen();
+      }
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              isNewUser ? const NicknameSetupScreen() : const ChallengeListScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => destination),
         (_) => false,
       );
     } on PlatformException catch (e) {
@@ -71,10 +82,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
@@ -131,9 +145,48 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ],
+                  ),
+                ),
+              ),
             ),
-          ),
+            const _LegalFooter(),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// 로그인 화면 하단의 법적 고지 링크. 로그인(=가입) 전에 문서를 확인할 수 있게 노출한다.
+class _LegalFooter extends StatelessWidget {
+  const _LegalFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextButton.styleFrom(
+      foregroundColor: AppColors.inkMuted,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      minimumSize: const Size(0, 36),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      textStyle: const TextStyle(fontSize: 13),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton(
+            onPressed: () => openLegalDoc(context, termsUrl),
+            style: style,
+            child: const Text('이용약관'),
+          ),
+          const Text('·', style: TextStyle(color: AppColors.inkMuted)),
+          TextButton(
+            onPressed: () => openLegalDoc(context, privacyPolicyUrl),
+            style: style,
+            child: const Text('개인정보처리방침'),
+          ),
+        ],
       ),
     );
   }

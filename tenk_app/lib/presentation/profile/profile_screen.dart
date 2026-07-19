@@ -6,7 +6,8 @@ import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../common/async_state.dart';
-import '../login/login_screen.dart';
+import '../legal/legal_notice_screen.dart';
+import 'account_settings_screen.dart';
 
 /// '내 정보' 화면. AppBar 의 사람 아이콘에서 진입.
 ///
@@ -56,64 +57,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       _showSnack(toApiException(e).message);
     } finally {
       if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _logout() async {
-    setState(() => _busy = true);
-    try {
-      await AuthScope.of(context).logout();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showSnack('로그아웃 실패: ${toApiException(e).message}');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _confirmWithdraw() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('정말 탈퇴하시겠어요?'),
-        content: const Text(
-          '탈퇴하면 모든 정보와 기록이 영구히 삭제되고 복구할 수 없어요.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('탈퇴'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    setState(() => _busy = true);
-    try {
-      await UserScope.of(context).withdraw();
-      if (!mounted) return;
-      // withdraw 직후 storage 의 토큰은 더 이상 유효하지 않음. logout() 의 storage.clear() 만 활용.
-      await AuthScope.of(context).logout();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showSnack('탈퇴 실패: ${toApiException(e).message}');
-      setState(() => _busy = false);
     }
   }
 
@@ -186,12 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     return ListView(
       children: [
         const SizedBox(height: 8),
-        ListTile(
-          leading: const Icon(Icons.chat_bubble_outline),
-          title: const Text('연동 계정'),
-          subtitle: Text(user.email ?? '카카오 계정으로 로그인 중'),
-        ),
-        const Divider(height: 1),
+        // ── 닉네임 (최상단) ──
         ListTile(
           leading: const Icon(Icons.person_outline),
           title: const Text('닉네임'),
@@ -219,12 +157,31 @@ class _ProfileScreenState extends State<ProfileScreen>
               style: const TextStyle(fontSize: 12, color: AppColors.inkSub),
             ),
           ),
+
         const Divider(height: 1),
+        // ── 계정 설정 (하위 화면) ──
         ListTile(
-          leading: const Icon(Icons.logout),
-          title: const Text('로그아웃'),
-          onTap: _busy ? null : _logout,
+          leading: const Icon(Icons.manage_accounts_outlined),
+          title: const Text('계정 설정'),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => AccountSettingsScreen(user: user),
+            ),
+          ),
         ),
+        const Divider(height: 1),
+        // ── 법적 고지 (하위 화면) ──
+        ListTile(
+          leading: const Icon(Icons.gavel_outlined),
+          title: const Text('법적 고지'),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const LegalNoticeScreen()),
+          ),
+        ),
+
+        // ── 테스트 도구 (dev 전용) ──
         if (testToolsEnabled && user.provider == 'TEST') ...[
           const Divider(height: 1),
           ListTile(
@@ -235,12 +192,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             onTap: _busy ? null : _reseed,
           ),
         ],
-        const Divider(height: 1),
-        ListTile(
-          leading: const Icon(Icons.delete_forever, color: AppColors.danger),
-          title: const Text('회원 탈퇴', style: TextStyle(color: AppColors.danger)),
-          onTap: _busy ? null : _confirmWithdraw,
-        ),
         if (_busy)
           const Padding(
             padding: EdgeInsets.all(24),

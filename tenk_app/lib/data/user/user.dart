@@ -9,6 +9,7 @@ class User {
     required this.email,
     required this.nickname,
     required this.nicknameChangeAvailableFrom,
+    required this.consentRequired,
   });
 
   final int userId;
@@ -22,6 +23,9 @@ class User {
   /// 백엔드가 `nicknameChangedDt.toLocalDate().plusDays(1).atStartOfDay()` 로 계산해 내려준다.
   final DateTime? nicknameChangeAvailableFrom;
 
+  /// 필수 동의(이용약관 + 개인정보 수집·이용) 미완료 여부. true 면 동의 화면으로 게이트.
+  final bool consentRequired;
+
   factory User.fromJson(Map<String, dynamic> json) {
     final raw = json['nicknameChangeAvailableFrom'] as String?;
     return User(
@@ -30,6 +34,7 @@ class User {
       email: json['email'] as String?,
       nickname: json['nickname'] as String?,
       nicknameChangeAvailableFrom: raw == null ? null : DateTime.parse(raw),
+      consentRequired: json['consentRequired'] as bool? ?? false,
     );
   }
 

@@ -6,6 +6,14 @@ import '../../config/test_config.dart';
 import '../api/auth_api.dart';
 import 'token_storage.dart';
 
+/// 카카오 로그인 결과 — 로그인 직후 화면 분기에 필요한 플래그만 담는다.
+class LoginOutcome {
+  const LoginOutcome({required this.isNewUser, required this.consentRequired});
+
+  final bool isNewUser;
+  final bool consentRequired;
+}
+
 /// 카카오 SDK 로그인 → 백엔드 JWT 교환 → secure storage 저장 흐름을 한 곳에 모음.
 ///
 /// 정책:
@@ -19,14 +27,17 @@ class AuthRepository {
 
   Future<bool> hasSession() async => (await storage.read()) != null;
 
-  /// 카카오 로그인 → 백엔드 JWT 교환. 반환값은 이번 호출이 **신규 가입** 이었는지 여부.
-  /// LoginScreen 에서 true 일 때 NicknameSetupScreen 으로 분기.
-  Future<bool> loginWithKakao() async {
+  /// 카카오 로그인 → 백엔드 JWT 교환. 반환값으로 신규 가입 여부와 필수 동의 미완료 여부를 전달한다.
+  /// LoginScreen 이 이 값으로 온보딩(신규) / 동의 게이트(기존 미동의) / 홈 을 분기.
+  Future<LoginOutcome> loginWithKakao() async {
     final OAuthToken kakaoToken = await _kakaoLogin();
     try {
       final tokens = await api.kakaoLogin(kakaoToken.accessToken);
       await storage.save(tokens);
-      return tokens.isNewUser;
+      return LoginOutcome(
+        isNewUser: tokens.isNewUser,
+        consentRequired: tokens.consentRequired,
+      );
     } finally {
       // best-effort: 카카오 SDK 측 토큰 폐기. 실패해도 흐름 진행에는 영향 없음.
       try {

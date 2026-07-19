@@ -32,6 +32,12 @@ CREATE TABLE `user` (
     -- 사용자가 '내 정보' 또는 가입 화면에서 직접 닉네임을 변경한 마지막 시각.
     -- NULL = 아직 한 번도 변경한 적 없음. 하루 1회 제한은 이 컬럼의 DATE 부분과 오늘을 비교.
     `nickname_changed_dt` DATETIME                                       NULL,
+    -- 필수 동의(이용약관 / 개인정보 수집·이용) 시각. NULL = 미동의 → 클라이언트가 동의 화면 게이트.
+    -- 라이브 DB 는 이 컬럼을 ALTER 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩):
+    --   ALTER TABLE `user` ADD COLUMN `terms_agreed_dt` DATETIME NULL AFTER `nickname_changed_dt`,
+    --                      ADD COLUMN `privacy_agreed_dt` DATETIME NULL AFTER `terms_agreed_dt`;
+    `terms_agreed_dt`     DATETIME                                       NULL,
+    `privacy_agreed_dt`   DATETIME                                       NULL,
     `created_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
     `updated_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
     `is_deleted`          TINYINT(1)    DEFAULT 0                        NOT NULL,

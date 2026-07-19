@@ -24,6 +24,13 @@ class UserApi {
     return User.fromJson(unwrapData(res.data));
   }
 
+  /// 필수 동의(이용약관 + 개인정보 수집·이용) 기록. 두 항목을 모두 체크한 뒤 호출한다.
+  /// 성공 시 갱신된 사용자 정보 반환 (consentRequired=false).
+  Future<User> agreeConsents() async {
+    final res = await _dio.post('/api/users/me/consent');
+    return User.fromJson(unwrapData(res.data));
+  }
+
   /// 회원 탈퇴 (soft delete + RT 일괄 무효화).
   Future<void> withdraw() async {
     await _dio.delete('/api/users/me');

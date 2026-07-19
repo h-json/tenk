@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,6 +35,14 @@ public class UserController {
     public ApiResponse<UserResponse> updateNickname(@CurrentUserId Long userId,
                                                     @Valid @RequestBody NicknameUpdateRequest request) {
         userService.updateNickname(userId, request.nickname());
+        return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
+    }
+
+    @Operation(summary = "필수 동의(이용약관 + 개인정보 수집·이용) 기록",
+            description = "가입 온보딩/동의 게이트에서 두 필수 항목을 모두 체크한 뒤 호출. 미동의 항목만 스탬프.")
+    @PostMapping("/me/consent")
+    public ApiResponse<UserResponse> agreeConsents(@CurrentUserId Long userId) {
+        userService.agreeConsents(userId);
         return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
     }
 

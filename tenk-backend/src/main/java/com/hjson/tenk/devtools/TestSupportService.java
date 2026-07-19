@@ -19,6 +19,7 @@ import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserRepository;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,8 @@ public class TestSupportService {
                 .findByProviderAndProviderUserId(AuthProvider.TEST, providerUserId)
                 .orElseGet(() -> userRepository.save(User.create(
                         AuthProvider.TEST, providerUserId, null, "테스터-" + normalizedSlot)));
-        // 테스트 계정은 닉네임 설정 화면을 건너뛰도록 항상 isNewUser=false 로 발급.
+        // 테스트 계정은 닉네임 설정·동의 화면을 모두 건너뛰도록 auto-consent + isNewUser=false 로 발급.
+        user.agreeToRequiredConsents(LocalDateTime.now());
         return authService.issueTokensFor(user, false);
     }
 

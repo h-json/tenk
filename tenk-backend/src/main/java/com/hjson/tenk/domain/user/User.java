@@ -53,6 +53,14 @@ public class User {
     @Column(name = "nickname_changed_dt")
     private LocalDateTime nicknameChangedDt;
 
+    // 필수 동의 시각. NULL = 아직 동의 안 함 → 클라이언트가 동의 화면으로 게이트.
+    // 이용약관/개인정보 수집·이용 동의를 각각 기록 (감사·약관 개정 재동의 대비 분리 보관).
+    @Column(name = "terms_agreed_dt")
+    private LocalDateTime termsAgreedDt;
+
+    @Column(name = "privacy_agreed_dt")
+    private LocalDateTime privacyAgreedDt;
+
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
@@ -104,5 +112,23 @@ public class User {
     public void withdraw() {
         this.deleted = true;
         this.deletedDt = LocalDateTime.now();
+    }
+
+    /**
+     * 필수 동의(이용약관 + 개인정보 수집·이용)를 기록한다. 이미 동의한 항목은 최초 동의 시각을
+     * 보존하기 위해 덮어쓰지 않는다 (멱등). 신규 동의 항목만 {@code now} 로 스탬프.
+     */
+    public void agreeToRequiredConsents(LocalDateTime now) {
+        if (this.termsAgreedDt == null) {
+            this.termsAgreedDt = now;
+        }
+        if (this.privacyAgreedDt == null) {
+            this.privacyAgreedDt = now;
+        }
+    }
+
+    /** 필수 동의를 모두 마쳤는지. false 면 클라이언트가 동의 화면으로 게이트한다. */
+    public boolean hasAgreedToRequiredConsents() {
+        return termsAgreedDt != null && privacyAgreedDt != null;
     }
 }

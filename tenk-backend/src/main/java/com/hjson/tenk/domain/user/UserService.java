@@ -43,6 +43,16 @@ public class UserService {
         user.changeNickname(normalized, LocalDateTime.now());
     }
 
+    /**
+     * 필수 동의(이용약관 + 개인정보 수집·이용)를 기록한다. 클라이언트가 두 항목을 모두 체크한 뒤
+     * 호출하며, 서버는 미동의 항목만 현재 시각으로 스탬프한다 (이미 동의한 시각은 보존).
+     */
+    @Transactional
+    public void agreeConsents(Long userId) {
+        User user = getActiveUser(userId);
+        user.agreeToRequiredConsents(LocalDateTime.now());
+    }
+
     @Transactional
     public void withdraw(Long userId) {
         User user = getActiveUser(userId);

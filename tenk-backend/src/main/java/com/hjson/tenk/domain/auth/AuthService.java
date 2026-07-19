@@ -94,7 +94,8 @@ public class AuthService {
                 jwtTokenProvider.accessTokenTtl().toSeconds(),
                 user.getId(),
                 user.getNickname(),
-                isNewUser
+                isNewUser,
+                !user.hasAgreedToRequiredConsents()
         );
     }
 

@@ -94,11 +94,11 @@
 
 ### 1. 앱 UX 다듬기 (백로그)
 
-> 2026-07-11 배치의 완료 항목(챌린지 상태색 / 카테고리 목록화+아이콘 / 금액입력 보조표시 / 필수 별표 / '메모'→'한 줄 평' / 성공 트로피 배지 / 7·11 날짜 타임존 버그 / 챌린지 이름 필드 / 영상 자막 위치·스타일)과 2026-06-16 실기기 3블록 검증은 전부 ✅ 완료 → 상세는 [handoff-archive.md](handoff-archive.md). "챌린지 색깔 기능"은 드롭(같은 문서). 아래는 **미착수**만.
+> 2026-07-11 배치의 완료 항목(챌린지 상태색 / 카테고리 목록화+아이콘 / 금액입력 보조표시 / 필수 별표 / '메모'→'한 줄 평' / 성공 트로피 배지 / 7·11 날짜 타임존 버그 / 챌린지 이름 필드 / 영상 자막 위치·스타일)과 2026-06-16 실기기 3블록 검증은 전부 ✅ 완료 → 상세는 [handoff-archive.md](handoff-archive.md). **드롭**: "챌린지 색깔 기능"(같은 문서) / "목록에 메모 노출"(2026-07-19 — 긴 메모가 목록 높이를 흔들고, 상세 진입으로 확인 가능해 목록 노출 가치가 낮다고 판단).
 
-- **업적(achievement) 시스템** — 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
-- **목록에 메모 노출** — 챌린지 상세의 amount 목록 (`_AmountTile`) 에서 memo 가 있을 때 미리보기(1~2줄 ellipsis) 또는 메모 아이콘 배지. 결정 필요: 본문 노출이 좋은지 아이콘만 노출이 좋은지 (긴 메모가 목록 높이를 흔들 수 있음).
-- **실기기 테스트 (향후 새 화면)** — 새 화면 추가 시 하단 가림 / 제스처·3버튼 내비 양쪽 / 키보드 inset 을 실기기에서 점검. 기존 3블록(닉네임/결과카드/SafeArea)은 2026-06-16 전원 통과([handoff-archive.md](handoff-archive.md)).
+- **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
+
+> **업적(achievement) 시스템**은 우선순위를 최후로 내렸다 → 맨 아래 §5.
 
 ### 2. 페이지네이션 / 정렬
 - `/api/challenges`, `/api/challenges/{id}/amounts`가 전체 목록 반환 중. `Pageable` 도입 시점 결정 (지금은 사용자당 챌린지 수가 적어 무방).
@@ -110,8 +110,15 @@
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.
 - **CI 도입** — 현재 통합 테스트가 로컬 `tenk` 스키마를 비우는 구조라 CI 에서 그대로 못 돈다. 도입 시 Testcontainers + 별도 `tenk_test` 스키마로 갈아탈 것.
-- **개인정보처리방침 (2026-07-07 작성 + 배포 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) 로 작성, Spring Boot static 서빙. ✅ **`https://tenk.hjson248.com/privacy.html` 배포 완료·브라우저 접속 확인** (SecurityConfig PERMIT_ALL 등록, 맥 이미지 재배포로 LIVE). 수집항목/이용목적/보관기간(탈퇴 후 3개월)/제3자(카카오)/파기/권한/문의처 포함. **Play Console 개인정보처리방침 URL 에 이 주소 입력.** 남은 것: ① 앱 내 링크 노출 (LoginScreen 또는 NicknameSetupScreen 에 "개인정보처리방침" 링크) ② 실서비스 전 변호사 검수 권장 ③ 문구는 실제 동작(음성 미수집, 자체 서버 저장, 3개월 보관 후 파기)과 일치시켜 작성했으니 정책 바꾸면 동시 갱신.
+- **개인정보처리방침 (2026-07-07 작성 + 배포 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) 로 작성, Spring Boot static 서빙. ✅ **`https://tenk.hjson248.com/privacy.html` 배포 완료·브라우저 접속 확인** (SecurityConfig PERMIT_ALL 등록, 맥 이미지 재배포로 LIVE). 수집항목/이용목적/보관기간(탈퇴 후 3개월)/제3자(카카오)/파기/권한/문의처 포함. **Play Console 개인정보처리방침 URL 에 이 주소 입력.** 남은 것: ① ✅ **앱 내 링크 노출 + 필수 동의 플로우 완료 (2026-07-19)** — 아래 별도 항목 참고 ② 실서비스 전 변호사 검수 권장 (privacy.html + terms.html 둘 다) ③ 문구는 실제 동작(음성 미수집, 자체 서버 저장, 3개월 보관 후 파기)과 일치시켜 작성했으니 정책 바꾸면 동시 갱신.
+
+- **필수 동의 플로우 (2026-07-19 구현 완료)** — "앱 내 링크 노출" 태스크를 출시 기준으로 확장. **이용약관([terms.html](../tenk-backend/src/main/resources/static/terms.html), 신규 작성) + 개인정보 수집·이용** 2개 필수 동의를 **동의 화면(ConsentGateScreen)** 에서 받고 `user.terms_agreed_dt`/`privacy_agreed_dt` 에 기록. **동의 화면과 닉네임 설정 화면은 분리** — 신규 가입은 동의(ConsentGateScreen) → 닉네임(NicknameSetupScreen) 2단계, 기존 미동의자는 동의 → 홈. 규칙·구조는 [../CLAUDE.md](../CLAUDE.md) "인증 — 필수 동의" 섹션이 진실의 원천. **⚠️ 라이브 DB 는 새 컬럼을 ALTER 로 추가해야 부팅됨**(ddl-auto=validate): `ALTER TABLE user ADD COLUMN terms_agreed_dt DATETIME NULL AFTER nickname_changed_dt, ADD COLUMN privacy_agreed_dt DATETIME NULL AFTER terms_agreed_dt;` — 로컬 tenk DB 엔 적용 완료, **prod 재배포 시 라이브 DB 에도 수동 적용 필요**(TEST enum 마이그레이션과 동일 패턴). **남은 것**: 통합 테스트(동의 엔드포인트 E2E) 미작성, 에뮬레이터에서 ConsentGateScreen 실물 확인 권장. terms.html 변호사 검수.
 - **회원 탈퇴 hard delete (2026-07-07 구현 완료)** — soft delete + 3개월 보관 후 물리 삭제. `User.withdraw()` 는 여전히 soft delete(`deleted_dt`) + RT 무효화, 새벽 1:30 배치 [UserRetentionScheduler](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) → [WithdrawnUserPurgeService.purge](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java) 가 `deleted_dt` +3개월 지난 계정을 challenge/amount/media_file row + 디스크 `uploads/` 영상 + refresh_token 까지 FK 순서(디스크→media_file→challenge_badge→amount→challenge→refresh_token→user)로 삭제. 유저 1명 단위 트랜잭션, 파일은 best-effort(`deleteQuietly`). user 는 hard delete 라 provider/provider_user_id 재사용 가능. 보관기간 상수는 `WithdrawnUserPurgeService.RETENTION`. **남은 것**: ① 통합 테스트 (탈퇴+deletedDt 과거로 박고 purge → row·파일 소멸 확인) 미작성 ② 3개월 미도래 계정은 그대로라 UI "영구히 삭제" 문구와 즉시성엔 여전히 시차 있음(정책상 의도).
+
+### 5. 업적(achievement) 시스템 (우선순위 최후)
+> 남은 일 중 **가장 후순위** — 핵심 흐름·배포·운영이 모두 정리된 뒤 착수 (2026-07-19 §1 에서 이관).
+
+- 챌린지 경계를 가로지르는 누적 보상. 새 테이블(예: `user_achievement`) + 별도 컨트롤러/서비스 + 별도 Flutter 화면. 자산은 기존 `assets/badges/` 재활용 가능. 배지와 디자인 언어가 자연스럽게 이어지도록 설계.
 
 ---
 
