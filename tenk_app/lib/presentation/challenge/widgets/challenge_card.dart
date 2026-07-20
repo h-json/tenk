@@ -61,9 +61,7 @@ class ChallengeCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         challenge.name,
-                        style: done
-                            ? AppTypo.title.copyWith(color: AppColors.inkSub)
-                            : AppTypo.title,
+                        style: AppTypo.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
