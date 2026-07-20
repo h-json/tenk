@@ -126,7 +126,14 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
 ```
 - 리포 `docs/schema.sql` + 맥 `dbinit` 볼륨의 `01-schema.sql` **양쪽도 같이 갱신**해야 다음 클린 재구축 때 어긋나지 않는다.
 - enum 값을 **끝에 추가**하는 ALTER 는 메타데이터만 바뀌어 즉시·무손실. 컬럼 추가/타입 변경은 데이터·다운타임 영향 검토 후.
-- 실적용 사례: 2026-07-11 `provider` ENUM 에 `TEST` 추가(devtools 테스트 계정용).
+- 실적용 사례:
+  - 2026-07-11 `provider` ENUM 에 `TEST` 추가(devtools 테스트 계정용).
+  - 2026-07-20 `user` 에 필수 동의 컬럼 2개 추가(이용약관/개인정보 동의 시각). **컬럼 추가라 순서가 중요** — 새 backend 는 `ddl-auto=validate` 라 컬럼 없이 뜨면 부팅 실패하므로 **ALTER 를 먼저 치고 그다음 `pull && up -d`**:
+    ```bash
+    docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
+      -e "ALTER TABLE \`user\` ADD COLUMN \`terms_agreed_dt\` DATETIME NULL AFTER \`nickname_changed_dt\`, ADD COLUMN \`privacy_agreed_dt\` DATETIME NULL AFTER \`terms_agreed_dt\`;"
+    ```
+    `dbinit` 볼륨 시드(`01-schema.sql`)도 새 `docs/schema.sql` 로 갱신 완료(§5.4 시딩 방식) — 안 하면 **클린 재구축 때만** 컬럼 없이 생성돼 부팅 실패한다(라이브 DB 는 ALTER 로 이미 반영).
 
 ---
 
@@ -150,6 +157,7 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
 - [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
 - [x] **개인정보처리방침 배포 (2026-07-07 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html)(jar static) 재배포로 `https://tenk.hjson248.com/privacy.html` 서빙·브라우저 확인. Play Console 처리방침 URL 이 이 주소.
 - [x] **회원 탈퇴 hard-delete (2026-07-07 배포)** — soft delete + 3개월 보관 후 새벽 배치 물리 삭제. 상세는 [handoff.md](handoff.md) "운영 고려사항".
+- [x] **필수 동의 플로우 배포 (2026-07-20)** — 이용약관(`terms.html`) static 추가 + 동의 기록 컬럼/엔드포인트. 라이브 DB ALTER(§5.5) + 이미지 재배포 + `dbinit` 시드 갱신까지 완료. 검증: `https://tenk.hjson248.com/terms.html` → 200(무인증), prod api-docs 에 `/api/users/me/consent`·`consentRequired` 노출. 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 필수 동의".
 - [x] **서버 타임존 KST 고정 (2026-07-13 배포)** — 컨테이너 기본 UTC 라 `LocalDate.now()` 가 한국 자정~오전 9시 사이 전날로 잡혀 "오늘 시작" 챌린지가 "시작 전" 으로 보이던 버그(7/11 제보) 해결. 두 겹 고정: [TenkApplication](../tenk-backend/src/main/java/com/hjson/tenk/TenkApplication.java) `TimeZone.setDefault` (이미지 재빌드로 반영) + [docker-compose.yml](../deploy/docker-compose.yml) backend `TZ: Asia/Seoul` env (맥 compose 복사본 갱신 → `up -d`). 검증: `docker compose exec backend date` → KST. 커밋 `f30d358`.
 
 ## 8. 기술 사실
