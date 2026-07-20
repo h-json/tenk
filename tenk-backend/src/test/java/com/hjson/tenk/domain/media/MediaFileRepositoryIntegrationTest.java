@@ -71,7 +71,7 @@ class MediaFileRepositoryIntegrationTest extends IntegrationTestBase {
             Challenge challenge = challengeRepository.save(
                     Challenge.create(user, "테스트 챌린지", LocalDate.now(), LocalDate.now().plusDays(1), 10_000));
             Amount amount = amountRepository.save(
-                    Amount.spend(challenge, "x", "x", 100, null, LocalDate.now().atTime(12, 0)));
+                    Amount.spend(challenge, "FOOD", "x", 100, null, LocalDate.now().atTime(12, 0)));
             MediaFile mediaFile = mediaFileRepository.save(
                     MediaFile.create(amount, "amounts/1/test.mp4", "test.mp4"));
             return mediaFile.getId();

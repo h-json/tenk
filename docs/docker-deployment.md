@@ -4,6 +4,9 @@
 >
 > 배포 완료 2026-06-30.
 > **갱신 규칙**: 배포 구성/명령/좌표가 바뀌면 **같은 턴에 이 문서도 갱신**할 것. 일시적 진행상태가 아니라 영구 규칙·구조·런북을 담는다.
+>
+> ⛔ **이 문서에 적지 말 것 — 할 일 / 기능·배포 이력 / 완료 체크리스트.** 배포하는 사람이 볼 구조·런북·함정만 남긴다.
+> 남은 일은 [handoff.md](handoff.md), 시간순 이력은 [handoff-archive.md](handoff-archive.md) 소관 (문서 라우팅 표는 [../CLAUDE.md](../CLAUDE.md) 상단).
 
 ---
 
@@ -11,7 +14,7 @@
 
 - ✅ **tenk 백엔드가 M1 맥미니에 컨테이너로 LIVE.** "윈도우 빌드 → Docker Hub → 맥 pull"(경로 B) 완주.
 - ✅ **재부팅 생존 검증 완료** (2026-07-01): Colima autostart(`brew services`) + 자동 로그인 + compose restart policy. 실제 `sudo reboot` 후 무인으로 backend 복귀 확인.
-- ✅ **외부 어디서나 접속 + HTTPS LIVE** (2026-07-01): 리버스 프록시(Traefik `v3.6.1`) + Let's Encrypt prod 인증서로 `https://tenk.hjson248.com` 폰(LTE)·PC 접속 확인. **리버스 프록시는 tenk 와 분리된 공유 엣지라 별도 리포 `reverse-proxy` 에서 관리**(맥 `~/Documents/projects/claude/reverse-proxy/`). **주의 요함(mixed content) 해결**: 스프링부트가 Traefik 의 `X-Forwarded-Proto=https` 를 신뢰하도록 `server.forward-headers-strategy=framework` 적용 — 안 하면 springdoc 이 `http://` 서버 URL 을 만들어 HTTPS 페이지가 "주의 요함". tenk 붙는 법·앱 설정은 §9, 엣지 상세는 `reverse-proxy` 리포 README.
+- ✅ **외부 어디서나 접속 + HTTPS LIVE** (2026-07-01): 리버스 프록시(Traefik `v3.6.1`) + Let's Encrypt prod 인증서로 `https://tenk.hjson248.com` 폰(LTE)·PC 접속 확인. **리버스 프록시는 tenk 와 분리된 공유 엣지라 별도 리포 `reverse-proxy` 에서 관리**(맥 `~/Documents/projects/claude/reverse-proxy/`). **주의 요함(mixed content) 해결**: 스프링부트가 Traefik 의 `X-Forwarded-Proto=https` 를 신뢰하도록 `server.forward-headers-strategy=framework` 적용 — 안 하면 springdoc 이 `http://` 서버 URL 을 만들어 HTTPS 페이지가 "주의 요함". tenk 붙는 법·앱 설정은 §8, 엣지 상세는 `reverse-proxy` 리포 README.
 
 ---
 
@@ -42,7 +45,7 @@
 |---|---|
 | [tenk-backend/Dockerfile](../tenk-backend/Dockerfile) | 멀티스테이지. ①JDK+Gradle로 `bootJar`, ②JRE+jar 실행. build 단계 `--platform=$BUILDPLATFORM`. |
 | [tenk-backend/.dockerignore](../tenk-backend/.dockerignore) | build context 제외 목록(build/, .gradle/, uploads/, .git/ 등). |
-| [deploy/docker-compose.yml](../deploy/docker-compose.yml) | backend + mariadb:11. `name: tenk`. DB 시크릿은 `.env` 주입, `SPRING_DATASOURCE_*` env가 prod yaml의 TODO를 덮음. `schema.sql`은 **`dbinit` named volume에 시딩**돼 첫 기동 자동적용(`~/Documents`는 TCC로 bind mount 불가 — §6·§10.6). db/uploads/dbinit named volume. |
+| [deploy/docker-compose.yml](../deploy/docker-compose.yml) | backend + mariadb:11. `name: tenk`. DB 시크릿은 `.env` 주입, `SPRING_DATASOURCE_*` env가 prod yaml의 TODO를 덮음. `schema.sql`은 **`dbinit` named volume에 시딩**돼 첫 기동 자동적용(`~/Documents`는 TCC로 bind mount 불가 — §6·§9.6). db/uploads/dbinit named volume. |
 | [deploy/.env.example](../deploy/.env.example) | `DB_PASSWORD`/`DB_ROOT_PASSWORD` 템플릿. 실제 `.env`는 gitignore. |
 
 **맥(`~/Documents/projects/claude/tenk/`)에 두는 것 = 배포 설정 3개뿐**: `docker-compose.yml` + `schema.sql`(=`docs/schema.sql` 복사) + `.env`. **소스코드는 안 둠.**
@@ -99,7 +102,7 @@ colima start --cpu 2 --memory 4
 docker network create web
 
 # ── named volume 시딩 (⚠️ 첫 up 전에 필수) ──
-#  ~/Documents 밑은 macOS TCC 로 bind mount 불가라 런타임 파일을 named volume 에 둔다(§6·§10.6).
+#  ~/Documents 밑은 macOS TCC 로 bind mount 불가라 런타임 파일을 named volume 에 둔다(§6·§9.6).
 #  bind mount 와 달리 named volume 은 자동으로 안 채워지므로 미리 시딩해야 한다.
 #  tenk_dbinit: 비어 있으면 DB 가 빈 채로 떠 ddl-auto=validate 가 실패한다.
 docker volume create tenk_dbinit
@@ -146,21 +149,11 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
 | `/v3/api-docs` 500 (`NoSuchMethodError: ControllerAdviceBean.<init>`) | springdoc 2.6.0은 Spring Boot 3용. Spring Boot 4=Spring Framework 7엔 **springdoc 3.0.x**. → `build.gradle` `3.0.3`로 올림(완료). |
 | 로그 `Using generated security password` 경고 | stateless JWT + 커스텀 SecurityConfig라 그 기본 유저는 안 쓰임. **무해**(로컬과 동일). |
 | Traefik 로그 `client version 1.24 is too old` / 라우팅 안 잡힘 | **엣지(리버스 프록시) 소관** — Docker 29 API 버전 문제. `reverse-proxy` 리포 README §5 참고(요약: Traefik `v3.6.1`+ 로 해결). |
-| 컨테이너가 `Created` 에서 멈추고 `error while creating mount source path ... mkdir /Users/…/Documents: operation not permitted` | **macOS TCC(프라이버시)가 `~/Documents`·Desktop·Downloads 를 보호**해 Colima VM(virtiofs)이 그 하위 경로를 bind mount 못 함(홈 루트 `~/` 밑은 됨). compose 파일 자체는 호스트가 읽어 어디 둬도 되지만 **compose 안 상대경로 bind mount 가 전부 막힌다**. → 런타임 파일을 **named volume** 으로 전환(폴더 위치 무관). 시딩은 §5.4, 전말은 §10.6. |
+| 컨테이너가 `Created` 에서 멈추고 `error while creating mount source path ... mkdir /Users/…/Documents: operation not permitted` | **macOS TCC(프라이버시)가 `~/Documents`·Desktop·Downloads 를 보호**해 Colima VM(virtiofs)이 그 하위 경로를 bind mount 못 함(홈 루트 `~/` 밑은 됨). compose 파일 자체는 호스트가 읽어 어디 둬도 되지만 **compose 안 상대경로 bind mount 가 전부 막힌다**. → 런타임 파일을 **named volume** 으로 전환(폴더 위치 무관). 시딩은 §5.4, 전말은 §9.6. |
 
 ---
 
-## 7. 다음 단계
-
-- [x] **폰 접속 방향 결정 (2026-07-01)** — **(나) 외부 어디서나 + HTTPS** 로 결정. 리버스 프록시는 **Traefik**. 근거·아키텍처 §9.
-- [x] **리버스 프록시 + 자동 HTTPS 구축 (2026-07-01 완료)** — 공유 엣지(Traefik)로 `https://tenk.hjson248.com` LE prod 인증서. `forward-headers-strategy` 로 mixed content("주의 요함")까지 해결. **엣지는 별도 리포 `reverse-proxy` 로 분리.** tenk 붙는 법 §9, 엣지 상세 그 리포 README.
-- [x] 자동 로그인 + `sudo reboot` 최종 생존 테스트 — **완료(2026-07-01), 무인 복귀 확인.**
-- [x] **개인정보처리방침 배포 (2026-07-07 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html)(jar static) 재배포로 `https://tenk.hjson248.com/privacy.html` 서빙·브라우저 확인. Play Console 처리방침 URL 이 이 주소.
-- [x] **회원 탈퇴 hard-delete (2026-07-07 배포)** — soft delete + 3개월 보관 후 새벽 배치 물리 삭제. 상세는 [handoff.md](handoff.md) "운영 고려사항".
-- [x] **필수 동의 플로우 배포 (2026-07-20)** — 이용약관(`terms.html`) static 추가 + 동의 기록 컬럼/엔드포인트. 라이브 DB ALTER(§5.5) + 이미지 재배포 + `dbinit` 시드 갱신까지 완료. 검증: `https://tenk.hjson248.com/terms.html` → 200(무인증), prod api-docs 에 `/api/users/me/consent`·`consentRequired` 노출. 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 필수 동의".
-- [x] **서버 타임존 KST 고정 (2026-07-13 배포)** — 컨테이너 기본 UTC 라 `LocalDate.now()` 가 한국 자정~오전 9시 사이 전날로 잡혀 "오늘 시작" 챌린지가 "시작 전" 으로 보이던 버그(7/11 제보) 해결. 두 겹 고정: [TenkApplication](../tenk-backend/src/main/java/com/hjson/tenk/TenkApplication.java) `TimeZone.setDefault` (이미지 재빌드로 반영) + [docker-compose.yml](../deploy/docker-compose.yml) backend `TZ: Asia/Seoul` env (맥 compose 복사본 갱신 → `up -d`). 검증: `docker compose exec backend date` → KST. 커밋 `f30d358`.
-
-## 8. 기술 사실
+## 7. 기술 사실
 
 - 백엔드: Spring Boot **4.0.6** / Java 21 / Gradle wrapper. 산출물 `build/libs/tenk-0.0.1-SNAPSHOT.jar`.
 - 빌드 시 **테스트 제외** 필수 → `bootJar`만(`build` 아님). 통합테스트가 실제 MariaDB를 요구해 빌드 컨테이너에선 못 돎.
@@ -168,11 +161,11 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
 
 ---
 
-## 9. 외부 접속 + HTTPS (LIVE) — 리버스 프록시는 별도 리포
+## 8. 외부 접속 + HTTPS (LIVE) — 리버스 프록시는 별도 리포
 
 `https://tenk.hjson248.com` 외부 접속 + 자동 TLS **LIVE**(2026-07-01). 리버스 프록시(공유 엣지)는 독립 인프라라 **별도 리포 `reverse-proxy`** 에서 관리(맥은 그 리포를 git clone). **엣지 아키텍처·DNS/포트포워딩·ACME·Traefik 함정·인증서 재발급은 그 리포 README 가 진실의 원천.** 여기엔 tenk 가 엣지에 붙는 법 + 앱-레벨 설정만 남긴다.
 
-### 9.1 tenk 가 엣지에 붙는 법 (이 리포의 책임 범위)
+### 8.1 tenk 가 엣지에 붙는 법 (이 리포의 책임 범위)
 - backend 를 `web`(엣지 공유) + `internal`(db 전용) **두 네트워크**에 둔다. db 는 `internal` 에만 둬 외부/엣지와 격리.
 - backend 에 라우팅 라벨 선언([deploy/docker-compose.yml](../deploy/docker-compose.yml)):
   ```
@@ -185,55 +178,55 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
   ```
 - `web` 네트워크는 **엣지 스택이 만들고 소유**(`docker network create web`) — tenk 는 join 만. `8080:8080` 퍼블리시는 맥 로컬 헬스체크 전용(인터넷 미노출). 새 서브도메인이면 A레코드(→ 맥 공인 IP)만 추가하면 Traefik 이 자동 발급.
 
-### 9.2 앱-레벨 HTTPS 설정 — mixed content("주의 요함") 해결
+### 8.2 앱-레벨 HTTPS 설정 — mixed content("주의 요함") 해결
 - ✅ **`server.forward-headers-strategy=framework`**: 증상은 인증서는 "유효함" 인데 크롬이 "주의 요함". 원인은 스프링부트가 Traefik 뒤에서 `X-Forwarded-Proto=https` 를 안 믿어 springdoc 이 Swagger `Servers` URL 을 `http://tenk.hjson248.com` 로 생성 → HTTPS 페이지 안 http 참조 = mixed content. TLS 종단이 프록시라 **프록시-뒤 앱의 공통 함정** — 해결은 앱 몫(엣지는 헤더만 부착). 적용 2곳: [application-prod.yaml](../tenk-backend/src/main/resources/application-prod.yaml) `server.forward-headers-strategy: framework`(소스 오브 트루스, 다음 이미지 빌드에 반영) + [deploy/docker-compose.yml](../deploy/docker-compose.yml) `SERVER_FORWARD_HEADERS_STRATEGY=framework` env(**이미지 재빌드 없이** `docker compose up -d` 로 즉시 적용). 검증: `curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'` → `https://tenk.hjson248.com`.
   - **함정 — 맥에서 자기 도메인 curl 이 `status=000`**: 공유기 NAT 헤어핀 미지원이라 맥이 자기 공인 IP 로 loopback 을 못 한다. 실사용자(폰 LTE/외부)는 정상. 맥 로컬 검증은 `--resolve tenk.hjson248.com:443:127.0.0.1` 로 Traefik 을 직접 때려 우회.
 
-### 9.3 Flutter base URL 전환 (완료 2026-07-02)
+### 8.3 Flutter base URL 전환 (완료 2026-07-02)
 - ✅ [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 `https://tenk.hjson248.com` 로 전환. [network_security_config.xml](../tenk_app/android/app/src/main/res/xml/network_security_config.xml) 의 LAN IP(`192.168.0.7`) cleartext 예외 줄 제거 — 실기기가 HTTPS 로 붙어 cleartext 불필요. `tenk_app (emulator)` 는 그대로 `http://10.0.2.2:8080`(로컬 개발용) 유지. 로컬 백엔드를 실기기로 테스트할 때만 해당 PC LAN IP 를 두 파일에 다시 추가.
 
 ---
 
-## 10. 맥에서 Claude Code 로 운영하기 (operator orientation)
+## 9. 맥에서 Claude Code 로 운영하기 (operator orientation)
 
 > 이 맥미니(`sonhuijun-ui-Macmini`)가 **tenk 운영 서버 그 자체**다. 여기서 도는 Claude Code 는
 > 윈도우 세션과 달리 **docker 명령을 사람 손 거치지 않고 직접 실행**할 수 있다. 이 절은 맥 Claude Code 가
-> 배포를 이어받을 때의 오리엔테이션이고, **실제 런북·아키텍처·함정은 이 문서 §1~§9 가 진실의 원천**이다.
+> 배포를 이어받을 때의 오리엔테이션이고, **실제 런북·아키텍처·함정은 이 문서 §1~§8 가 진실의 원천**이다.
 
-### 10.1 전제 — 맥 = 서버, 리포 = 소스
+### 9.1 전제 — 맥 = 서버, 리포 = 소스
 - 맥 Claude Code 는 `docker compose ...`(tenk·reverse-proxy 폴더) · `colima ...` · `docker ...` 를 직접 실행 — 상태 확인·재배포·로그·재기동 즉시 수행.
 - **리포 `deploy/` 가 소스 오브 트루스, 맥 폴더는 복사본.** 바꿀 땐 리포에서 고치고 → 맥 복사 → `up -d`. 맥 파일 직접 수정 금지(드리프트 — 급하면 리포 역반영).
 
-### 10.2 맥 로컬 레이아웃 (비-git, 머신 고유)
+### 9.2 맥 로컬 레이아웃 (비-git, 머신 고유)
 ```
 ~/Documents/projects/claude/
 ├─ tenk/            # 리포 deploy/ 복사본: docker-compose.yml(name:tenk) · schema.sql(=docs/schema.sql, dbinit 시드) · .env(커밋 금지)
 └─ reverse-proxy/   # 공유 엣지 (★ 별도 리포 clone — tenk 소관 아님, name:traefik)
 ```
-- **런타임 파일은 named volume**(폴더가 `~/Documents` 밑이라 TCC bind mount 불가 — §10.6): `tenk_db-data`·`tenk_uploads`·`tenk_dbinit`·`traefik_letsencrypt`. 백업은 `docker cp`.
-- 두 스택은 external 네트워크 `web` 로 연결(`docker network create web` 1회, §9). 이미지 소스는 맥에 없음(§2) → 코드 재배포는 §10.4.
+- **런타임 파일은 named volume**(폴더가 `~/Documents` 밑이라 TCC bind mount 불가 — §9.6): `tenk_db-data`·`tenk_uploads`·`tenk_dbinit`·`traefik_letsencrypt`. 백업은 `docker cp`.
+- 두 스택은 external 네트워크 `web` 로 연결(`docker network create web` 1회, §8). 이미지 소스는 맥에 없음(§2) → 코드 재배포는 §9.4.
 
-### 10.3 첫 진입 루틴 (상태부터 확인)
+### 9.3 첫 진입 루틴 (상태부터 확인)
 ```bash
 docker compose -f ~/Documents/projects/claude/tenk/docker-compose.yml ps        # backend/db 상태
 docker compose -f ~/Documents/projects/claude/reverse-proxy/docker-compose.yml ps     # traefik 상태
 colima status && docker context show                  # VM·컨텍스트(=colima)
 curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'
 ```
-기대값: 컨테이너 3개 Up, 마지막 curl 이 `https://tenk.hjson248.com`. 어긋나면 §6 / §9.
+기대값: 컨테이너 3개 Up, 마지막 curl 이 `https://tenk.hjson248.com`. 어긋나면 §6 / §8.
 
-### 10.4 자주 하는 운영 (상세는 §5·§9)
+### 9.4 자주 하는 운영 (상세는 §5·§8)
 - **설정만 바뀜**(compose/env/schema): 리포 수정 → 맥 복사 → `docker compose up -d`. 이미지 재빌드 불필요.
 - **코드 바뀜**: 윈도우 `docker buildx ... --push`(§5.1) → 맥 `docker compose pull && docker compose up -d`. (맥엔 소스 없어 빌드는 윈도우 담당.)
 - **로그/재기동**: `docker compose logs -f backend|traefik`, `docker compose restart <svc>`. 인증서/엣지는 `reverse-proxy` 리포 소관.
 
-### 10.5 맥에 둘 것 — 배포 설정만, 앱 소스는 안 둔다
-- **모노레포 통째 클론 금지** — 서버에 앱 소스가 올라가면 clean-server 원칙(§2)이 깨진다. 맥엔 배포 설정(§10.2)만.
+### 9.5 맥에 둘 것 — 배포 설정만, 앱 소스는 안 둔다
+- **모노레포 통째 클론 금지** — 서버에 앱 소스가 올라가면 clean-server 원칙(§2)이 깨진다. 맥엔 배포 설정(§9.2)만.
 - 맥 Claude Code 컨텍스트용으로 **이 런북 한 파일만 복사**(예: `~/Documents/projects/claude/tenk/RUNBOOK.md`). 소스-상대 링크는 안 열려도 명령·아키텍처·함정 본문은 유효.
-- 킥오프: *"이 맥에서 tenk 를 운영해. `RUNBOOK.md` §10 읽고 §10.3 으로 배포 상태 확인 후 이어서 도와줘. 서버엔 앱 소스 없고 배포 설정만 있다."*
+- 킥오프: *"이 맥에서 tenk 를 운영해. `RUNBOOK.md` §9 읽고 §9.3 으로 배포 상태 확인 후 이어서 도와줘. 서버엔 앱 소스 없고 배포 설정만 있다."*
 - 설정 버전관리 원하면(선택): 별도 `tenk-deploy` 리포 또는 `deploy/` sparse-checkout.
 
-### 10.6 함정·결정 — `~/Documents` TCC bind mount 실패 → named volume 전환 (2026-07-01)
+### 9.6 함정·결정 — `~/Documents` TCC bind mount 실패 → named volume 전환 (2026-07-01)
 배포 폴더를 홈 루트에서 `~/Documents/projects/claude/` 밑(`tenk/`·`reverse-proxy/`)으로 옮겼더니 두 스택이 다 안 떴다. 컨테이너가 `Created` 에서 멈추고:
 ```
 error while creating mount source path '.../Documents/.../letsencrypt':

@@ -8,7 +8,19 @@
 > - **요구사항·기술 스택·아키텍처 결정이 추가·변경된 경우** (예: 클라이언트 프레임워크 결정, 새 외부 의존성 도입, 인증·저장소 방식 변경, 핵심 도메인 정책 변경)
 > - 위 결정을 대화에서 합의했지만 아직 코드에 반영되지 않은 경우에도, 결정 자체는 이 문서에 먼저 박아둘 것
 >
-> 일시적인 진행 상태는 [docs/handoff.md](docs/handoff.md)에, 영구적인 규칙·구조·결정은 여기에.
+> **📂 문서는 용도별로 분리돼 있다 — 새 내용을 handoff 에 몰아 적지 말 것.** 어디에 쓸지는 아래 표로 판단:
+>
+> | 쓸 내용 | 어디에 |
+> |---|---|
+> | 영구적인 규칙·구조·아키텍처·도메인 정책 (진실의 원천) | **이 문서 (CLAUDE.md)** |
+> | **현재** 진행 상태 · 남은 일(미착수) · 회귀 함정 · 시작 순서 | [docs/handoff.md](docs/handoff.md) |
+> | **지난** 이력 — 시간순 변경 로그, 완료된 작업 상세, 검증 결과 | [docs/handoff-archive.md](docs/handoff-archive.md) |
+> | 의사결정 **근거**(왜 이렇게 골랐나) · 대안 검토 · 회의록 | [docs/decisions.md](docs/decisions.md) |
+> | 배포 **구조·런북·배포 함정** (배포하는 사람이 볼 것만) | [docs/docker-deployment.md](docs/docker-deployment.md) |
+>
+> 판단 기준: *"지금 알아야 하나(handoff) vs 나중에 왜 그런지 추적할 때만 보나(archive/decisions)"*.
+> 작업을 완료하면 handoff 의 해당 항목은 **archive 로 옮기고 handoff 에선 지운다** (handoff 는 계속 짧게 유지).
+> 배포 문서에는 **할 일·기능 이력을 적지 말 것** — 그건 handoff/archive 소관이다.
 
 ---
 
@@ -55,7 +67,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **127개** (2026-07-20 실측): 단위 100 + `@SpringBootTest` 통합 22 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2 + devtools 테스트 시딩/로그인 5) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. ⚠️ 이 중 **9건이 사전 실패 상태**(Badge/Media 테스트가 무효 카테고리 `"x"` 사용 — [docs/handoff.md](docs/handoff.md) "함정 — 백엔드" 참고). `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **127개** (2026-07-20 실측): 단위 100 + `@SpringBootTest` 통합 22 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2 + devtools 테스트 시딩/로그인 5) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. **전원 통과**(2026-07-20 기준). `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
