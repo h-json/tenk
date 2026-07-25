@@ -32,6 +32,18 @@ class LegalNoticeScreen extends StatelessWidget {
                   size: 18, color: AppColors.inkMuted),
               onTap: () => openLegalDoc(context, privacyPolicyUrl),
             ),
+            const Divider(height: 1),
+            // 오픈소스 라이선스 고지 — 국내 관례대로 '법적 고지'(약관 묶음) 안에 둔다.
+            // Flutter 기본 라이선스 화면(showLicensePage)이 의존성 라이선스를 자동 수집·표시.
+            ListTile(
+              leading: const Icon(Icons.code_outlined),
+              title: const Text('오픈소스 라이선스'),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: 'Tenk',
+              ),
+            ),
           ],
         ),
       ),

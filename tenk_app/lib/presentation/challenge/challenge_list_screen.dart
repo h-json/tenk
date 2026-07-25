@@ -83,9 +83,9 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
           title: const Text('내 챌린지'),
           actions: [
             IconButton(
-              tooltip: '내 정보',
+              tooltip: '메뉴',
               onPressed: _openProfile,
-              icon: const Icon(Icons.account_circle_outlined),
+              icon: const Icon(Icons.menu),
             ),
           ],
           bottom: TabBar(

@@ -28,6 +28,7 @@ public class SecurityConfig {
             "/delete-account.html", // 계정·데이터 삭제 안내 (Play Console '데이터 삭제' URL — 앱 밖에서도 요청 가능해야 함)
             "/api/auth/kakao/login",
             "/api/auth/refresh",
+            "/api/app/version",     // 앱 버전 게이트 — 로그인 전 부팅 시점에 호출되므로 인증 불필요
             // /api/dev/seed 는 인증 유지 (TESTER 권한 검증은 서비스에서)
 
             "/swagger-ui.html",

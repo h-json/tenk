@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
+import '../../data/app/app_version.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../common/async_state.dart';
 import '../legal/legal_notice_screen.dart';
+import '../update/update_gate.dart';
 import 'account_settings_screen.dart';
 import 'my_info_screen.dart';
 
@@ -16,9 +18,10 @@ import 'my_info_screen.dart';
 /// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침)
 /// - 테스트 데이터 재생성 (TESTER 권한 계정만)
 ///
-/// ⚠️ 화면 제목 '메뉴' 는 **임시**다. 하위에 '내 정보' 가 생기면서 같은 이름이 중첩되는 걸 피하려고
-/// 붙였고, '설정'(톱니 아이콘) 으로 갈지 '메뉴'(햄버거) 로 갈지는 아직 미정 — docs/handoff.md 남은 일 참고.
-/// 확정되면 제목과 함께 진입점 아이콘(현재 `account_circle_outlined`)도 같이 바꿀 것.
+/// 화면 제목은 '메뉴'로 확정됐다 (2026-07-25). 이 허브는 설정(preference) 모음이 아니라
+/// 내 정보·계정·법적 고지·앱 정보 등 이질적 항목을 모아 분기하는 메뉴라서 '설정'이 아닌 '메뉴'다.
+/// 진입점 아이콘도 챌린지 목록 AppBar 에서 `Icons.menu`(햄버거)로 통일했다.
+/// 소리·진동 같은 설정성 항목이 생기면 최상위에 토글을 두지 말고 '알림/효과 설정' 하위 화면을 새로 추가할 것.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -132,6 +135,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             MaterialPageRoute<void>(builder: (_) => const LegalNoticeScreen()),
           ),
         ),
+        const Divider(height: 1),
+        // ── 앱 버전 (+ 최신 여부. 업데이트 있으면 탭 시 스토어로) ──
+        const _AppVersionTile(),
 
         // ── 테스트 도구 (TESTER 권한 계정만) ──
         if (user.isTester) ...[
@@ -150,6 +156,73 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Center(child: CircularProgressIndicator()),
           ),
       ],
+    );
+  }
+}
+
+/// 메뉴의 '앱 버전' 행. 현재 버전을 표시하고, 서버 정책상 업데이트가 있으면 안내 + 탭 시 스토어로.
+/// User 로딩과 별개의 비동기 자원이라 (AsyncStateMixin 을 겹쳐 쓰지 않고) 자체 상태를 든다.
+class _AppVersionTile extends StatefulWidget {
+  const _AppVersionTile();
+
+  @override
+  State<_AppVersionTile> createState() => _AppVersionTileState();
+}
+
+class _AppVersionTileState extends State<_AppVersionTile> {
+  String? _version;
+  AppVersionInfo? _info;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return; // InheritedWidget 은 initState 밖(여기)에서 읽는다. 1회만.
+    _started = true;
+    _load();
+  }
+
+  Future<void> _load() async {
+    final api = AppScope.of(context);
+    final version = await api.currentVersion();
+    if (mounted) setState(() => _version = version);
+    final info = await api.checkVersion();
+    if (mounted) setState(() => _info = info);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final versionText = _version == null ? '확인 중…' : 'v$_version';
+    final info = _info;
+    final hasUpdate = info != null && (info.updateAvailable || info.updateRequired);
+
+    String? statusLabel;
+    Color statusColor = AppColors.inkMuted;
+    if (hasUpdate) {
+      statusLabel = '업데이트가 있어요';
+      statusColor = AppColors.primary;
+    } else if (info?.status == AppVersionStatus.latest) {
+      statusLabel = '최신 버전이에요';
+    }
+    // info 가 null(로딩 중)이거나 unknown(확인 실패)이면 상태 라벨 없이 버전만 노출.
+
+    return ListTile(
+      leading: const Icon(Icons.info_outline),
+      title: const Text('앱 버전'),
+      subtitle: statusLabel == null
+          ? null
+          : Text(statusLabel, style: TextStyle(color: statusColor)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(versionText, style: const TextStyle(color: AppColors.inkSub)),
+          if (hasUpdate) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          ],
+        ],
+      ),
+      onTap: hasUpdate ? () => openStorePage(context, info.storeUrl) : null,
     );
   }
 }

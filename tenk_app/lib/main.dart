@@ -11,6 +11,7 @@ import 'design/app_theme.dart';
 import 'data/amount/amount_api.dart';
 import 'data/api/auth_api.dart';
 import 'data/api/dio_client.dart';
+import 'data/app/app_api.dart';
 import 'data/auth/auth_repository.dart';
 import 'data/auth/token_storage.dart';
 import 'data/challenge/challenge_api.dart';
@@ -37,6 +38,7 @@ void main() {
   final amountApi = AmountApi(authDio: dioClient.authDio);
   final mediaApi = MediaApi(authDio: dioClient.authDio);
   final userApi = UserApi(authDio: dioClient.authDio);
+  final appApi = AppApi(rawDio: dioClient.rawDio);
 
   runApp(TenkApp(
     authRepository: authRepository,
@@ -44,6 +46,7 @@ void main() {
     amountApi: amountApi,
     mediaApi: mediaApi,
     userApi: userApi,
+    appApi: appApi,
   ));
 }
 
@@ -64,6 +67,7 @@ class TenkApp extends StatelessWidget {
     required this.amountApi,
     required this.mediaApi,
     required this.userApi,
+    required this.appApi,
   });
 
   final AuthRepository authRepository;
@@ -71,6 +75,7 @@ class TenkApp extends StatelessWidget {
   final AmountApi amountApi;
   final MediaApi mediaApi;
   final UserApi userApi;
+  final AppApi appApi;
 
   @override
   Widget build(BuildContext context) {
@@ -84,11 +89,14 @@ class TenkApp extends StatelessWidget {
             api: mediaApi,
             child: UserScope(
               api: userApi,
-              child: MaterialApp(
-                title: 'Tenk',
-                navigatorKey: navigatorKey,
-                theme: buildTenkTheme(),
-                home: const SessionGate(),
+              child: AppScope(
+                api: appApi,
+                child: MaterialApp(
+                  title: 'Tenk',
+                  navigatorKey: navigatorKey,
+                  theme: buildTenkTheme(),
+                  home: const SessionGate(),
+                ),
               ),
             ),
           ),

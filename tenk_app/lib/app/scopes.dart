@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/amount/amount_api.dart';
+import '../data/app/app_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
 import '../data/media/media_api.dart';
@@ -110,5 +111,29 @@ class UserScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(UserScope oldWidget) => api != oldWidget.api;
+}
+
+/// 트리 어디서든 [AppApi](앱 버전 게이트)를 꺼내쓰기 위한 단순 InheritedWidget.
+/// SessionGate(부팅 강제/권장 업데이트)와 메뉴의 '앱 버전' 항목이 사용.
+///
+/// ⚠️ 이걸로 Scope 가 6개 — CLAUDE.md 의 "5개 초과 시 Riverpod/Provider 재검토" 임계를 넘었다.
+/// 지금은 boilerplate 비용이 아직 이관을 정당화하지 못해 유지하되, 다음 도메인 추가 시 재검토할 것.
+class AppScope extends InheritedWidget {
+  const AppScope({
+    super.key,
+    required this.api,
+    required super.child,
+  });
+
+  final AppApi api;
+
+  static AppApi of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
+    assert(scope != null, 'AppScope not found in widget tree');
+    return scope!.api;
+  }
+
+  @override
+  bool updateShouldNotify(AppScope oldWidget) => api != oldWidget.api;
 }
 

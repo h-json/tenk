@@ -11,11 +11,13 @@
 --                      + no_spend_day_key (생성 컬럼) + uk_amount_no_spend_day 인덱스로 "무지출 하루 1회" 강제
 --                      + memo (NULL 허용, 영상 export 시 자막 디폴트 오버라이드 용도)
 --   refresh_token    : 신설 — JWT 모바일 인증의 RT 보관소
+--   app_config       : 신설 — 앱 최신/최소 지원 버전 + 스토어 URL (단일 행). 강제/권장 업데이트 게이트용
 -- ============================================================
 
 use `tenk`;
 
 -- 외래키 순서를 고려한 드롭
+DROP TABLE IF EXISTS `app_config`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `challenge_badge`;
 DROP TABLE IF EXISTS `user_badge`;  -- 구 테이블 (있으면 정리)
@@ -153,6 +155,29 @@ CREATE TABLE `refresh_token` (
     CONSTRAINT `fk_refresh_token_user`
         FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
 );
+
+-- 앱 버전 정책 (단일 행). 강제/권장 업데이트 게이트가 이 값을 읽어 클라 버전과 비교한다.
+--   min_supported_version : 이 버전 미만은 강제 업데이트(앱 사용 차단)
+--   latest_version        : 이 버전 미만은 권장 업데이트(안내만, 계속 사용 가능)
+-- 값은 재배포 없이 SQL 로 갱신한다 (관리자 UI 없음 — TESTER 승격과 동일한 운영 방식):
+--   UPDATE `app_config` SET `latest_version`='1.1.0', `min_supported_version`='1.0.0' WHERE `app_config_id`=1;
+-- 라이브 DB 는 이 테이블을 CREATE + INSERT 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩):
+--   위 CREATE TABLE `app_config` + 아래 INSERT 를 그대로 실행.
+CREATE TABLE `app_config` (
+    `app_config_id`         BIGINT AUTO_INCREMENT                       NOT NULL,
+    `min_supported_version` VARCHAR(20)                                 NOT NULL,
+    `latest_version`        VARCHAR(20)                                 NOT NULL,
+    `android_store_url`     VARCHAR(255)                                NULL,
+    `ios_store_url`         VARCHAR(255)                                NULL,
+    `updated_dt`            DATETIME      DEFAULT CURRENT_TIMESTAMP     NOT NULL,
+    PRIMARY KEY (`app_config_id`)
+);
+
+INSERT INTO `app_config`
+    (`app_config_id`, `min_supported_version`, `latest_version`, `android_store_url`, `ios_store_url`)
+VALUES
+    (1, '1.0.0', '1.0.0',
+     'https://play.google.com/store/apps/details?id=com.hjson.tenk_app', NULL);
 
 -- ============================================================
 -- 배지 마스터 데이터 (3 / 7 / 14 / 30 단계)

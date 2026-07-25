@@ -6,7 +6,7 @@
 > **📂 문서 분할 안내 (2026-07-19)** — handoff 가 무거워져 셋으로 나눔:
 > - **이 파일 (handoff.md)** = **현상황**: 시작 순서 · 완료 요약 · 남은 일(미착수) · 비-git 자산 · 함정. **매 세션 기본으로 읽는 파일.**
 > - **[handoff-archive.md](handoff-archive.md)** = **이력**: 시간순 변경 로그(changelog) + 완료된 백로그 상세. "언제/왜 이렇게 됐지"를 추적할 때만.
-> - **[decisions.md](decisions.md)** = **회의록**: 기록수정·촬영분리 / 결과 카드 / 영상 내보내기 3건의 의사결정 근거 + 영상 export 함정(mpeg4 인코더·drawtext 한글). 관련 코드를 건드릴 때만.
+> - **[decisions.md](decisions.md)** = **회의록**: 주요 기능별 의사결정 근거(기록수정·촬영분리 / 결과 카드 / 영상 내보내기 / 연령·선택수집 / 테스터 로그인 / 앱 버전·업데이트 게이트 등 — 전체 목록은 문서 상단 "수록") + 영상 export 함정(mpeg4 인코더·drawtext 한글). 관련 코드를 건드릴 때만.
 >
 > 회귀 방지 지뢰(함정)는 짧고 매 세션 가치가 높아 이 파일 하단 "알려진 주의사항 / 함정"에 그대로 둠.
 
@@ -92,6 +92,9 @@
 **앱 콘텐츠 (프로덕션 전 필수) — 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.** 남은 실행 항목:
 - [x] ✅ **백엔드 재배포 완료 (2026-07-25)** — 연령 게이트 + 성별 + role/테스트로그인 제거를 prod 에 배포. 라이브 DB 3컬럼(`birth_date`/`gender`/`role`) `ALTER` 선적용 → `docker compose pull && up -d` → 부팅 정상 + `/api/auth/test/login` 제거 확인(401=security-first). `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). `delete-account.html`/`privacy.html` 은 이미지에 구워져 함께 반영. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) §5.5.
   - [ ] **시딩 쓰려면 내부 테스터 계정을 TESTER 로 승격** (선택): `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼 노출됨).
+- [ ] 🟠 **다음 prod 백엔드 재배포 묶음 (미착수 — 여러 건 모아 한 번에 업로드 예정)** — 코드/로컬은 완료됐고 **라이브 반영만** 남은 것들:
+  - **앱 버전 게이트 (#5, 2026-07-26 구현)**: 라이브 DB 에 `app_config` **CREATE TABLE + INSERT**(id=1, min/latest='1.0.0', Android URL, ios NULL) 선적용 → `docker compose pull && up -d`. **안 하면 ddl-auto=validate 로 부팅 실패**. `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). SQL·배포 순서는 아래 §4 "앱 버전 게이트 라이브 배포" + [docker-deployment.md](docker-deployment.md).
+  - (이후 다른 백엔드 변경이 생기면 이 묶음에 추가해 한 번에 배포)
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
 - [x] **'내 정보' 성별 선택 입력 — ✅ 완료 (2026-07-21)** — 입력 / '입력 안 함'으로 되돌리기 양방향
 - **Play Console 폼 입력** (답안은 [play-console-app-content.md](play-console-app-content.md)):
@@ -122,7 +125,7 @@
 - [ ] **#2 메뉴 항목 추가** — ✅ **이름·아이콘 확정 (2026-07-25): '메뉴' + `Icons.menu`** + ✅ **앱 버전 행 완료 (2026-07-26, #5·라이선스와 함께)** — 현재 버전(`v1.0.0`)+최신여부 표시, 업데이트 있으면 스토어로. 남은 것: **피드백 보내기** 항목 추가. (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
 - [ ] **#3 날짜·시간 선택 UI 정리** — 현재 picker 가 영어로 뜨거나 시간이 시계(analog) UI 로 떠서 불편함. 한국어 로케일 적용(`MaterialLocalizations`/`flutter_localizations` + `supportedLocales`) + 시간 입력을 쓰기 편한 형태로 교체. 노출 지점: 챌린지 생성(기간) + amount 기록/수정(spent_dt 시간).
 - [ ] **#4 모달 → 화면 전환** — 카테고리 셀렉박스 / 성별 선택 팝업 / 닉네임 변경 팝업 등 다이얼로그를 별도 화면(push)으로 재구성. 연령·동의·닉네임을 이미 별도 화면으로 분리한 방향과 일관 ([../CLAUDE.md](../CLAUDE.md) 게이트 화면 분리 원칙). 대상: [spend_category.dart](../tenk_app/lib/presentation/amount/spend_category.dart) 드롭다운, [my_info_screen.dart](../tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`·성별 다이얼로그.
-- [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 (2026-07-26)**. **남은 것: ① 라이브 DB `app_config` CREATE+INSERT + 백엔드 재배포 ② 스토어 URL(ios)는 iOS 출시 때 확정 ③ 에뮬 E2E 검증(강제/권장/최신 3분기).** 배포 메모는 아래 "운영 고려사항" 참고.
+- [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. **남은 것: 라이브 DB `app_config` CREATE+INSERT + 백엔드 재배포 — 다음 prod 배포 때 다른 항목과 함께 일괄 업로드 예정(아래 §0-DEPLOY).** iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
 - [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
 - [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
