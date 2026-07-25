@@ -114,7 +114,19 @@
 
 > 2026-07-11 배치의 완료 항목(챌린지 상태색 / 카테고리 목록화+아이콘 / 금액입력 보조표시 / 필수 별표 / '메모'→'한 줄 평' / 성공 트로피 배지 / 7·11 날짜 타임존 버그 / 챌린지 이름 필드 / 영상 자막 위치·스타일)과 2026-06-16 실기기 3블록 검증은 전부 ✅ 완료 → 상세는 [handoff-archive.md](handoff-archive.md). **드롭**: "챌린지 색깔 기능"(같은 문서) / "목록에 메모 노출"(2026-07-19 — 긴 메모가 목록 높이를 흔들고, 상세 진입으로 확인 가능해 목록 노출 가치가 낮다고 판단).
 
-- [ ] **메뉴 화면 이름·아이콘 확정 (미정, 2026-07-21 보류)** — 닉네임·성별을 '내 정보' 하위 화면([MyInfoScreen](../tenk_app/lib/presentation/profile/my_info_screen.dart))으로 묶으면서 상위 화면([ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart))의 제목이 '내 정보' 와 겹치게 됐다. **임시로 '메뉴'** 를 붙여둔 상태. **'설정'(톱니 아이콘) vs '메뉴'(햄버거 아이콘)** 중 무엇으로 갈지 정한 뒤 **제목 + 진입점 아이콘**(현재 챌린지 목록 AppBar 의 `account_circle_outlined`)을 같이 바꿀 것. 판단 기준: 하위 항목이 설정성(계정·법적 고지)에 가까우면 '설정', 앞으로 통계·도움말 등 비설정 항목이 늘 예정이면 '메뉴'.
+- [ ] **메뉴 화면 이름·아이콘 확정 (미정, 2026-07-21 보류)** — 닉네임·성별을 '내 정보' 하위 화면([MyInfoScreen](../tenk_app/lib/presentation/profile/my_info_screen.dart))으로 묶으면서 상위 화면([ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart))의 제목이 '내 정보' 와 겹치게 됐다. **임시로 '메뉴'** 를 붙여둔 상태. **'설정'(톱니 아이콘) vs '메뉴'(햄버거 아이콘)** 중 무엇으로 갈지 정한 뒤 **제목 + 진입점 아이콘**(현재 챌린지 목록 AppBar 의 `account_circle_outlined`)을 같이 바꿀 것. 판단 기준: 하위 항목이 설정성(계정·법적 고지)에 가까우면 '설정', 앞으로 통계·도움말 등 비설정 항목이 늘 예정이면 '메뉴'. (아래 배치 §1-A #2 와 함께 처리)
+
+#### 1-A. 등록된 할 일 배치 (2026-07-25)
+
+> 사용자가 한 번에 넘긴 미착수 목록. 각 항목은 착수 전 별도 설계/합의 필요 ([[feedback-plan-before-code-edit]]). 규모가 큰 건은 회의 안건으로 승격 ([[feedback-defer-decisions-to-dedicated-meeting]]).
+
+- [ ] **#1 탈퇴 철회 흐름** — 탈퇴 후 3개월 보관 기간 안에 같은 카카오로 재로그인하면, 현재는 `USER_ALREADY_WITHDRAWN` 로 막힌다. 대신 **"탈퇴한 계정입니다. 탈퇴를 철회하시겠습니까?"** 확인을 받아 → 철회 선택 시 `is_deleted`/`deleted_dt` 를 해제해 복구, 거부 시 기존 3개월 보관 유지. 백엔드([AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 의 탈퇴 계정 분기) + 철회 엔드포인트 + Flutter 로그인 흐름 분기 동반. 보관 만료(hard delete) 후엔 철회 불가(계정이 이미 없음).
+- [ ] **#2 메뉴/'내 정보' 구성 확정 + 항목 추가** — 위 "메뉴 화면 이름·아이콘 확정"과 통합. **앱 버전** 표시 + **피드백 보내기** 항목 추가. (추후 배지 획득 효과음·진동이 생기면 **효과음/진동 설정** 항목도 추가 — 현재 그 기능 없으므로 대기.)
+- [ ] **#3 날짜·시간 선택 UI 정리** — 현재 picker 가 영어로 뜨거나 시간이 시계(analog) UI 로 떠서 불편함. 한국어 로케일 적용(`MaterialLocalizations`/`flutter_localizations` + `supportedLocales`) + 시간 입력을 쓰기 편한 형태로 교체. 노출 지점: 챌린지 생성(기간) + amount 기록/수정(spent_dt 시간).
+- [ ] **#4 모달 → 화면 전환** — 카테고리 셀렉박스 / 성별 선택 팝업 / 닉네임 변경 팝업 등 다이얼로그를 별도 화면(push)으로 재구성. 연령·동의·닉네임을 이미 별도 화면으로 분리한 방향과 일관 ([../CLAUDE.md](../CLAUDE.md) 게이트 화면 분리 원칙). 대상: [spend_category.dart](../tenk_app/lib/presentation/amount/spend_category.dart) 드롭다운, [my_info_screen.dart](../tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`·성별 다이얼로그.
+- [ ] **#5 앱 시작 시 강제/권장 업데이트** — 최신 버전이 아니면 업데이트 유도. 서버가 최소 지원 버전을 내려주고 클라가 자기 버전과 비교(강제 vs 권장 분기). 백엔드 버전 체크 엔드포인트 + Flutter 부팅 게이트 동반. 스토어 딥링크 필요.
+- [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
+- [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
