@@ -129,6 +129,7 @@
 - [ ] **#9 DB 컬럼 enum 전환 검토** — 문자열로 저장 중인 코드성 컬럼을 `@Enumerated`/enum 으로 정리. 특히 `amount.category` 는 현재 **의도적으로 String** (검증 이전 자유 텍스트 row 읽기 호환 — [../CLAUDE.md](../CLAUDE.md) 지출 카테고리 규칙). 전환하려면 레거시 자유 텍스트 데이터 마이그레이션(재시딩/백필)이 선행돼야 함. 착수 전 대상 컬럼 목록화 + 마이그레이션 전략부터.
 - [ ] **#10 email NULL 원인 분석** — `user.email` 이 NULL 로 들어가는 케이스 분석. 카카오 동의 항목에서 이메일 미제공/미동의 시 [AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 가 어떻게 처리하는지 확인 → 정책 결정(이메일 없이도 가입 허용? 재동의 유도?). 우선 **분석 태스크** — 실제 NULL row 가 있는지 + 코드 경로 추적부터.
 - [ ] **#11 닉네임 변경 안내 날짜 텍스트 삭제** — [MyInfoScreen](../tenk_app/lib/presentation/profile/my_info_screen.dart) 닉네임 행의 "X년 XX월 XX일 이후에 다시 변경할 수 있어요." 라벨(`lock_outline` 옆) 제거. 하루 1회 제한 로직·서버 검증은 그대로 두고 UI 문구만 삭제.
+- [ ] **#12 메뉴 진입 시 매번 로딩 대기 UX 개선** — [ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart)(메뉴) 진입할 때마다 `/api/users/me` 를 다시 fetch 해 로딩 스피너를 보게 됨. 캐시(이미 로드한 User 재사용) 또는 낙관적 렌더(스켈레톤/즉시 표시 후 백그라운드 갱신)로 체감 지연 제거. 하위 화면('내 정보'/'계정 설정')에 User 를 넘겨 재fetch 안 하는 기존 패턴과 정합.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
