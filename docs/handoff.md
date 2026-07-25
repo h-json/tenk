@@ -17,8 +17,9 @@
 - ✅ **통합 테스트 2종 추가 (2026-07-20)** — 필수 동의 엔드포인트 E2E 5건 + 탈퇴 계정 파기 5건.
 - ✅ **연령 확인 게이트 + Play 앱 콘텐츠 답안지 (2026-07-20)** — 만 14세 미만 차단(즉시 파기), 계정 삭제 안내 페이지 신설, [play-console-app-content.md](play-console-app-content.md) 작성.
 - ✅ **성별 선택 수집 + '내 정보' 하위 화면 분리 (2026-07-21)** — 성별은 통계용 선택 항목으로 '내 정보'에서만 입력·해제(가입 흐름 무변경). 닉네임·성별을 '내 정보'로 묶고 상위 화면은 순수 메뉴로 재편 — **상위 화면 이름은 '메뉴'(임시), 확정은 아래 §1 남은 일**. 테스트 **151개** 전원 통과, **에뮬 E2E 검증 완료**. **남은 것은 prod 배포 + Play 콘솔 폼 입력뿐** — 아래 "남은 일 §0".
-- 🔵 **Play 앱 콘텐츠 폼 진행 중 (2026-07-21)** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / **앱 액세스 권한·타겟층·데이터 안전 미완**. 앱 액세스는 **테스터 로그인 회의(다음 세션)** 결정에 종속 — 이메일 전용 카카오계정이 데모 계정으로 동작함을 확인해 선택지가 넓어짐. §0 참고.
-- ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 콘솔 폼 3종 + 테스터 로그인 회의) / iOS 빌드(맥 필요, 보류) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **테스터 로그인 회의 완료 + 구현 (2026-07-25)** — 결정: App access=**데모 카카오 계정**, 앱/서버의 **테스트 로그인 완전 제거**, 시딩은 **계정 role(USER/TESTER)** 로 재게이팅. 회의록 [decisions.md](decisions.md) "테스터 로그인 회의", Play 답안 [play-console-app-content.md](play-console-app-content.md) §2. **테스트 147개 전원 통과 + flutter analyze clean**(로컬 DB 에 role ALTER 적용해 검증). 남은 것: 데모 카카오 계정 생성 + 새 컬럼(role 포함) ALTER 반영 백엔드 재배포 + 콘솔 폼 3종. §0 참고.
+- 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. §0.
+- ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -35,7 +36,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 151개 — 단위 106 + 통합 40 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 147개 — 단위 106 + 통합 36 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -55,7 +56,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **151개**(단위 106 + 통합 40 + WebMvc 4 + 컨텍스트 1, 2026-07-21 실측). **전원 통과**. 통합 40 = 기존 17 + devtools 시딩/로그인 5(2026-07-11) + 필수 동의·선택 수집 E2E 6 + 탈퇴 계정 파기 5 + 연령 확인 E2E 7(2026-07-20~21). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **147개**(단위 106 + 통합 36 + WebMvc 4 + 컨텍스트 1, 2026-07-25 실측). **전원 통과**. 통합 36 = 기존 17 + devtools 시딩 3 + 필수 동의·선택 수집 E2E 5 + 탈퇴 계정 파기 5 + 연령 확인 E2E 6(테스트 로그인 제거로 devtools 5→3·동의 6→5·연령 7→6). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -89,19 +90,21 @@
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
 **앱 콘텐츠 (프로덕션 전 필수) — 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.** 남은 실행 항목:
-- [ ] **백엔드 재배포** — 새 컬럼 2개 `ALTER` + `delete-account.html`/`privacy.html` 갱신분 반영. **ALTER 를 먼저 안 하면 `ddl-auto=validate` 로 부팅 실패** (로컬 DB 는 둘 다 적용 완료):
+- [ ] **백엔드 재배포** — 새 컬럼 3개 `ALTER` + `delete-account.html`/`privacy.html` 갱신분 반영. **ALTER 를 먼저 안 하면 `ddl-auto=validate` 로 부팅 실패** (로컬 DB 는 셋 다 적용 완료):
   ```sql
   ALTER TABLE `user` ADD COLUMN `birth_date` DATE NULL AFTER `privacy_agreed_dt`,
-                     ADD COLUMN `gender` VARCHAR(10) NULL AFTER `birth_date`;
+                     ADD COLUMN `gender` VARCHAR(10) NULL AFTER `birth_date`,
+                     ADD COLUMN `role` VARCHAR(20) NOT NULL DEFAULT 'USER' AFTER `gender`;
   ```
+  재배포 후 **내부 테스터 계정을 TESTER 로 승격**(시딩 쓰려면): `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**.
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
 - [x] **'내 정보' 성별 선택 입력 — ✅ 완료 (2026-07-21)** — 입력 / '입력 안 함'으로 되돌리기 양방향
 - **Play Console 폼 입력** (답안은 [play-console-app-content.md](play-console-app-content.md)):
   - [x] 개인정보처리방침 URL / 광고 / 콘텐츠 등급 설문 — ✅ 완료 (2026-07-21)
-  - [ ] **앱 액세스 권한(로그인 세부정보)** — 아래 "테스터 로그인 회의" 결정에 종속 (미완)
+  - [ ] **앱 액세스 권한(로그인 세부정보)** — 답안 확정(**데모 카카오 계정**, [play-console-app-content.md](play-console-app-content.md) §2). 남은 실행: **데모 카카오 계정 생성** + 콘솔 폼에 아이디/비번 입력 + **새 기기 로그인 재현**(추가 인증 안 뜨는지)
   - [ ] **타겟층 및 콘텐츠** (13~15 포함 → 가족 정책 확인란) — 미완
   - [ ] **데이터 안전** + 데이터 삭제 URL — 미완
-- [ ] 🗣️ **[다음 세션] 테스터 로그인 회의** — 프로덕션 출시 빌드에서 앱 내 테스트 로그인(devtools)을 어떻게 처리할지 결정. **전제 상황이 바뀌었다**: 심사자 로그인은 **이메일 전용 카카오계정(전화번호·본인인증 없이 `accounts.kakao.com` 가입)이 데모 계정으로 동작함을 에뮬레이터에서 확인 (2026-07-21)** → 여분 번호·앱 내 우회 없이 App access 를 채울 수 있게 됨. 회의 안건: ⓐ 프로덕션 빌드에서 테스트 로그인 **완전 제거**(`TEST_LOGIN_KEY` dart-define 빼고 빌드 + 서버 `TENK_TEST_ENABLED=false`) 하고 심사는 데모 카카오 계정으로 / ⓑ 키를 바이너리에 굽지 않는 "키 입력식" 우회로 개조(데모 계정을 못 쓰게 될 때 대비) 중 택1. 결정되면 App access 답안([play-console-app-content.md](play-console-app-content.md) §2)을 데모 계정 방식으로 개정하고 이 문서 반영. **주의**: Play 는 업데이트마다 바이너리를 재심사하므로 데모 계정은 **영구 유지**해야 한다(첫 심사만 아님).
+- [x] ✅ **테스터 로그인 회의 완료 (2026-07-25)** — 결정·구현 완료. App access=데모 카카오 계정, 앱/서버 테스트 로그인 제거, 시딩은 계정 role(USER/TESTER)로 재게이팅. 회의록·근거는 [decisions.md](decisions.md) "테스터 로그인 회의". 남은 실행 항목은 위 "앱 액세스 권한"(데모 계정 생성)으로 흡수됨.
 - [ ] terms.html / privacy.html 변호사 검수 (권장, 미착수)
 
 **iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**

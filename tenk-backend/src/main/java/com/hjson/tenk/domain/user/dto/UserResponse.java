@@ -3,6 +3,7 @@ package com.hjson.tenk.domain.user.dto;
 import com.hjson.tenk.domain.user.AuthProvider;
 import com.hjson.tenk.domain.user.Gender;
 import com.hjson.tenk.domain.user.User;
+import com.hjson.tenk.domain.user.UserRole;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,7 +20,9 @@ public record UserResponse(
         // 연령 확인 미완료 여부. true 면 클라이언트가 연령 확인 화면으로 게이트 — 동의보다 먼저 통과해야 한다.
         boolean ageVerificationRequired,
         // 성별 (선택 입력). null = 미입력이 정상 상태 — 기능에 쓰이지 않는다.
-        Gender gender
+        Gender gender,
+        // 계정 권한 (USER / TESTER). 클라이언트는 TESTER 일 때만 테스트 데이터 시딩 버튼을 노출한다.
+        UserRole role
 ) {
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -30,7 +33,8 @@ public record UserResponse(
                 computeAvailableFrom(user.getNicknameChangedDt()),
                 !user.hasAgreedToRequiredConsents(),
                 !user.hasVerifiedAge(),
-                user.getGender()
+                user.getGender(),
+                user.getRole()
         );
     }
 

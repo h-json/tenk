@@ -12,12 +12,18 @@ class User {
     required this.consentRequired,
     required this.ageVerificationRequired,
     required this.gender,
+    required this.role,
   });
 
   final int userId;
 
-  /// 로그인 공급자 (`KAKAO` / `TEST` 등). 테스트 데이터 시딩 버튼을 `TEST` 계정에만 노출하는 데 사용.
+  /// 로그인 공급자 (`KAKAO` 등). 표시·감사용.
   final String? provider;
+
+  /// 계정 권한 (`USER` / `TESTER`). 테스트 데이터 시딩 버튼을 `TESTER` 계정에만 노출하는 데 사용.
+  final String? role;
+
+  bool get isTester => role == 'TESTER';
   final String? email;
   final String? nickname;
 
@@ -46,6 +52,7 @@ class User {
       consentRequired: json['consentRequired'] as bool? ?? false,
       ageVerificationRequired: json['ageVerificationRequired'] as bool? ?? false,
       gender: json['gender'] as String?,
+      role: json['role'] as String?,
     );
   }
 

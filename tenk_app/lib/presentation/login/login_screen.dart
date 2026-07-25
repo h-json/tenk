@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../../app/scopes.dart';
 import '../../config/legal_config.dart';
-import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
@@ -49,28 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       // dio 예외 원문을 그대로 띄우면 화면이 영문 스택으로 덮인다. 서버가 내려준 한국어 메시지를 쓸 것.
       _showError('로그인 실패: ${toApiException(e).message}');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _testLogin() async {
-    final slot = await showDialog<String>(
-      context: context,
-      builder: (_) => const _TestSlotDialog(),
-    );
-    if (!mounted || slot == null) return;
-    setState(() => _loading = true);
-    try {
-      await AuthScope.of(context).loginAsTest(slot);
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const ChallengeListScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showError('테스트 로그인 실패: ${toApiException(e).message}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -127,25 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
-                if (testToolsEnabled) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _loading ? null : _testLogin,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        '테스트 로그인',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ],
               ],
                   ),
                 ),
@@ -190,76 +148,6 @@ class _LegalFooter extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 테스트 로그인 시 테스터 식별자(슬롯)를 입력받는 다이얼로그. 슬롯별로 격리된 테스트 계정이 된다.
-class _TestSlotDialog extends StatefulWidget {
-  const _TestSlotDialog();
-
-  @override
-  State<_TestSlotDialog> createState() => _TestSlotDialogState();
-}
-
-class _TestSlotDialogState extends State<_TestSlotDialog> {
-  // 백엔드 TEST_SLOT 패턴과 동일 — 한글·영문·숫자·-·_ 1~20자.
-  static final RegExp _slotPattern = RegExp(r'^[a-zA-Z0-9가-힣_-]{1,20}$');
-  final _controller = TextEditingController();
-  String? _error;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final slot = _controller.text.trim();
-    if (!_slotPattern.hasMatch(slot)) {
-      setState(() => _error = '한글·영문·숫자·-·_ 1~20자로 입력해주세요.');
-      return;
-    }
-    Navigator.of(context).pop(slot);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('테스트 로그인'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLength: 20,
-            decoration: InputDecoration(
-              labelText: '테스터 이름',
-              hintText: '예: alice',
-              border: const OutlineInputBorder(),
-              errorText: _error,
-            ),
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '이름별로 데이터가 분리된 테스트 계정이 만들어져요.',
-            style: TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        TextButton(onPressed: _submit, child: const Text('로그인')),
-      ],
     );
   }
 }

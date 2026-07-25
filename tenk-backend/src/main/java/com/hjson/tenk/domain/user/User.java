@@ -73,6 +73,12 @@ public class User {
     @Column(name = "gender", length = 10)
     private Gender gender;
 
+    // 계정 권한. 기본 USER, 내부 테스터만 DB 에서 TESTER 로 승격(테스트 데이터 시딩 권한).
+    // 앱에는 승격 경로가 없다 — SQL 로 직접 부여한다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private UserRole role = UserRole.USER;
+
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;

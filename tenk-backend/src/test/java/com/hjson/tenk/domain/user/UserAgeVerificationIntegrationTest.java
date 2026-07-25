@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.hjson.tenk.devtools.TestSupportService;
 import com.hjson.tenk.security.JwtTokenProvider;
 import com.hjson.tenk.support.IntegrationTestBase;
 import java.time.LocalDate;
@@ -34,12 +33,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class UserAgeVerificationIntegrationTest extends IntegrationTestBase {
 
-    private static final String KEY = "test-integration-key"; // application-test.yaml 과 일치
-
     @Autowired MockMvc mockMvc;
     @Autowired JwtTokenProvider jwtTokenProvider;
     @Autowired UserRepository userRepository;
-    @Autowired TestSupportService testSupportService;
 
     @Test
     @DisplayName("신규 카카오 유저는 ageVerificationRequired=true 로 시작한다")
@@ -113,16 +109,6 @@ class UserAgeVerificationIntegrationTest extends IntegrationTestBase {
                         .content("{\"birthDate\":\"2000-01-01\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("C0003"));
-    }
-
-    @Test
-    @DisplayName("테스트 로그인 계정은 auto-verify 라 연령 화면을 안 탄다")
-    void testAccountIsAutoVerified() throws Exception {
-        Long userId = testSupportService.testLogin(KEY, "age").userId();
-
-        mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(userId)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.ageVerificationRequired").value(false));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder postBirthDate(

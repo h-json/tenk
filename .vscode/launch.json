@@ -7,8 +7,7 @@
             "request": "launch",
             "type": "dart",
             "toolArgs": [
-                "--dart-define=API_BASE_URL=http://10.0.2.2:8080",
-                "--dart-define=TEST_LOGIN_KEY=tenk-local-test-key"
+                "--dart-define=API_BASE_URL=http://10.0.2.2:8080"
             ]
         },
         {
@@ -17,8 +16,7 @@
             "request": "launch",
             "type": "dart",
             "toolArgs": [
-                "--dart-define=API_BASE_URL=https://tenk.hjson248.com",
-                "--dart-define=TEST_LOGIN_KEY=tenk-test-9f3c1a7b5e2d4068c1"
+                "--dart-define=API_BASE_URL=https://tenk.hjson248.com"
             ]
         }
     ]

@@ -5,6 +5,7 @@
 --   user             : password 제거, provider/provider_user_id/email 추가
 --                      + nickname_changed_dt (직접 변경 마지막 시각, NULL=미변경) — 하루 1회 제한용
 --                      + terms/privacy_agreed_dt (필수 동의 시각) + birth_date (연령 확인) + gender (선택)
+--                      + role (USER/TESTER — 테스터만 시딩 권한)
 --   challenge        : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
 --   amount           : created_dt (감사용) + spent_dt (사용자 지정 발생 일시) + is_no_spend 추가, category/content NULL 허용
 --                      + no_spend_day_key (생성 컬럼) + uk_amount_no_spend_day 인덱스로 "무지출 하루 1회" 강제
@@ -47,6 +48,11 @@ CREATE TABLE `user` (
     -- '내 정보' 화면에서 언제든 다시 NULL 로 되돌릴 수 있다. 라이브 DB 는 ALTER 로 추가:
     --   ALTER TABLE `user` ADD COLUMN `gender` VARCHAR(10) NULL AFTER `birth_date`;
     `gender`              VARCHAR(10)                                    NULL,
+    -- 계정 권한. 기본 'USER', 내부 테스터만 SQL 로 'TESTER' 승격(테스트 데이터 시딩 권한). 추후 'ADMIN' 여지.
+    -- 라이브 DB 는 ALTER 로 추가:
+    --   ALTER TABLE `user` ADD COLUMN `role` VARCHAR(20) NOT NULL DEFAULT 'USER' AFTER `gender`;
+    -- 내부 테스터 승격 예:  UPDATE `user` SET `role`='TESTER' WHERE `provider`='KAKAO' AND `provider_user_id`='<카카오회원번호>';
+    `role`                VARCHAR(20)   DEFAULT 'USER'                   NOT NULL,
     `created_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
     `updated_dt`          DATETIME      DEFAULT CURRENT_TIMESTAMP        NOT NULL,
     `is_deleted`          TINYINT(1)    DEFAULT 0                        NOT NULL,

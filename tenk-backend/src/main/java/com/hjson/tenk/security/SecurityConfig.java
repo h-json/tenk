@@ -28,7 +28,7 @@ public class SecurityConfig {
             "/delete-account.html", // 계정·데이터 삭제 안내 (Play Console '데이터 삭제' URL — 앱 밖에서도 요청 가능해야 함)
             "/api/auth/kakao/login",
             "/api/auth/refresh",
-            "/api/auth/test/login",  // 테스트 우회 로그인 (tenk.test.enabled + 시크릿 키로 서비스에서 재검증). /api/dev/seed 는 인증 유지
+            // /api/dev/seed 는 인증 유지 (TESTER 권한 검증은 서비스에서)
 
             "/swagger-ui.html",
             "/swagger-ui/**",

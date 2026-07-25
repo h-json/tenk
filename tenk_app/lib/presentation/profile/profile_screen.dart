@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
-import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
@@ -15,7 +14,7 @@ import 'my_info_screen.dart';
 /// - 내 정보 → [MyInfoScreen] (닉네임 / 성별)
 /// - 계정 설정 → [AccountSettingsScreen] (연동 계정 / 로그아웃 / 회원 탈퇴)
 /// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침)
-/// - 테스트 데이터 재생성 (dev 전용, TEST 계정만)
+/// - 테스트 데이터 재생성 (TESTER 권한 계정만)
 ///
 /// ⚠️ 화면 제목 '메뉴' 는 **임시**다. 하위에 '내 정보' 가 생기면서 같은 이름이 중첩되는 걸 피하려고
 /// 붙였고, '설정'(톱니 아이콘) 으로 갈지 '메뉴'(햄버거) 로 갈지는 아직 미정 — docs/handoff.md 남은 일 참고.
@@ -134,8 +133,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         ),
 
-        // ── 테스트 도구 (dev 전용) ──
-        if (testToolsEnabled && user.provider == 'TEST') ...[
+        // ── 테스트 도구 (TESTER 권한 계정만) ──
+        if (user.isTester) ...[
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.science_outlined, color: Colors.deepPurple),
