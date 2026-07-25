@@ -95,7 +95,8 @@ public class AuthService {
                 user.getId(),
                 user.getNickname(),
                 isNewUser,
-                !user.hasAgreedToRequiredConsents()
+                !user.hasAgreedToRequiredConsents(),
+                !user.hasVerifiedAge()
         );
     }
 

@@ -10,6 +10,8 @@ class User {
     required this.nickname,
     required this.nicknameChangeAvailableFrom,
     required this.consentRequired,
+    required this.ageVerificationRequired,
+    required this.gender,
   });
 
   final int userId;
@@ -26,6 +28,13 @@ class User {
   /// 필수 동의(이용약관 + 개인정보 수집·이용) 미완료 여부. true 면 동의 화면으로 게이트.
   final bool consentRequired;
 
+  /// 연령 확인 미완료 여부. true 면 연령 확인 화면으로 게이트 — 동의보다 먼저 통과해야 한다.
+  final bool ageVerificationRequired;
+
+  /// 성별 (`MALE`/`FEMALE`/`OTHER`). **선택 입력이라 null(미입력)이 정상 상태**이고 기능에 쓰이지 않는다.
+  /// '내 정보' 화면에서만 입력·해제한다.
+  final String? gender;
+
   factory User.fromJson(Map<String, dynamic> json) {
     final raw = json['nicknameChangeAvailableFrom'] as String?;
     return User(
@@ -35,6 +44,8 @@ class User {
       nickname: json['nickname'] as String?,
       nicknameChangeAvailableFrom: raw == null ? null : DateTime.parse(raw),
       consentRequired: json['consentRequired'] as bool? ?? false,
+      ageVerificationRequired: json['ageVerificationRequired'] as bool? ?? false,
+      gender: json['gender'] as String?,
     );
   }
 

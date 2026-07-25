@@ -11,6 +11,7 @@ import java.time.Period;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -55,6 +56,23 @@ public class WithdrawnUserPurgeService {
      */
     @Transactional
     public void purge(Long userId) {
+        deleteEverythingOf(userId);
+    }
+
+    /**
+     * 보관 기간 없이 즉시 파기. 연령 확인에서 <b>만 14세 미만</b>으로 판명된 계정처럼 애초에 이용
+     * 대상이 아니어서 데이터를 남길 근거가 없는 경우에만 쓴다.
+     *
+     * <p>{@code REQUIRES_NEW} 인 이유: 호출자({@link UserService#verifyAge})가 파기 직후
+     * {@code USER_UNDER_MINIMUM_AGE} 예외를 던져 자기 트랜잭션을 롤백시킨다. 같은 트랜잭션에서
+     * 지우면 그 롤백에 삭제까지 함께 되돌아가 계정이 살아남는다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void purgeImmediately(Long userId) {
+        deleteEverythingOf(userId);
+    }
+
+    private void deleteEverythingOf(Long userId) {
         List<String> filePaths = mediaFileRepository.findFilePathsByUserId(userId);
         for (String path : filePaths) {
             storage.deleteQuietly(path);

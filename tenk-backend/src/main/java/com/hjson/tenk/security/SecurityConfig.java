@@ -25,6 +25,7 @@ public class SecurityConfig {
             "/error",
             "/privacy.html",        // 개인정보처리방침 정적 페이지 (Play Console·앱에서 링크)
             "/terms.html",          // 이용약관 정적 페이지 (가입 동의 화면에서 링크)
+            "/delete-account.html", // 계정·데이터 삭제 안내 (Play Console '데이터 삭제' URL — 앱 밖에서도 요청 가능해야 함)
             "/api/auth/kakao/login",
             "/api/auth/refresh",
             "/api/auth/test/login",  // 테스트 우회 로그인 (tenk.test.enabled + 시크릿 키로 서비스에서 재검증). /api/dev/seed 는 인증 유지

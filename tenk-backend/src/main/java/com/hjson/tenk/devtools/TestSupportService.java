@@ -43,6 +43,10 @@ import org.springframework.util.ReflectionUtils;
 public class TestSupportService {
 
     private static final Pattern SLOT_PATTERN = Pattern.compile("[a-zA-Z0-9가-힣_-]{1,20}");
+
+    /** 테스트 계정이 연령 확인 게이트를 건너뛰도록 박아두는 성인 생년월일 (값 자체엔 의미 없음). */
+    private static final LocalDate TEST_ACCOUNT_BIRTH_DATE = LocalDate.of(1990, 1, 1);
+
     private static final int TARGET = 10_000;
 
     private static final Field CHALLENGE_START_DATE = accessibleField("startDate");
@@ -75,8 +79,10 @@ public class TestSupportService {
                 .findByProviderAndProviderUserId(AuthProvider.TEST, providerUserId)
                 .orElseGet(() -> userRepository.save(User.create(
                         AuthProvider.TEST, providerUserId, null, "테스터-" + normalizedSlot)));
-        // 테스트 계정은 닉네임 설정·동의 화면을 모두 건너뛰도록 auto-consent + isNewUser=false 로 발급.
+        // 테스트 계정은 닉네임 설정·연령 확인·동의 화면을 모두 건너뛰도록
+        // auto-consent + auto-verify + isNewUser=false 로 발급.
         user.agreeToRequiredConsents(LocalDateTime.now());
+        user.verifyAge(TEST_ACCOUNT_BIRTH_DATE);
         return authService.issueTokensFor(user, false);
     }
 

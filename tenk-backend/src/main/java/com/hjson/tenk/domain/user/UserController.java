@@ -1,6 +1,8 @@
 package com.hjson.tenk.domain.user;
 
 import com.hjson.tenk.common.api.ApiResponse;
+import com.hjson.tenk.domain.user.dto.BirthDateRequest;
+import com.hjson.tenk.domain.user.dto.GenderUpdateRequest;
 import com.hjson.tenk.domain.user.dto.NicknameUpdateRequest;
 import com.hjson.tenk.domain.user.dto.UserResponse;
 import com.hjson.tenk.security.CurrentUserId;
@@ -35,6 +37,24 @@ public class UserController {
     public ApiResponse<UserResponse> updateNickname(@CurrentUserId Long userId,
                                                     @Valid @RequestBody NicknameUpdateRequest request) {
         userService.updateNickname(userId, request.nickname());
+        return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
+    }
+
+    @Operation(summary = "성별 설정 (선택 항목)",
+            description = "'내 정보' 화면에서만 호출. gender 를 null 로 보내면 미입력으로 되돌린다(수집 철회).")
+    @PatchMapping("/me/gender")
+    public ApiResponse<UserResponse> updateGender(@CurrentUserId Long userId,
+                                                  @RequestBody GenderUpdateRequest request) {
+        userService.updateGender(userId, request.gender());
+        return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
+    }
+
+    @Operation(summary = "연령 확인(생년월일) 기록",
+            description = "연령 확인 게이트에서 호출. 만 14세 미만이면 계정을 즉시 파기하고 U0006 으로 거부한다.")
+    @PostMapping("/me/birth-date")
+    public ApiResponse<UserResponse> verifyAge(@CurrentUserId Long userId,
+                                               @Valid @RequestBody BirthDateRequest request) {
+        userService.verifyAge(userId, request.birthDate());
         return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
     }
 

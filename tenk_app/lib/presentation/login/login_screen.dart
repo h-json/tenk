@@ -7,6 +7,7 @@ import '../../config/test_config.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../legal/age_gate_screen.dart';
 import '../legal/consent_gate_screen.dart';
 import '../legal/consent_section.dart';
 import '../profile/nickname_setup_screen.dart';
@@ -26,15 +27,15 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final outcome = await AuthScope.of(context).loginWithKakao();
       if (!mounted) return;
-      // 신규 가입 → 동의 화면 → (동의 후) 닉네임 설정 / 기존 미동의 → 동의 게이트 → 홈 / 그 외 → 홈.
-      // 동의와 닉네임 설정은 별도 화면으로 분리한다.
-      final Widget destination;
-      if (outcome.isNewUser) {
-        destination = const ConsentGateScreen(next: NicknameSetupScreen());
-      } else if (outcome.consentRequired) {
-        destination = const ConsentGateScreen();
-      } else {
-        destination = const ChallengeListScreen();
+      // 게이트를 안쪽부터 감싼다: [연령 확인] → [약관 동의] → (신규만) 닉네임 설정 → 홈.
+      // 연령·동의·닉네임은 각각 별도 화면 — 하나에 몰아넣지 말 것.
+      Widget destination =
+          outcome.isNewUser ? const NicknameSetupScreen() : const ChallengeListScreen();
+      if (outcome.consentRequired) {
+        destination = ConsentGateScreen(next: destination);
+      }
+      if (outcome.ageVerificationRequired) {
+        destination = AgeGateScreen(next: destination);
       }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(builder: (_) => destination),
@@ -46,7 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError('카카오 로그인 실패: ${e.message ?? e.code}');
     } catch (e) {
       if (!mounted) return;
-      _showError('로그인 실패: $e');
+      // dio 예외 원문을 그대로 띄우면 화면이 영문 스택으로 덮인다. 서버가 내려준 한국어 메시지를 쓸 것.
+      _showError('로그인 실패: ${toApiException(e).message}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

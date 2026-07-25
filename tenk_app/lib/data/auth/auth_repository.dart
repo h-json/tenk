@@ -8,10 +8,17 @@ import 'token_storage.dart';
 
 /// 카카오 로그인 결과 — 로그인 직후 화면 분기에 필요한 플래그만 담는다.
 class LoginOutcome {
-  const LoginOutcome({required this.isNewUser, required this.consentRequired});
+  const LoginOutcome({
+    required this.isNewUser,
+    required this.consentRequired,
+    required this.ageVerificationRequired,
+  });
 
   final bool isNewUser;
   final bool consentRequired;
+
+  /// 연령 확인 미완료. 동의보다 먼저 통과해야 하는 게이트 (미성년 판정 시 계정이 파기된다).
+  final bool ageVerificationRequired;
 }
 
 /// 카카오 SDK 로그인 → 백엔드 JWT 교환 → secure storage 저장 흐름을 한 곳에 모음.
@@ -37,6 +44,7 @@ class AuthRepository {
       return LoginOutcome(
         isNewUser: tokens.isNewUser,
         consentRequired: tokens.consentRequired,
+        ageVerificationRequired: tokens.ageVerificationRequired,
       );
     } finally {
       // best-effort: 카카오 SDK 측 토큰 폐기. 실패해도 흐름 진행에는 영향 없음.

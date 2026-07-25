@@ -5,6 +5,7 @@ import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.auth.RefreshTokenRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,15 @@ public class UserService {
 
     private static final int NICKNAME_MAX_LENGTH = 50;
 
+    /** 이용 가능 최소 연령. 이용약관(terms.html)의 "만 14세 미만은 서비스 이용 대상이 아닙니다" 와 같은 값이어야 한다. */
+    private static final int MINIMUM_AGE = 14;
+
+    /** 생년월일 하한 — 오타·장난 입력 컷. 이보다 이른 날짜는 유효한 값으로 보지 않는다. */
+    private static final LocalDate EARLIEST_BIRTH_DATE = LocalDate.of(1900, 1, 1);
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final WithdrawnUserPurgeService purgeService;
 
     public User getActiveUser(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
@@ -51,6 +59,36 @@ public class UserService {
     public void agreeConsents(Long userId) {
         User user = getActiveUser(userId);
         user.agreeToRequiredConsents(LocalDateTime.now());
+    }
+
+    /**
+     * 연령 확인. 클라이언트가 생년월일을 받아 호출하고, 서버가 {@link #MINIMUM_AGE} 를 판정한다.
+     *
+     * <p><b>만 14세 미만이면 계정을 즉시 파기하고 거부한다.</b> 카카오 로그인 시점에 이미 이메일·닉네임이
+     * 프로비저닝돼 있어 "거부만" 하면 이용 대상이 아닌 미성년자의 개인정보가 서버에 남는다. 파기는
+     * 트랜잭션 롤백에 휩쓸리지 않도록 {@link WithdrawnUserPurgeService#purgeImmediately} (REQUIRES_NEW) 로 한다.
+     */
+    @Transactional
+    public void verifyAge(Long userId, LocalDate birthDate) {
+        User user = getActiveUser(userId);
+        LocalDate today = LocalDate.now();
+        if (birthDate == null || birthDate.isAfter(today) || birthDate.isBefore(EARLIEST_BIRTH_DATE)) {
+            throw new BusinessException(ErrorCode.USER_BIRTH_DATE_INVALID);
+        }
+        if (Period.between(birthDate, today).getYears() < MINIMUM_AGE) {
+            purgeService.purgeImmediately(userId);
+            throw new BusinessException(ErrorCode.USER_UNDER_MINIMUM_AGE);
+        }
+        user.verifyAge(birthDate);
+    }
+
+    /**
+     * 성별 설정. {@code null} 이면 미입력으로 되돌린다 — 선택 수집 항목이라 <b>철회 경로를 항상 열어둔다</b>.
+     * 서비스 기능은 이 값을 쓰지 않으므로 검증할 것도, 실패할 것도 없다.
+     */
+    @Transactional
+    public void updateGender(Long userId, Gender gender) {
+        getActiveUser(userId).changeGender(gender);
     }
 
     @Transactional

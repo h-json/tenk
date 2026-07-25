@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -60,6 +61,17 @@ public class User {
 
     @Column(name = "privacy_agreed_dt")
     private LocalDateTime privacyAgreedDt;
+
+    // 연령 확인 화면에서 사용자가 입력한 생년월일. NULL = 아직 연령 확인 안 함 → 클라이언트가 연령 확인 화면으로 게이트.
+    // 만 14세 미만 값은 애초에 저장되지 않는다 (UserService.verifyAge 가 계정을 즉시 파기하고 거부).
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    // 성별 — 선택 입력. NULL = 미입력(정상 상태). 서비스 기능에는 쓰이지 않고 통계 목적으로만 보관한다.
+    // '내 정보' 화면에서만 입력·해제하며 가입 흐름에서는 묻지 않는다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 10)
+    private Gender gender;
 
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
@@ -130,5 +142,23 @@ public class User {
     /** 필수 동의를 모두 마쳤는지. false 면 클라이언트가 동의 화면으로 게이트한다. */
     public boolean hasAgreedToRequiredConsents() {
         return termsAgreedDt != null && privacyAgreedDt != null;
+    }
+
+    /**
+     * 연령 확인 결과(생년월일)를 기록한다. 최소 연령 검증은 {@link UserService#verifyAge} 가 하고,
+     * 여기까지 온 값은 이미 이용 가능 연령임이 확인된 값이다.
+     */
+    public void verifyAge(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    /** 연령 확인을 마쳤는지. false 면 클라이언트가 연령 확인 화면으로 게이트한다. */
+    public boolean hasVerifiedAge() {
+        return birthDate != null;
+    }
+
+    /** 성별 설정. {@code null} 을 넘기면 미입력으로 되돌린다 (수집 철회 경로 — 막지 말 것). */
+    public void changeGender(Gender gender) {
+        this.gender = gender;
     }
 }

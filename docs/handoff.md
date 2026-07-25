@@ -13,9 +13,11 @@
 **최근 상태 요약** — 상세 시간순 로그는 [handoff-archive.md](handoff-archive.md) "최근 변경 이력" 참고.
 - ✅ UI 전면 리뉴얼(디자인 시스템 Wave 0~5 + 리모델) 완료·에뮬 검증 — 방향 "절제된 베이스 + 리워드만 화려", 규칙은 [../CLAUDE.md](../CLAUDE.md) "디자인 시스템" / "챌린지 목록 IA".
 - ✅ Android 릴리스 실기기 전체 흐름 스모크 완료 / Play Console 내부 테스트 게시·카카오 로그인 확인 / devtools 테스트 로그인·시딩 운영 배포 / 서버 타임존 KST 고정 버그픽스 배포.
-- ✅ **필수 동의 플로우(이용약관+개인정보) 구현·prod 배포·에뮬 E2E 검증 완료 (2026-07-20)** — '내 정보'도 메뉴형(닉네임 / 계정 설정 / 법적 고지 하위 화면)으로 재편. 상세는 아래 "운영 고려사항".
-- ✅ **통합 테스트 2종 추가 (2026-07-20)** — 필수 동의 엔드포인트 E2E 5건 + 탈퇴 계정 파기 5건. 총 137개 전원 통과.
-- ⏭️ 다음 후보: Play Console 앱 콘텐츠(데이터 안전/콘텐츠 등급/타겟층) / iOS 빌드(맥 필요, 보류) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위) — 아래 "남은 일".
+- ✅ **필수 동의 플로우(이용약관+개인정보) 구현·prod 배포·에뮬 E2E 검증 완료 (2026-07-20)** — 상세는 아래 "운영 고려사항".
+- ✅ **통합 테스트 2종 추가 (2026-07-20)** — 필수 동의 엔드포인트 E2E 5건 + 탈퇴 계정 파기 5건.
+- ✅ **연령 확인 게이트 + Play 앱 콘텐츠 답안지 (2026-07-20)** — 만 14세 미만 차단(즉시 파기), 계정 삭제 안내 페이지 신설, [play-console-app-content.md](play-console-app-content.md) 작성.
+- ✅ **성별 선택 수집 + '내 정보' 하위 화면 분리 (2026-07-21)** — 성별은 통계용 선택 항목으로 '내 정보'에서만 입력·해제(가입 흐름 무변경). 닉네임·성별을 '내 정보'로 묶고 상위 화면은 순수 메뉴로 재편 — **상위 화면 이름은 '메뉴'(임시), 확정은 아래 §1 남은 일**. 테스트 **151개** 전원 통과. **prod 배포·실기기 검증은 미완** — 아래 "남은 일 §0".
+- ⏭️ 다음 후보: 위 §0 마무리(배포·콘솔 입력) / iOS 빌드(맥 필요, 보류) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -32,7 +34,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 137개 — 단위 100 + 통합 32 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 151개 — 단위 106 + 통합 40 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge 마스터는 유지). Flutter 재로그인으로 복구 가능
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -52,7 +54,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **137개**(단위 100 + 통합 32 + WebMvc 4 + 컨텍스트 1, 2026-07-20 실측). **전원 통과**(2026-07-20, 사전 실패 9건 수정 완료 — archive 참고). 통합 32 = 기존 17 + devtools 시딩/로그인 5(2026-07-11) + 필수 동의 E2E 5 + 탈퇴 계정 파기 5(2026-07-20). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **151개**(단위 106 + 통합 40 + WebMvc 4 + 컨텍스트 1, 2026-07-21 실측). **전원 통과**. 통합 40 = 기존 17 + devtools 시딩/로그인 5(2026-07-11) + 필수 동의·선택 수집 E2E 6 + 탈퇴 계정 파기 5 + 연령 확인 E2E 7(2026-07-20~21). `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -83,8 +85,19 @@
 - [ ] (선택) 앱 아이콘 교체 — 현재 기본 Flutter 아이콘 (`flutter_launcher_icons` 권장)
 - [ ] (선택) APK 크기(~165MB) 줄이려면 `--split-per-abi` (arch별 ~55MB)
 
-**Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).** 남은 것:
-- [ ] (프로덕션 전) 앱 콘텐츠 완성: 개인정보처리방침 URL(`https://tenk.hjson248.com/privacy.html`, 준비됨) + 데이터 안전 폼 + 콘텐츠 등급 + 타겟층. 내부 테스트에선 비필수라 미입력 상태.
+**Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
+
+**앱 콘텐츠 (프로덕션 전 필수) — 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.** 남은 실행 항목:
+- [ ] **백엔드 재배포** — 새 컬럼 2개 `ALTER` + `delete-account.html`/`privacy.html` 갱신분 반영. **ALTER 를 먼저 안 하면 `ddl-auto=validate` 로 부팅 실패** (로컬 DB 는 둘 다 적용 완료):
+  ```sql
+  ALTER TABLE `user` ADD COLUMN `birth_date` DATE NULL AFTER `privacy_agreed_dt`,
+                     ADD COLUMN `gender` VARCHAR(10) NULL AFTER `birth_date`;
+  ```
+- [ ] **연령 확인 게이트 에뮬/실기기 E2E** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인
+- [ ] **'내 정보' 성별 선택 입력 확인** — 입력 / '입력 안 함'으로 되돌리기 양방향
+- [ ] Play Console 폼 입력 6종: 개인정보처리방침 URL / 앱 액세스 권한 / 광고 / 콘텐츠 등급 설문 / 타겟층(13~15 포함 → 가족 정책) / 데이터 안전 + 데이터 삭제 URL
+- [ ] **앱 액세스 권한 전제 확인** — 심사자용 '테스트 로그인' 이 동작하려면 업로드 AAB 를 `--dart-define=TEST_LOGIN_KEY=<prod 키>` 로 빌드 + 서버 `TENK_TEST_ENABLED=true` 여야 함 (문서 §2 참고). 이 경로가 싫으면 심사 전용 카카오 계정 발급이 대안
+- [ ] terms.html / privacy.html 변호사 검수 (권장, 미착수)
 
 **iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**
 - 공통 사전: `xcode-select --install`, `sudo gem install cocoapods`(또는 brew), `cd tenk_app && flutter pub get && (cd ios && pod install)`.
@@ -97,6 +110,8 @@
 ### 1. 앱 UX 다듬기 (백로그)
 
 > 2026-07-11 배치의 완료 항목(챌린지 상태색 / 카테고리 목록화+아이콘 / 금액입력 보조표시 / 필수 별표 / '메모'→'한 줄 평' / 성공 트로피 배지 / 7·11 날짜 타임존 버그 / 챌린지 이름 필드 / 영상 자막 위치·스타일)과 2026-06-16 실기기 3블록 검증은 전부 ✅ 완료 → 상세는 [handoff-archive.md](handoff-archive.md). **드롭**: "챌린지 색깔 기능"(같은 문서) / "목록에 메모 노출"(2026-07-19 — 긴 메모가 목록 높이를 흔들고, 상세 진입으로 확인 가능해 목록 노출 가치가 낮다고 판단).
+
+- [ ] **메뉴 화면 이름·아이콘 확정 (미정, 2026-07-21 보류)** — 닉네임·성별을 '내 정보' 하위 화면([MyInfoScreen](../tenk_app/lib/presentation/profile/my_info_screen.dart))으로 묶으면서 상위 화면([ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart))의 제목이 '내 정보' 와 겹치게 됐다. **임시로 '메뉴'** 를 붙여둔 상태. **'설정'(톱니 아이콘) vs '메뉴'(햄버거 아이콘)** 중 무엇으로 갈지 정한 뒤 **제목 + 진입점 아이콘**(현재 챌린지 목록 AppBar 의 `account_circle_outlined`)을 같이 바꿀 것. 판단 기준: 하위 항목이 설정성(계정·법적 고지)에 가까우면 '설정', 앞으로 통계·도움말 등 비설정 항목이 늘 예정이면 '메뉴'.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
@@ -137,6 +152,7 @@
 - **AT는 stateless** — 로그아웃해도 AT 만료 시간까지 유효. 즉시 무효화 필요하면 RT만 revoke하면 다음 갱신 시 거부됨 (Swagger 시나리오 2로 확인됨).
 - **JWT secret 노출 시 대응**: `openssl rand -base64 64`로 새 키 생성 → `application-prod.yaml`의 `tenk.auth.jwt.secret` 교체 → 재부팅. 서명 검증 실패로 기존 AT/RT 즉시 거부. 별도 블랙리스트/Redis 필요 없음.
 - **`@TransactionalEventListener(AFTER_COMMIT)` 에서 DB 쓰기**: 리스너 메서드 자체에 **`@Transactional(propagation = REQUIRES_NEW)`** 필수. 안 박으면 `[Badge] granted` 로그는 찍히는데 INSERT 가 사라진다 (AFTER_COMMIT 콜백 시점에 원본 tx 동기화가 정리 중이라 단순 REQUIRED 가 새 tx 를 못 연다). [BadgeEventListener](../tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeEventListener.java) 참고.
+- **"거부하면서 삭제"는 같은 트랜잭션에서 안 된다**: 연령 확인의 만 14세 미만 처리처럼 *데이터를 지우고 나서 예외를 던지는* 흐름은, 지우는 쪽이 같은 트랜잭션이면 그 예외의 롤백에 삭제까지 휩쓸려 계정이 되살아난다. [WithdrawnUserPurgeService.purgeImmediately](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java) 가 `@Transactional(REQUIRES_NEW)` 인 이유이고, 자기 호출(self-invocation)이면 프록시를 안 타 무력화되니 반드시 **다른 빈을 주입받아 호출**할 것. 회귀 가드는 [UserAgeVerificationIntegrationTest.underageIsRejectedAndPurged](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/UserAgeVerificationIntegrationTest.java).
 - **테스트에서 amount 카테고리는 반드시 9종 코드(`"FOOD"` 등)로**: `Amount.spend`/`AmountCreateRequest` 가 `requireValidCode` 로 검증하므로 `"x"`·소문자 `"food"` 같은 더미 값을 쓰면 `AMOUNT_CATEGORY_INVALID` 로 깨진다 (2026-07-11 검증 도입 때 테스트 9건이 이 이유로 깨져 있었고 2026-07-20 수정됨). 단 [AmountTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountTest.java) 의 `"food"`/`"식비"` 는 **거부 검증용 의도된 값**이라 그대로 둘 것.
 - **통합 테스트가 `tenk` 스키마 데이터를 비움**: [IntegrationTestBase](../tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 의 `@BeforeEach` 가 user/challenge/amount/refresh_token 을 DELETE 한다 (badge 마스터 9행은 유지). `./gradlew test` 후 Flutter 카카오 재로그인 필요. tenk_test 스키마 분리는 일부러 안 함 (다음 운영자가 원하면 그때).
 

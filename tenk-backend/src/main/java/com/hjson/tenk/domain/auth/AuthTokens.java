@@ -11,5 +11,8 @@ public record AuthTokens(
         boolean isNewUser,
         // 필수 동의(이용약관 + 개인정보 수집·이용) 미완료 여부. 로그인 직후 클라이언트가 동의 게이트 분기에 사용.
         // 신규 가입은 항상 true, 테스트 계정은 auto-consent 라 false.
-        boolean consentRequired
+        boolean consentRequired,
+        // 연령 확인 미완료 여부. 로그인 직후 클라이언트가 연령 확인 게이트 분기에 사용 — 동의보다 먼저.
+        // 신규 가입은 항상 true, 테스트 계정은 auto-verify 라 false.
+        boolean ageVerificationRequired
 ) {}

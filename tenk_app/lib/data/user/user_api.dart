@@ -31,6 +31,22 @@ class UserApi {
     return User.fromJson(unwrapData(res.data));
   }
 
+  /// 성별 설정 (선택 항목). `null` 을 넘기면 미입력으로 되돌린다 — 수집 철회 경로라 막지 말 것.
+  Future<User> updateGender(String? gender) async {
+    final res = await _dio.patch('/api/users/me/gender', data: {'gender': gender});
+    return User.fromJson(unwrapData(res.data));
+  }
+
+  /// 연령 확인(생년월일) 기록. 백엔드가 만 14세 이상인지 판정한다.
+  /// 미만이면 계정이 즉시 파기되고 `U0006` 으로 거부되므로, 호출부는 그 코드를 반드시 분기할 것.
+  Future<User> verifyAge(DateTime birthDate) async {
+    final ymd = '${birthDate.year.toString().padLeft(4, '0')}-'
+        '${birthDate.month.toString().padLeft(2, '0')}-'
+        '${birthDate.day.toString().padLeft(2, '0')}';
+    final res = await _dio.post('/api/users/me/birth-date', data: {'birthDate': ymd});
+    return User.fromJson(unwrapData(res.data));
+  }
+
   /// 회원 탈퇴 (soft delete + RT 일괄 무효화).
   Future<void> withdraw() async {
     await _dio.delete('/api/users/me');

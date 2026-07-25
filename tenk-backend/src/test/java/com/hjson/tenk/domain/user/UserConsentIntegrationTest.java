@@ -2,6 +2,7 @@ package com.hjson.tenk.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -108,6 +110,32 @@ class UserConsentIntegrationTest extends IntegrationTestBase {
         mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(userId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.consentRequired").value(false));
+    }
+
+    @Test
+    @DisplayName("성별은 선택 항목 — 기본 null, 설정·해제가 모두 되고 응답에 반영된다")
+    void genderIsOptionalAndReversible() throws Exception {
+        Long userId = saveKakaoUser("kakao-gender-1");
+
+        mockMvc.perform(get("/api/users/me").header(HttpHeaders.AUTHORIZATION, bearer(userId)))
+                .andExpect(jsonPath("$.data.gender").doesNotExist());
+
+        mockMvc.perform(patch("/api/users/me/gender")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"gender\":\"MALE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gender").value("MALE"));
+
+        // 수집 철회 경로 — null 을 보내면 미입력으로 되돌아가야 한다
+        mockMvc.perform(patch("/api/users/me/gender")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"gender\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gender").doesNotExist());
+
+        assertThat(userRepository.findById(userId).orElseThrow().getGender()).isNull();
     }
 
     private Long saveKakaoUser(String providerUserId) {

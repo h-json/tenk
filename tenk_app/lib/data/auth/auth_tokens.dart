@@ -8,6 +8,7 @@ class AuthTokens {
     required this.refreshToken,
     this.isNewUser = false,
     this.consentRequired = false,
+    this.ageVerificationRequired = false,
   });
 
   final String accessToken;
@@ -18,10 +19,14 @@ class AuthTokens {
   /// 로그인 직후 동의 게이트 분기에 사용.
   final bool consentRequired;
 
+  /// 연령 확인 미완료 여부. 로그인 응답에서만 의미 있음. 동의보다 **먼저** 통과해야 하는 게이트.
+  final bool ageVerificationRequired;
+
   factory AuthTokens.fromJson(Map<String, dynamic> json) => AuthTokens(
         accessToken: json['accessToken'] as String,
         refreshToken: json['refreshToken'] as String,
         isNewUser: json['isNewUser'] as bool? ?? false,
         consentRequired: json['consentRequired'] as bool? ?? false,
+        ageVerificationRequired: json['ageVerificationRequired'] as bool? ?? false,
       );
 }
