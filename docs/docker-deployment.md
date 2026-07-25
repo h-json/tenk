@@ -138,6 +138,32 @@ docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
     ```
     `dbinit` 볼륨 시드(`01-schema.sql`)도 새 `docs/schema.sql` 로 갱신 완료(§5.4 시딩 방식) — 안 하면 **클린 재구축 때만** 컬럼 없이 생성돼 부팅 실패한다(라이브 DB 는 ALTER 로 이미 반영).
 
+### 5.6 로컬 DB 툴로 운영 DB 접속 (DBeaver/DataGrip 등)
+운영 DB(`db` 컨테이너)는 `internal` 네트워크에만 있고 **포트 퍼블리시가 없어** 맥 호스트·외부 어디서도 직접 못 붙는다(의도된 격리 — 3306 을 공개망·LAN 에 노출하지 않는 게 기본. 비번 인증은 걸려 있지만, 브루트포스·pre-auth CVE 를 막는 방어층으로 포트 격리를 함께 둔다). 로컬 GUI 툴로 붙어야 하면 **① 맥 호스트로 포트를 꺼내고 ② Tailscale tailnet 으로만 닿게** 한다.
+
+**base compose 는 절대 안 고친다** — `3306` 퍼블리시가 커밋되면 모든 재배포에 DB 포트가 영구 노출된다. 대신 **맥 로컬 override 로 덧칠**(머신 한정·비커밋, `docker compose` 가 base 위에 자동 병합):
+
+```yaml
+# 맥: ~/Documents/projects/claude/tenk/docker-compose.override.yml
+# 로컬 DB 툴 접속용, 이 맥에서만. 커밋 금지. 끝나면 파일 삭제 후 up -d 로 원복.
+services:
+  db:
+    ports:
+      - "127.0.0.1:3306:3306"   # loopback 에만 바인딩 — LAN 미노출
+```
+```bash
+cd ~/Documents/projects/claude/tenk
+docker compose up -d
+tailscale serve --bg --tcp 3306 tcp://127.0.0.1:3306   # tailnet 기기만 닿게 브릿지
+tailscale status                                        # 맥 MagicDNS 이름 / 100.x IP 확인
+```
+- **접속(윈도우 등 tailnet 기기)**: host = 맥 tailnet 주소(MagicDNS 이름 또는 `100.x`), port `3306`, user `tenk`, pw = `.env` 의 `DB_PASSWORD`, DB `tenk`. root 가 필요하면 user `root` / `DB_ROOT_PASSWORD`.
+- **원복**: `tailscale serve --tcp 3306 off` → override 파일 삭제 → `docker compose up -d`.
+- **왜 override 인가**: base = 항구적·격리 운영 정의(진실의 원천, §9.1), override = 한시적·머신 한정 편의. 분리해야 리포와 안 어긋나고 커밋에 노출 구성이 안 샌다. 파일만 지우면 격리 상태로 깨끗이 원복.
+- **왜 `127.0.0.1` + `tailscale serve` 인가**: `"3306:3306"`(0.0.0.0)로 열면 tailnet 뿐 아니라 집 LAN 에도 열린다. loopback 바인딩 + serve 브릿지면 **tailnet 기기만** 닿아 인터넷·LAN 둘 다 차단(비번 인증은 그 위에 그대로 작동). 신뢰되는 홈 LAN 이면 그냥 `"3306:3306"` 로 열고 serve 를 생략해도 실무상 허용 — 대신 LAN 노출을 감수하는 것.
+- **함정**: `tailscale serve` 의 TCP 문법은 버전마다 다르다 — 안 먹으면 `tailscale serve --help` 로 현재 문법 확인. Tailscale 자체는 이미 이 맥에 깔려 있음(NoMachine GUI 접속용).
+- ⚠️ 이 절은 **디버깅·점검용 임시 접속**이다. 상시 켜두지 말 것 — 끝나면 원복해 격리 기본 상태로 돌린다.
+
 ---
 
 ## 6. 트러블슈팅 (실제로 겪은 것)
