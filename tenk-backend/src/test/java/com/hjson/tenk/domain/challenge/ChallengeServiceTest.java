@@ -47,7 +47,7 @@ class ChallengeServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
+        user = User.create(AuthProvider.KAKAO, "kakao-1", "tester");
         ReflectionTestUtils.setField(user, "id", 100L);
         // 모든 toResponse 경로가 badge 조회를 거치므로 디폴트 빈 리스트로 stub.
         given(challengeBadgeRepository.findByChallengeOrderByCreatedDtAsc(any()))

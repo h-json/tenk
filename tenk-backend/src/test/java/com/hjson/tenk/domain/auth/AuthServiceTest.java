@@ -50,7 +50,7 @@ class AuthServiceTest {
     }
 
     private User userWithId(long id) {
-        User u = User.create(AuthProvider.KAKAO, "kakao-id-" + id, "u@example.com", "tester");
+        User u = User.create(AuthProvider.KAKAO, "kakao-id-" + id, "tester");
         ReflectionTestUtils.setField(u, "id", id);
         return u;
     }
@@ -58,7 +58,7 @@ class AuthServiceTest {
     @Test
     void kakaoLogin_provisions_new_user_when_none_exists() {
         given(kakaoTokenVerifier.verifyAndFetch("kakao-AT"))
-                .willReturn(new KakaoUser("kakao-id-200", "u@example.com", "tester"));
+                .willReturn(new KakaoUser("kakao-id-200", "tester"));
         given(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "kakao-id-200"))
                 .willReturn(Optional.empty());
         User saved = userWithId(200L);
@@ -75,18 +75,17 @@ class AuthServiceTest {
     }
 
     @Test
-    void kakaoLogin_updates_email_only_for_existing_user_and_preserves_nickname() {
+    void kakaoLogin_preserves_nickname_for_existing_user() {
         User existing = userWithId(200L);
         // 사용자가 '내 정보' 에서 'mychoice' 로 변경한 상태라고 가정
         ReflectionTestUtils.setField(existing, "nickname", "mychoice");
         given(kakaoTokenVerifier.verifyAndFetch("kakao-AT"))
-                .willReturn(new KakaoUser("kakao-id-200", "new@example.com", "kakaonick"));
+                .willReturn(new KakaoUser("kakao-id-200", "kakaonick"));
         given(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "kakao-id-200"))
                 .willReturn(Optional.of(existing));
 
         AuthTokens tokens = service.kakaoLogin("kakao-AT");
 
-        assertThat(existing.getEmail()).isEqualTo("new@example.com");
         assertThat(existing.getNickname()).isEqualTo("mychoice"); // 카카오 닉네임으로 덮어쓰지 않는다
         verify(userRepository, never()).save(any(User.class));
         assertThat(tokens.userId()).isEqualTo(200L);
@@ -98,7 +97,7 @@ class AuthServiceTest {
         User withdrawn = userWithId(200L);
         withdrawn.withdraw();
         given(kakaoTokenVerifier.verifyAndFetch("kakao-AT"))
-                .willReturn(new KakaoUser("kakao-id-200", null, null));
+                .willReturn(new KakaoUser("kakao-id-200", null));
         given(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "kakao-id-200"))
                 .willReturn(Optional.of(withdrawn));
 

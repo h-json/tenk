@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class AmountTest {
 
-    private final User user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
+    private final User user = User.create(AuthProvider.KAKAO, "kakao-1", "tester");
 
     private Challenge fiveDayChallenge() {
         LocalDate today = LocalDate.now();

@@ -67,16 +67,14 @@ public class AuthService {
                     if (existing.isDeleted()) {
                         throw new BusinessException(ErrorCode.USER_ALREADY_WITHDRAWN);
                     }
-                    // 재로그인 시 nickname 은 갱신하지 않는다. 사용자가 '내 정보' 에서 변경한 닉네임이
-                    // 카카오 닉네임으로 덮어쓰이지 않도록. email 만 최신 카카오 값으로 동기화.
-                    existing.updateEmail(kakao.email());
+                    // 재로그인 시 갱신하는 값이 없다. nickname 은 사용자가 '내 정보' 에서 바꾼 값을
+                    // 카카오 닉네임으로 덮어쓰지 않기 위해 두고, email 은 아예 수집하지 않는다.
                     return new ProvisionResult(existing, false);
                 })
                 .orElseGet(() -> new ProvisionResult(
                         userRepository.save(User.create(
                                 AuthProvider.KAKAO,
                                 kakao.providerUserId(),
-                                kakao.email(),
                                 kakao.nickname() == null ? "kakao-" + kakao.providerUserId() : kakao.nickname()
                         )),
                         true

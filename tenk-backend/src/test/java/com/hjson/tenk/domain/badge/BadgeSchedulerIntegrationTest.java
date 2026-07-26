@@ -78,7 +78,7 @@ class BadgeSchedulerIntegrationTest extends IntegrationTestBase {
 
     private Long createUser(String providerUserId) {
         return tx.execute(status -> {
-            User u = User.create(AuthProvider.KAKAO, providerUserId, providerUserId + "@example.com", "tester");
+            User u = User.create(AuthProvider.KAKAO, providerUserId, "tester");
             return userRepository.save(u).getId();
         });
     }

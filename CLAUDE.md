@@ -74,12 +74,13 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 
 ### 인증
 - **현재 활성 공급자**: `KAKAO`만. `GOOGLE`/`NAVER`는 enum/`AuthProvider`에는 남아 있으나 실 흐름·코드는 미구현 (추후 동일한 모바일 토큰 교환 방식으로 추가 예정).
-- ID/비밀번호 자체 로그인 없음. `user.password` 컬럼은 **제거**, 대신 `provider`, `provider_user_id`, `email`을 사용. `(provider, provider_user_id)`가 unique.
+- ID/비밀번호 자체 로그인 없음. `user.password` 컬럼은 **제거**, 대신 `provider`, `provider_user_id` 를 사용. `(provider, provider_user_id)`가 unique.
+- **이메일은 수집하지 않는다** (2026-07-26 결정, `user.email` 컬럼도 DROP). 카카오 '카카오계정(이메일)' 동의항목은 **개인 개발자 일반 앱에서 '권한 없음'** 이라 실제로 늘 NULL 이었고, 확인해보니 이메일이 쓰이는 곳은 '계정 설정' 표시 한 곳뿐이었다. 비즈 앱 전환으로 받아올 수는 있으나 **기능에 안 쓰는 항목을 받는 건 최소수집 원칙 위반** — 성별을 선택 항목으로 둔 것과 같은 논리. [KakaoTokenVerifier.KakaoUser](tenk-backend/src/main/java/com/hjson/tenk/security/KakaoTokenVerifier.java) 는 `kakao_account.email` 을 **파싱조차 하지 않는다**. 되살리려면 파싱 + 엔티티 컬럼 + [schema.sql](docs/schema.sql) + [privacy.html](tenk-backend/src/main/resources/static/privacy.html) 수집표·제3자 제공표 + [play-console-app-content.md](docs/play-console-app-content.md) §6-2 를 **전부 함께** 되돌릴 것. '계정 설정'의 '연동 계정' 행은 이메일 대신 **공급자**를 표시한다.
 - **로그인 흐름** (모바일 전용):
   1. 모바일 앱이 카카오 SDK로 access token 발급.
   2. `POST /api/auth/kakao/login { accessToken }` 호출.
   3. 백엔드가 `kapi.kakao.com/v1/user/access_token_info`로 **`app_id` 매칭 검증** (다른 앱 토큰 차단) → `/v2/user/me`로 사용자 정보 조회.
-  4. 신규면 자동 프로비저닝 (카카오 닉네임 그대로), 기존이면 **email 만 갱신** (닉네임은 사용자가 직접 변경한 값 보존 — 아래 닉네임 정책 참고).
+  4. 신규면 자동 프로비저닝 (카카오 닉네임 그대로), **기존이면 갱신하는 값이 없다** (닉네임은 사용자가 직접 변경한 값 보존 — 아래 닉네임 정책 참고. 이메일은 위 항목대로 미수집).
   5. 자체 JWT **AT(1시간, HS256)** + opaque **RT(랜덤 64자, SHA-256 해시로 DB 저장, 14일)** 발급. 응답에 `isNewUser` 플래그 — 신규 가입을 만든 호출이면 true (refresh 응답은 항상 false). 클라이언트는 true 일 때 NicknameSetupScreen 으로 분기.
 - **카카오 키 두 종류** (같은 카카오 앱에서 발급되는 별개 값):
   - **앱 ID (숫자)**: 백엔드 `tenk.auth.kakao.app-id`. `access_token_info` 응답의 `app_id`와 매칭 검증용. REST API 키 아님.
@@ -122,8 +123,9 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - 거부 문자: `\p{Cc}` (제어 문자 — null byte, 줄바꿈, 백스페이스 등) + `\p{Cf}` (형식 문자 — zero-width space/joiner, BiDi override, BOM, word joiner 등). 표시 위장·로그 인젝션·방향 뒤집기 차단. 일반 이모지/한글/특수문자는 통과
   - SQL 인젝션은 JPA prepared statement 로 자동 방어, XSS 는 Flutter Text 위젯이 raw 렌더링하므로 위험 없음
   - 클라이언트도 같은 패턴 `RegExp(r'[\p{Cc}\p{Cf}]', unicode: true)` 으로 1차 검증 (즉시 피드백 — [NicknameSetupScreen](tenk_app/lib/presentation/profile/nickname_setup_screen.dart) / [my_info_screen.dart](tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`). 진실의 원천은 서버
-- **메뉴 화면** ([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart)) — 챌린지 리스트 AppBar 의 `account_circle_outlined` 버튼에서 진입. **자체 콘텐츠 없이 하위 화면으로만 분기하는 순수 메뉴**: **내 정보**(→ [MyInfoScreen](tenk_app/lib/presentation/profile/my_info_screen.dart): 닉네임·성별) → **계정 설정**(→ [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart): 연동 계정·로그아웃·회원 탈퇴) → **법적 고지**(→ [LegalNoticeScreen](tenk_app/lib/presentation/legal/legal_notice_screen.dart): 이용약관·개인정보처리방침) → 테스트 재생성(dev). **전부 별도 하위 화면으로 push**(섹션 아님). 로그아웃·회원 탈퇴 로직은 AccountSettingsScreen 소유(연동 계정 이메일은 메뉴가 로드한 User 를 넘겨 재fetch 없음).
+- **메뉴 화면** ([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart)) — 챌린지 리스트 AppBar 의 `account_circle_outlined` 버튼에서 진입. **자체 콘텐츠 없이 하위 화면으로만 분기하는 순수 메뉴**: **내 정보**(→ [MyInfoScreen](tenk_app/lib/presentation/profile/my_info_screen.dart): 닉네임·성별) → **계정 설정**(→ [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart): 연동 계정·로그아웃·회원 탈퇴) → **법적 고지**(→ [LegalNoticeScreen](tenk_app/lib/presentation/legal/legal_notice_screen.dart): 이용약관·개인정보처리방침) → 테스트 재생성(dev). **전부 별도 하위 화면으로 push**(섹션 아님). 로그아웃·회원 탈퇴 로직은 AccountSettingsScreen 소유(연동 계정 = 공급자 표시. 메뉴가 로드한 User 를 넘겨 재fetch 없음).
   - **경계**: '내 정보' = **사용자 본인에 대한 정보**(닉네임·성별), '계정 설정' = **계정 자체**(연동·로그인·탈퇴). 새 항목은 이 기준으로 배치할 것.
+  - **메뉴는 `/api/users/me` 를 기다리지 않고 즉시 렌더한다** (2026-07-26). 순수 내비게이션 허브라 user 없이도 그릴 수 있고, `user` 는 **TESTER 타일 노출 판정 + 계정 설정에 넘길 값**에만 쓰인다. 그래서 `AsyncStateMixin`/`AsyncStateView` 로 감싸지 않고 `User? _user` 를 직접 든다(컨벤션의 "두 종류 이상의 비동기 자원" 케이스 — 앱 버전 타일이 이미 두 번째 자원). **`/me` 실패해도 ErrorView 로 덮지 말 것** — 오프라인에서 법적 고지·앱 버전조차 못 여는 게 로딩보다 나쁘다. 같은 이유로 [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart) 의 `user` 는 **nullable** 이고 null 이면 스스로 읽는다(메뉴가 아직 못 받았을 수 있으므로). 메뉴가 값을 갖고 있으면 그대로 넘겨 재fetch 없음.
   - MyInfoScreen 의 닉네임 행은 변경 불가 상태면 **`lock_outline` 아이콘만** 노출하고, 다시 가능해지는 시각은 **탭했을 때 SnackBar 로만** 알려준다 (상시 라벨 없음 — 위 닉네임 정책 참고). 메뉴로 돌아오면 `reload()` 로 갱신(닉네임 변경분이 '계정 설정'에 넘길 User 에도 반영되게).
   - **메뉴 화면 제목 = '메뉴', 진입 아이콘 = `Icons.menu`(햄버거) 로 확정 (2026-07-25).** 이 허브는 설정(preference) 모음이 아니라 내 정보·계정·법적 고지·앱 정보 등 **이질적 항목을 모아 분기하는 메뉴**라서 '설정'이 아니다. **소리·진동 같은 설정성 항목이 생기면 최상위에 토글을 두지 말고 '알림/효과 설정' 하위 화면을 새로 추가**할 것 (설정은 최상위 이름이 아니라 필요 시 하위 화면 이름으로 들어온다).
 - **회원 탈퇴 = soft delete 후 3개월 보관 → hard delete**. 탈퇴 즉시 [User.withdraw](tenk-backend/src/main/java/com/hjson/tenk/domain/user/User.java) 로 `is_deleted=true` + `deleted_dt` 기록 + 모든 RT 무효화 (같은 카카오로 재로그인 시도하면 `USER_ALREADY_WITHDRAWN`). 이후 매일 새벽 1:30 배치 [UserRetentionScheduler](tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) 가 `deleted_dt` 로부터 **3개월(`WithdrawnUserPurgeService.RETENTION`) 지난 계정**을 물리 삭제 — challenge/amount/media_file row + **디스크 영상 파일** + refresh_token 까지 cascade ([WithdrawnUserPurgeService.purge](tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java), FK 안전 순서: 디스크→media_file→challenge_badge→amount→challenge→refresh_token→user). 유저 1명 단위 트랜잭션 — 스케줄러가 유저별로 외부 호출해 `@Transactional` 프록시를 살린다(self-invocation 금지). 보관 기간(3개월)은 개인정보처리방침 §3 과 일치시킬 것. **개인정보처리방침**은 [privacy.html](tenk-backend/src/main/resources/static/privacy.html) → `https://tenk.hjson248.com/privacy.html` 로 서빙 (SecurityConfig PERMIT_ALL 등록). Play Console 개인정보처리방침 URL·앱 내 링크가 이 주소를 가리킨다.
@@ -339,7 +341,7 @@ lib/
     │   ├── nickname_setup_screen.dart   # 신규 가입자 전용 (LoginScreen 이 isNewUser=true 면 분기). PopScope canPop=false 로 회피 차단. 카카오 닉네임 pre-fill. 동의 화면과 분리(닉네임만)
     │   ├── profile_screen.dart          # AppBar 햄버거(Icons.menu) 진입점 = 순수 메뉴(제목 '메뉴' 확정). 내 정보(→) + 계정 설정(→) + 법적 고지(→) + 앱 버전(+최신여부) + 테스트 재생성(dev)
     │   ├── my_info_screen.dart           # '내 정보' 하위 화면. 닉네임(변경 다이얼로그) + 성별(선택, '입력 안 함' 포함)
-    │   └── account_settings_screen.dart # '계정 설정' 하위 화면. 연동 계정 표시 / 로그아웃 / 회원 탈퇴(confirm). '내 정보'가 넘긴 User 사용
+    │   └── account_settings_screen.dart # '계정 설정' 하위 화면. 연동 계정 표시 / 로그아웃 / 회원 탈퇴(confirm). 메뉴가 넘긴 User 사용, null 이면 자체 로드
     ├── legal/                        # 연령 확인·약관 동의·고지 (openLegalDoc 헬퍼 공유)
     │   ├── age_gate_screen.dart          # 중립적 연령 심사. 생년월일 3칸(기본값 없음), 컷오프 비노출, back 차단. 14세 미만이면 계정 파기 안내 후 로그아웃
     │   ├── consent_section.dart         # 전체 동의 + 이용약관/개인정보 필수 2항목 + [보기] 공용 위젯 + openLegalDoc(url_launcher)

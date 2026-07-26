@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public record UserResponse(
         Long userId,
         AuthProvider provider,
-        String email,
+        // 이메일은 수집하지 않으므로 응답에도 없다 (2026-07-26). 사유는 User 엔티티 주석 참고.
         String nickname,
         // 다음 닉네임 변경이 가능해지는 시각 = 마지막 변경 + 24시간.
         // null = 지금 바로 변경 가능 (한 번도 변경 안 했거나 이미 24시간이 지남).
@@ -29,7 +29,6 @@ public record UserResponse(
         return new UserResponse(
                 user.getId(),
                 user.getProvider(),
-                user.getEmail(),
                 user.getNickname(),
                 computeAvailableFrom(user.getNicknameChangedDt()),
                 !user.hasAgreedToRequiredConsents(),

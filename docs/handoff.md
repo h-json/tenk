@@ -18,7 +18,8 @@
 - ✅ **연령 확인 게이트 + Play 앱 콘텐츠 답안지 (2026-07-20)** — 만 14세 미만 차단(즉시 파기), 계정 삭제 안내 페이지 신설, [play-console-app-content.md](play-console-app-content.md) 작성.
 - ✅ **성별 선택 수집 + '내 정보' 하위 화면 분리 (2026-07-21)** — 성별은 통계용 선택 항목으로 '내 정보'에서만 입력·해제(가입 흐름 무변경). 닉네임·성별을 '내 정보'로 묶고 상위 화면은 순수 메뉴로 재편 — **상위 화면 이름은 '메뉴'(임시), 확정은 아래 §1 남은 일**. 테스트 **151개** 전원 통과, **에뮬 E2E 검증 완료**. **남은 것은 prod 배포 + Play 콘솔 폼 입력뿐** — 아래 "남은 일 §0".
 - ✅ **테스터 로그인 회의 + 구현 + prod 배포 완료 (2026-07-25)** — 결정: App access=**데모 카카오 계정**, 앱/서버의 **테스트 로그인 완전 제거**, 시딩은 **계정 role(USER/TESTER)** 로 재게이팅. 회의록 [decisions.md](decisions.md) "테스터 로그인 회의", Play 답안 [play-console-app-content.md](play-console-app-content.md) §2. **테스트 147개 전원 통과 + flutter analyze clean**. **prod 배포 완료** — 연령 게이트·성별도 이번에 함께 LIVE(3컬럼 ALTER + 새 이미지). §0.
-- ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11, 2026-07-26)** — 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과. **에뮬 E2E 미검증 + 백엔드 재배포 대기** (스키마 변경 없음). §0-DEPLOY.
+- ✅ **이메일 수집 중단 (#10, 2026-07-26)** — 원인은 카카오 이메일 동의항목 **'권한 없음'**(개인 개발자 앱). 쓰이는 곳이 표시 한 곳뿐이라 수집을 접고 **컬럼까지 DROP**. privacy.html·Play 데이터 안전의 **고지 불일치도 함께 해소**. ⚠️ **라이브 DB ALTER 필수** — §0-DEPLOY.
+- ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11) · 메뉴 진입 로딩 제거 (#12) — 2026-07-26.** #11: 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과 + **에뮬 E2E 검증 완료**. #12: 메뉴를 낙관적 렌더로 전환(`/me` 안 기다림) + `flutter analyze` 완전 clean. **#11 은 백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
@@ -93,10 +94,7 @@
 **앱 콘텐츠 (프로덕션 전 필수) — 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.** 남은 실행 항목:
 - [x] ✅ **백엔드 재배포 완료 (2026-07-25)** — 연령 게이트 + 성별 + role/테스트로그인 제거를 prod 에 배포. 라이브 DB 3컬럼(`birth_date`/`gender`/`role`) `ALTER` 선적용 → `docker compose pull && up -d` → 부팅 정상 + `/api/auth/test/login` 제거 확인(401=security-first). `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). `delete-account.html`/`privacy.html` 은 이미지에 구워져 함께 반영. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) §5.5.
   - [ ] **시딩 쓰려면 내부 테스터 계정을 TESTER 로 승격** (선택): `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼 노출됨).
-- [ ] 🟠 **다음 prod 백엔드 재배포 묶음 (미착수 — 여러 건 모아 한 번에 업로드 예정)** — 코드/로컬은 완료됐고 **라이브 반영만** 남은 것들:
-  - **앱 버전 게이트 (#5, 2026-07-26 구현)**: 라이브 DB 에 `app_config` **CREATE TABLE + INSERT**(id=1, min/latest='1.0.0', Android URL, ios NULL) 선적용 → `docker compose pull && up -d`. **안 하면 ddl-auto=validate 로 부팅 실패**. `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). SQL·배포 순서는 아래 §4 "앱 버전 게이트 라이브 배포" + [docker-deployment.md](docker-deployment.md).
-  - **닉네임 제한 24시간화 (#11, 2026-07-26)**: 코드만 바뀜 — **DB 작업 없음**(컬럼 변화 없음). 이미지 재배포만 하면 반영. 배포 전까지 실기기(`(device)` 구성 = prod)에선 옛 규칙(다음 날 자정)으로 응답하니 검증은 에뮬+로컬 백엔드로.
-  - (이후 다른 백엔드 변경이 생기면 이 묶음에 추가해 한 번에 배포)
+- [ ] 🟠 **§0-DEPLOY — 다음 prod 백엔드 재배포 묶음 (미착수).** 아래 "운영 배포 런북" 이 실행 순서의 진실의 원천. 코드·로컬 검증은 전부 끝났고 **라이브 반영만** 남았다.
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
 - [x] **'내 정보' 성별 선택 입력 — ✅ 완료 (2026-07-21)** — 입력 / '입력 안 함'으로 되돌리기 양방향
 - **Play Console 폼 입력** (답안은 [play-console-app-content.md](play-console-app-content.md)):
@@ -106,6 +104,76 @@
   - [ ] **데이터 안전** + 데이터 삭제 URL — 미완
 - [x] ✅ **테스터 로그인 회의 완료 (2026-07-25)** — 결정·구현 완료. App access=데모 카카오 계정, 앱/서버 테스트 로그인 제거, 시딩은 계정 role(USER/TESTER)로 재게이팅. 회의록·근거는 [decisions.md](decisions.md) "테스터 로그인 회의". 남은 실행 항목은 위 "앱 액세스 권한"(데모 계정 생성)으로 흡수됨.
 - [ ] terms.html / privacy.html 변호사 검수 (권장, 미착수)
+
+---
+
+#### 🚀 운영 배포 런북 (§0-DEPLOY) — 2026-07-26 묶음, 미실행
+
+> 맥(서버)에서 실행. 배포 구조·명령의 원본은 [docker-deployment.md](docker-deployment.md) §5.1(업데이트 사이클) / §5.5(라이브 DB 스키마 변경).
+> **이 묶음은 스키마 변경 2건을 포함**하므로 `ddl-auto=validate` 특성상 **SQL 먼저, 이미지 나중**이 절대 원칙이다. 순서를 뒤집으면 백엔드가 부팅 실패한다.
+
+**들어 있는 것 (3건)**
+
+| # | 내용 | DB 작업 | 이미지 재배포 |
+|---|---|---|---|
+| #5 | 앱 버전 게이트 / 강제·권장 업데이트 | ✅ `app_config` CREATE + INSERT | ✅ |
+| #10 | 이메일 수집 중단 | ✅ `user.email` DROP COLUMN | ✅ (privacy.html 도 이미지에 구워져 함께 반영) |
+| #11 | 닉네임 제한 24시간화 | ❌ 없음 | ✅ |
+
+**1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
+
+**2단계 — 라이브 DB 스키마 선적용** (맥)
+```bash
+cd ~/Documents/projects/claude/tenk
+set -a; . ./.env; set +a
+
+# (a) 백업 먼저 — DROP COLUMN 이 섞여 있어 되돌리기가 비싸다
+docker compose exec -T db mariadb-dump -uroot -p"$DB_ROOT_PASSWORD" tenk > ~/tenk-backup-$(date +%Y%m%d-%H%M).sql
+
+# (b) #5 app_config 생성 + 시드 1행
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
+CREATE TABLE \`app_config\` (
+  \`app_config_id\`         BIGINT AUTO_INCREMENT                   NOT NULL,
+  \`min_supported_version\` VARCHAR(20)                             NOT NULL,
+  \`latest_version\`        VARCHAR(20)                             NOT NULL,
+  \`android_store_url\`     VARCHAR(255)                            NULL,
+  \`ios_store_url\`         VARCHAR(255)                            NULL,
+  \`updated_dt\`            DATETIME DEFAULT CURRENT_TIMESTAMP      NOT NULL,
+  PRIMARY KEY (\`app_config_id\`)
+);
+INSERT INTO \`app_config\`
+  (\`app_config_id\`,\`min_supported_version\`,\`latest_version\`,\`android_store_url\`,\`ios_store_url\`)
+VALUES
+  (1,'1.0.0','1.0.0','https://play.google.com/store/apps/details?id=com.hjson.tenk_app',NULL);
+"
+
+# (c) #10 email 컬럼 제거
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
+  -e "ALTER TABLE \`user\` DROP COLUMN \`email\`;"
+```
+
+**3단계 — 이미지 재배포** (맥)
+```bash
+docker compose pull && docker compose up -d
+docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
+```
+
+**4단계 — `dbinit` 볼륨 시드 갱신** (클린 재구축 대비. §5.4 방식)
+`tenk_dbinit` 볼륨의 `01-schema.sql` 을 이번 `docs/schema.sql` 로 교체. **안 하면 라이브는 멀쩡한데 클린 재구축 때만 스키마가 어긋나** 부팅 실패한다.
+
+**5단계 — 검증**
+- [ ] `curl 'https://tenk.hjson248.com/api/app/version?platform=android&currentVersion=1.0.0'` → `status: LATEST`
+- [ ] `curl 'https://tenk.hjson248.com/api/app/version?platform=android&currentVersion=0.9.0'` → `UPDATE_REQUIRED` (min=1.0.0 이므로)
+- [ ] `https://tenk.hjson248.com/privacy.html` 수집항목에 **이메일이 없어졌는지**
+- [ ] 실기기(`(device)` 구성)로 카카오 로그인 → 메뉴 → 계정 설정에 "카카오 계정으로 로그인 중" / 앱 버전 행 "최신 버전이에요"
+- [ ] 닉네임 변경 후 재탭 → "내일 오후 ○시 ○분부터 가능해요"
+
+**롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
+
+**향후 릴리스 때**: 스토어 게시가 끝나면 재배포 없이 SQL 한 줄로 최신 버전을 올린다 —
+`UPDATE app_config SET latest_version='<pubspec version>', min_supported_version='<하한>' WHERE app_config_id=1;`
+
+---
 
 **iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**
 - 공통 사전: `xcode-select --install`, `sudo gem install cocoapods`(또는 brew), `cd tenk_app && flutter pub get && (cd ios && pod install)`.
@@ -132,9 +200,10 @@
 - [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
 - [ ] **#9 DB 컬럼 enum 전환 검토** — 문자열로 저장 중인 코드성 컬럼을 `@Enumerated`/enum 으로 정리. 특히 `amount.category` 는 현재 **의도적으로 String** (검증 이전 자유 텍스트 row 읽기 호환 — [../CLAUDE.md](../CLAUDE.md) 지출 카테고리 규칙). 전환하려면 레거시 자유 텍스트 데이터 마이그레이션(재시딩/백필)이 선행돼야 함. 착수 전 대상 컬럼 목록화 + 마이그레이션 전략부터.
-- [ ] **#10 email NULL 원인 분석** — `user.email` 이 NULL 로 들어가는 케이스 분석. 카카오 동의 항목에서 이메일 미제공/미동의 시 [AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 가 어떻게 처리하는지 확인 → 정책 결정(이메일 없이도 가입 허용? 재동의 유도?). 우선 **분석 태스크** — 실제 NULL row 가 있는지 + 코드 경로 추적부터.
+- ~~#10 email NULL 원인 분석~~ → ✅ 완료 (2026-07-26). 원인 = 카카오 '카카오계정(이메일)' 동의항목이 **개인 개발자 일반 앱에선 '권한 없음'**(콘솔 확인). 코드 버그 아님. **수집을 접기로 결정** — 컬럼까지 삭제. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증".
 - ~~#11 닉네임 변경 안내 날짜 텍스트 삭제~~ → ✅ 완료 (2026-07-26). 제한 규칙까지 실제 24시간으로 통일. 상세는 [handoff-archive.md](handoff-archive.md), 문구 근거는 [decisions.md](decisions.md) "닉네임 쿨다운 안내 문구".
-- [ ] **#12 메뉴 진입 시 매번 로딩 대기 UX 개선** — [ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart)(메뉴) 진입할 때마다 `/api/users/me` 를 다시 fetch 해 로딩 스피너를 보게 됨. 캐시(이미 로드한 User 재사용) 또는 낙관적 렌더(스켈레톤/즉시 표시 후 백그라운드 갱신)로 체감 지연 제거. 하위 화면('내 정보'/'계정 설정')에 User 를 넘겨 재fetch 안 하는 기존 패턴과 정합.
+- ~~#12 메뉴 진입 시 매번 로딩 대기 UX 개선~~ → ✅ 완료 (2026-07-26). 메뉴를 **낙관적 렌더**로 전환(`/me` 안 기다림, 실패해도 내비게이션 안 막음). 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "메뉴 화면".
+  - **남은 갈래(미착수)**: '내 정보'(MyInfoScreen) 진입 스피너는 그대로 — 닉네임·성별이 화면 콘텐츠 자체라 없애려면 `UserApi` 에 캐시(stale-while-revalidate)가 필요하고, **로그아웃·탈퇴 시 무효화**를 빠뜨리면 재로그인 후 이전 계정 값이 한 순간 보인다. 거슬리면 그때 착수.
 - [ ] **#13 생년월일 입력 자동 포커스 이동** — [AgeGateScreen](../tenk_app/lib/presentation/legal/age_gate_screen.dart) 의 연/월/일 3칸 입력에서, 연도 4자리·월/일 2자리를 채우면 자동으로 다음 칸으로 포커스 이동(`TextInputFormatter` maxLength + `FocusNode` 넘김). 중립성 3원칙(컷오프 비노출·기본값 없음·이탈 차단)은 유지 — 자동 이동은 편의 기능이라 무관.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
@@ -148,7 +217,7 @@
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **⚠️ 앱 버전 게이트 라이브 배포 (2026-07-26 구현, 배포 대기)** — `app_config` 테이블은 신규라 **라이브 DB 에 CREATE+INSERT 를 수동 적용해야 부팅됨**(ddl-auto=validate, 동의 컬럼 ALTER 와 동일 패턴). [schema.sql](schema.sql) 의 `app_config` `CREATE TABLE` + `INSERT`(id=1, min/latest='1.0.0', android URL) 를 그대로 실행 + dbinit 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비) → 백엔드 재배포. `ios_store_url` 은 iOS 출시 전까지 NULL 유지. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) 참고. **버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`.
+- **⚠️ 미배포 변경 3건 (2026-07-26)** — 실행 순서·SQL·검증 체크리스트는 **§0 의 "🚀 운영 배포 런북"** 하나로 모아뒀다(여기 중복 기재하지 말 것). 요약만: `app_config` CREATE+INSERT(#5) + `user.email` DROP(#10) 을 **SQL 먼저** 친 뒤 이미지 재배포. `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`.
 - **관리자 패널 (트리거: 콘텐츠 모더레이션·사용자 관리) — 지금 X, 백로그 O.** 현재 관리자 제어 대상은 TESTER 승격 + 앱 버전 정책 2개뿐이고 둘 다 저빈도 SQL 로 충분해 패널을 지을 근거가 없다(과설계). **출시 후 UGC(영상·닉네임·한 줄 평) 신고/모더레이션이 생기면** SQL 로 감당이 안 돼 이때 착수: ADMIN role + 인증 + (웹) 관리 화면. 그때 TESTER 승격·app_config·신고 상태가 모두 "DB 행 편집" 이라 패널이 자연스럽게 흡수. 근거는 [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의".
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.

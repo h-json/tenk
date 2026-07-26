@@ -6,7 +6,6 @@ class User {
   const User({
     required this.userId,
     required this.provider,
-    required this.email,
     required this.nickname,
     required this.nicknameChangeAvailableFrom,
     required this.consentRequired,
@@ -24,7 +23,6 @@ class User {
   final String? role;
 
   bool get isTester => role == 'TESTER';
-  final String? email;
   final String? nickname;
 
   /// 다음 닉네임 변경이 가능해지는 시각. null = 지금 바로 변경 가능.
@@ -46,7 +44,6 @@ class User {
     return User(
       userId: (json['userId'] as num).toInt(),
       provider: json['provider'] as String?,
-      email: json['email'] as String?,
       nickname: json['nickname'] as String?,
       nicknameChangeAvailableFrom: raw == null ? null : DateTime.parse(raw),
       consentRequired: json['consentRequired'] as bool? ?? false,

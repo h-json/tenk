@@ -49,7 +49,7 @@ class BadgeGrantServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
+        user = User.create(AuthProvider.KAKAO, "kakao-1", "tester");
         ReflectionTestUtils.setField(user, "id", 100L);
 
         // 챌린지 기간은 today-70 ~ today+1 — 모든 시나리오의 spentDt 를 invariant 없이 모킹할 수 있게.

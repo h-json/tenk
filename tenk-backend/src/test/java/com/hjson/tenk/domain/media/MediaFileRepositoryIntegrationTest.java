@@ -67,7 +67,7 @@ class MediaFileRepositoryIntegrationTest extends IntegrationTestBase {
     private Long seedMediaFile(String providerUserId) {
         return tx.execute(status -> {
             User user = userRepository.save(
-                    User.create(AuthProvider.KAKAO, providerUserId, providerUserId + "@example.com", "tester"));
+                    User.create(AuthProvider.KAKAO, providerUserId, "tester"));
             Challenge challenge = challengeRepository.save(
                     Challenge.create(user, "테스트 챌린지", LocalDate.now(), LocalDate.now().plusDays(1), 10_000));
             Amount amount = amountRepository.save(

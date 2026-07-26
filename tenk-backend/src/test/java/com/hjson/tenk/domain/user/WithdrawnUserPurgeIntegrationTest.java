@@ -118,7 +118,7 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
     private Long seedUserWithData(String providerUserId) {
         return tx.execute(status -> {
             User user = userRepository.save(User.create(
-                    AuthProvider.KAKAO, providerUserId, providerUserId + "@example.com", "탈퇴예정"));
+                    AuthProvider.KAKAO, providerUserId, "탈퇴예정"));
             Challenge challenge = challengeRepository.save(Challenge.create(
                     user, "파기 테스트", LocalDate.now(), LocalDate.now().plusDays(3), 10_000));
             Amount amount = amountRepository.save(Amount.spend(

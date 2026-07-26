@@ -5,7 +5,6 @@ import '../../data/api/api_error.dart';
 import '../../data/app/app_version.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
-import '../common/async_state.dart';
 import '../legal/legal_notice_screen.dart';
 import '../update/update_gate.dart';
 import 'account_settings_screen.dart';
@@ -29,17 +28,31 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
-    with AsyncStateMixin<ProfileScreen, User> {
+class _ProfileScreenState extends State<ProfileScreen> {
   bool _busy = false; // 테스트 데이터 재생성 진행 중
-
-  @override
-  Future<User> fetch() => UserScope.of(context).getMe();
+  User? _user;
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    ensureLoaded();
+    if (_started) return; // InheritedWidget 은 initState 밖(여기)에서 읽는다. 1회만.
+    _started = true;
+    _loadUser();
+  }
+
+  /// user 는 **TESTER 타일 노출 판정 + 계정 설정에 넘길 값**에만 쓰인다.
+  /// 메뉴 자체는 순수 내비게이션 허브라 이 로드를 기다리지 않고, 실패해도 막지 않는다
+  /// (실패 시 영향은 TESTER 타일 미노출뿐이고, 계정 설정은 user 가 null 이면 스스로 읽는다).
+  /// `/me` 하나가 실패했다고 법적 고지·앱 버전까지 못 들어가면 안 되므로 ErrorView 로 덮지 않는다.
+  Future<void> _loadUser() async {
+    final api = UserScope.of(context); // await 전에 읽을 것
+    try {
+      final user = await api.getMe();
+      if (mounted) setState(() => _user = user);
+    } catch (_) {
+      // 무시 — 위 주석 참고.
+    }
   }
 
   Future<void> _reseed() async {
@@ -83,20 +96,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('메뉴')),
-      body: SafeArea(
-        top: false,
-        child: AsyncStateView<User>(
-          data: data,
-          error: error,
-          loading: loading,
-          onRetry: reload,
-          builder: (_, user) => _buildBody(user),
-        ),
-      ),
+      body: SafeArea(top: false, child: _buildBody()),
     );
   }
 
-  Widget _buildBody(User user) {
+  Widget _buildBody() {
     return ListView(
       children: [
         const SizedBox(height: 8),
@@ -110,7 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               MaterialPageRoute<void>(builder: (_) => const MyInfoScreen()),
             );
             // 하위 화면에서 닉네임을 바꿨을 수 있으니 돌아오면 갱신 (계정 설정에 넘길 user 도 최신으로).
-            if (mounted) reload();
+            // 화면을 막지 않는 백그라운드 갱신이라 돌아온 즉시 메뉴가 보인다.
+            if (mounted) _loadUser();
           },
         ),
         const Divider(height: 1),
@@ -119,9 +124,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           leading: const Icon(Icons.manage_accounts_outlined),
           title: const Text('계정 설정'),
           trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          // user 가 아직 안 왔으면 null 을 넘긴다 — 그 화면이 스스로 읽는다 (탭을 막지 않기 위해).
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => AccountSettingsScreen(user: user),
+              builder: (_) => AccountSettingsScreen(user: _user),
             ),
           ),
         ),
@@ -140,7 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         const _AppVersionTile(),
 
         // ── 테스트 도구 (TESTER 권한 계정만) ──
-        if (user.isTester) ...[
+        // user 로드 후에 나타난다. dev 계정 한정이라 뒤늦은 등장이 문제되지 않는다.
+        if (_user?.isTester ?? false) ...[
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.science_outlined, color: Colors.deepPurple),

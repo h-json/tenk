@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class ChallengeTest {
 
-    private final User user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
+    private final User user = User.create(AuthProvider.KAKAO, "kakao-1", "tester");
 
     @Test
     void create_today_to_29days_inclusive_is_30_days_and_passes() {

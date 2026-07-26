@@ -126,7 +126,7 @@ class UserConsentIntegrationTest extends IntegrationTestBase {
 
     private Long saveKakaoUser(String providerUserId) {
         return tx.execute(status -> userRepository.save(
-                User.create(AuthProvider.KAKAO, providerUserId, providerUserId + "@example.com", "tester"))
+                User.create(AuthProvider.KAKAO, providerUserId, "tester"))
                 .getId());
     }
 

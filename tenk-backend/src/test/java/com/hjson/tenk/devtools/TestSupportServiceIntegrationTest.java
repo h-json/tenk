@@ -39,7 +39,7 @@ class TestSupportServiceIntegrationTest extends IntegrationTestBase {
     /** 실제 카카오 계정을 DB 에서 TESTER 로 승격한 상황(운영은 SQL 로 함)을 재현. */
     private User tester(String providerUserId) {
         User user = userRepository.save(
-                User.create(AuthProvider.KAKAO, providerUserId, providerUserId + "@test.com", "테스터"));
+                User.create(AuthProvider.KAKAO, providerUserId, "테스터"));
         ReflectionTestUtils.setField(user, "role", UserRole.TESTER);
         return userRepository.save(user);
     }
@@ -85,7 +85,7 @@ class TestSupportServiceIntegrationTest extends IntegrationTestBase {
     @DisplayName("TESTER 가 아닌 일반(USER) 계정에서 reseed 하면 거부한다")
     void reseedRejectsNonTesterUser() {
         User plain = userRepository.save(
-                User.create(AuthProvider.KAKAO, "kakao-real-1", "a@b.com", "실사용자"));
+                User.create(AuthProvider.KAKAO, "kakao-real-1", "실사용자"));
 
         assertThatThrownBy(() -> testSupportService.reseed(plain.getId()))
                 .isInstanceOf(BusinessException.class)

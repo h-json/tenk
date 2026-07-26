@@ -43,8 +43,10 @@ public class User {
     @Column(name = "provider_user_id", nullable = false, length = 255)
     private String providerUserId;
 
-    @Column(name = "email", length = 255)
-    private String email;
+    // 이메일은 수집하지 않는다 (2026-07-26). 카카오 '카카오계정(이메일)' 동의항목은 개인 개발자
+    // 일반 앱에선 '권한 없음'이라 애초에 내려오지 않았고, 서비스 기능 어디에도 쓰이지 않아
+    // (표시 한 곳뿐이었음) 비즈 앱 전환으로 받아올 이유가 없다고 판단 — 개인정보 최소수집 원칙.
+    // 컬럼도 DROP 했다. 되살릴 거면 schema.sql·privacy.html·Play 데이터 안전을 함께 갱신할 것.
 
     @Column(name = "nickname", nullable = false, length = 255)
     private String nickname;
@@ -93,22 +95,15 @@ public class User {
     @Column(name = "deleted_dt")
     private LocalDateTime deletedDt;
 
-    private User(AuthProvider provider, String providerUserId, String email, String nickname) {
+    private User(AuthProvider provider, String providerUserId, String nickname) {
         this.provider = provider;
         this.providerUserId = providerUserId;
-        this.email = email;
         this.nickname = nickname;
         this.deleted = false;
     }
 
-    public static User create(AuthProvider provider, String providerUserId, String email, String nickname) {
-        return new User(provider, providerUserId, email, nickname);
-    }
-
-    public void updateEmail(String email) {
-        if (email != null) {
-            this.email = email;
-        }
+    public static User create(AuthProvider provider, String providerUserId, String nickname) {
+        return new User(provider, providerUserId, nickname);
     }
 
     /**

@@ -6,13 +6,15 @@ import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../login/login_screen.dart';
 
-/// '내 정보' → '계정 설정' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
+/// 메뉴 → '계정 설정' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
 ///
-/// [user] 는 '내 정보'에서 이미 로드한 값을 넘겨받는다 (연동 계정 이메일은 세션 중 안 바뀌므로 재fetch 불필요).
+/// [user] 는 보통 메뉴가 이미 로드한 값을 넘겨받는다 (연동 계정 이메일은 세션 중 안 바뀌므로 재fetch 불필요).
+/// **null 이면 스스로 읽는다** — 메뉴가 `/me` 를 기다리지 않고 즉시 그려지기 때문에 아직 값이 없을 수 있다.
+/// 이때도 화면을 스피너로 막지 않는다: 로그아웃·탈퇴는 user 없이도 되고, 이메일 자리는 폴백 문구가 있다.
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key, required this.user});
 
-  final User user;
+  final User? user;
 
   @override
   State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
@@ -20,6 +22,32 @@ class AccountSettingsScreen extends StatefulWidget {
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool _busy = false; // 로그아웃 / 탈퇴 진행 중
+  User? _user;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started || _user != null) return; // 넘겨받았으면 읽지 않는다
+    _started = true;
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final api = UserScope.of(context); // await 전에 읽을 것
+    try {
+      final user = await api.getMe();
+      if (mounted) setState(() => _user = user);
+    } catch (_) {
+      // 이메일만 폴백 문구로 남는다. 로그아웃·탈퇴는 그대로 동작.
+    }
+  }
 
   Future<void> _logout() async {
     setState(() => _busy = true);
@@ -59,7 +87,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return; // 다이얼로그 대기 중 화면이 사라졌을 수 있다
 
     setState(() => _busy = true);
     try {
@@ -79,6 +107,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     }
   }
 
+  /// 로그인 공급자 표시명. 아직 로드 전이거나 모르는 값이면 현재 유일한 공급자인 카카오로 폴백.
+  /// Google/Naver 를 붙이면 여기에 분기를 추가할 것.
+  static String _providerLabel(String? provider) => switch (provider) {
+        'GOOGLE' => '구글 계정으로 로그인 중',
+        'NAVER' => '네이버 계정으로 로그인 중',
+        _ => '카카오 계정으로 로그인 중',
+      };
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -95,7 +131,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ListTile(
               leading: const Icon(Icons.chat_bubble_outline),
               title: const Text('연동 계정'),
-              subtitle: Text(widget.user.email ?? '카카오 계정으로 로그인 중'),
+              // 이메일은 수집하지 않으므로 공급자만 표시한다 (2026-07-26).
+              // 로딩 중에도 이 폴백 문구가 맞는 말이라 별도 로딩 표시를 두지 않는다.
+              subtitle: Text(_providerLabel(_user?.provider)),
             ),
             const Divider(height: 1),
             ListTile(

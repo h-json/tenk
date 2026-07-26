@@ -80,7 +80,7 @@ class JwtAuthenticationFilterWebMvcTest {
     @DisplayName("정상 AT 면 컨트롤러 호출까지 도달해 200")
     void validTokenReachesController() throws Exception {
         Long userId = 42L;
-        User stub = User.create(AuthProvider.KAKAO, "k-42", "u42@example.com", "tester");
+        User stub = User.create(AuthProvider.KAKAO, "k-42", "tester");
         ReflectionTestUtils.setField(stub, "id", userId);
         given(userService.getActiveUser(eq(userId))).willReturn(stub);
 

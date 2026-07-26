@@ -61,7 +61,7 @@ class AmountServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = User.create(AuthProvider.KAKAO, "kakao-1", "u@example.com", "tester");
+        user = User.create(AuthProvider.KAKAO, "kakao-1", "tester");
         ReflectionTestUtils.setField(user, "id", 100L);
     }
 

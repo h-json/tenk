@@ -61,7 +61,13 @@ public class KakaoTokenVerifier {
         }
     }
 
-    public record KakaoUser(String providerUserId, String email, String nickname) {
+    /**
+     * 카카오에서 받아 쓰는 값. <b>이메일은 의도적으로 읽지 않는다</b> (2026-07-26) —
+     * '카카오계정(이메일)' 동의항목은 개인 개발자 일반 앱에서 '권한 없음'이고, 서비스 기능에도
+     * 쓰이지 않아 비즈 앱 전환으로 받아올 이유가 없다고 판단했다 (개인정보 최소수집).
+     * 되살릴 거면 {@code kakao_account.email} 파싱 + User 컬럼 + privacy.html 을 함께 되돌릴 것.
+     */
+    public record KakaoUser(String providerUserId, String nickname) {
 
         @SuppressWarnings("unchecked")
         static KakaoUser from(Map<String, Object> attributes) {
@@ -72,7 +78,6 @@ public class KakaoTokenVerifier {
             String providerUserId = id.toString();
 
             Map<String, Object> account = (Map<String, Object>) attributes.get("kakao_account");
-            String email = account != null ? (String) account.get("email") : null;
             String nickname = null;
             if (account != null) {
                 Map<String, Object> profile = (Map<String, Object>) account.get("profile");
@@ -80,7 +85,7 @@ public class KakaoTokenVerifier {
                     nickname = profile.get("nickname").toString();
                 }
             }
-            return new KakaoUser(providerUserId, email, nickname);
+            return new KakaoUser(providerUserId, nickname);
         }
     }
 }
