@@ -25,11 +25,9 @@ String formatDate(DateTime dt) {
 String formatPeriod(DateTime start, DateTime end) =>
     '${formatDate(start)} ~ ${formatDate(end)}';
 
-String formatDateTime(DateTime dt) {
-  final d = dt.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
-}
+// 날짜+시각 표기는 여기 두지 않는다 — 24시간제로 고정돼 있으면 Material picker·
+// 기기 설정과 표기가 갈라진다. `presentation/common/date_time_picker.dart` 의
+// `formatDateWithTime(context, dt)` 를 쓸 것 (오후 10:11 / 22:11 자동 분기).
 
 const _koreanWeekdays = ['월', '화', '수', '목', '금', '토', '일'];
 

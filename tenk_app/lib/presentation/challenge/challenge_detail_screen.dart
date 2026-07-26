@@ -9,6 +9,7 @@ import '../amount/amount_edit_screen.dart';
 import '../amount/amount_record_screen.dart';
 import '../amount/spend_category.dart';
 import '../common/async_state.dart';
+import '../common/date_time_picker.dart';
 import '_formatters.dart';
 import 'export/export_screen.dart';
 import 'result_card/result_card_screen.dart';
@@ -1093,7 +1094,7 @@ class _AmountTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Text(formatDateTime(amount.spentDt),
+                          Text(formatDateWithTime(context, amount.spentDt),
                               style: AppTypo.caption),
                           if (hasVideo) ...[
                             const SizedBox(width: 6),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/amount/amount.dart';
 import '../../../data/challenge/challenge.dart';
 import '../../amount/spend_category.dart';
+import '../../common/date_time_picker.dart';
 import '../_formatters.dart';
 import 'export_prefetch_screen.dart';
 import 'export_settings_screen.dart';
@@ -270,10 +271,16 @@ class _ClipTile extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            formatDateTime(a.spentDt),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.outline,
+                          // 로케일 시각 표기가 24시간제보다 길어 좁은 기기에서
+                          // 이 행이 넘칠 수 있어 Flexible + ellipsis 로 받는다.
+                          Flexible(
+                            child: Text(
+                              formatDateWithTime(context, a.spentDt),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),

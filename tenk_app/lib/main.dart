@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 // 카카오 SDK에도 `AuthApi`/`UserApi`가 있어 우리 쪽과 충돌하므로 가린다.
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart'
     hide AuthApi, UserApi;
@@ -95,6 +96,16 @@ class TenkApp extends StatelessWidget {
                   title: 'Tenk',
                   navigatorKey: navigatorKey,
                   theme: buildTenkTheme(),
+                  // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.
+                  // 시스템 로케일을 따라가게 두면 영어 기기에서 Material 기본 UI
+                  // (날짜/시간 picker, 라이선스 화면)만 영어로 튀어 섞인다.
+                  locale: const Locale('ko'),
+                  supportedLocales: const [Locale('ko')],
+                  localizationsDelegates: const [
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
                   home: const SessionGate(),
                 ),
               ),

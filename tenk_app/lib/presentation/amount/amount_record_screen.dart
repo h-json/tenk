@@ -7,12 +7,13 @@ import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
-import '../../design/tokens.dart';
 import '../challenge/_formatters.dart';
+import '../common/date_time_picker.dart';
 import '../common/field_label.dart';
 import 'amount_camera_screen.dart';
 import 'spend_category.dart';
 import 'widgets/budget_hint_row.dart';
+import 'widgets/date_time_fields.dart';
 import 'widgets/video_attachment_section.dart';
 
 /// 지출/무지출 기록 추가 화면. 영상 첨부는 양쪽 모두 **선택** ([AmountCameraScreen] 으로 위임).
@@ -99,21 +100,29 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
     _videoPath = null;
   }
 
-  Future<void> _pickDateTime() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _spentDt,
-      firstDate: widget.challenge.startDate,
-      lastDate: widget.challenge.endDate,
+  Future<void> _pickDate() async {
+    final picked = await pickTenkDate(
+      context,
+      initial: _spentDt,
+      first: widget.challenge.startDate,
+      last: widget.challenge.endDate,
+      helpText: '기록 날짜 선택',
     );
-    if (pickedDate == null || !mounted) return;
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_spentDt),
-    );
-    if (pickedTime == null) return;
+    if (picked == null) return;
     setState(() {
-      _spentDt = _combine(pickedDate, pickedTime);
+      _spentDt = _combine(picked, TimeOfDay.fromDateTime(_spentDt));
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await pickTenkTime(
+      context,
+      initial: TimeOfDay.fromDateTime(_spentDt),
+      helpText: '기록 시각 선택',
+    );
+    if (picked == null) return;
+    setState(() {
+      _spentDt = _combine(_spentDt, picked);
     });
   }
 
@@ -194,10 +203,11 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
               ] else ...[
                 const FieldLabel('일시'),
                 const SizedBox(height: 8),
-                _DateTimeField(
-                  label: '기록 일시',
-                  dt: _spentDt,
-                  onTap: _pickDateTime,
+                DateTimeFields(
+                  date: _spentDt,
+                  time: TimeOfDay.fromDateTime(_spentDt),
+                  onDateTap: _pickDate,
+                  onTimeTap: _pickTime,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -317,41 +327,5 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
       ),
       const SizedBox(height: 32),
     ];
-  }
-}
-
-class _DateTimeField extends StatelessWidget {
-  const _DateTimeField({
-    required this.label,
-    required this.dt,
-    required this.onTap,
-  });
-
-  final String label;
-  final DateTime dt;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surfaceAlt,
-      borderRadius: BorderRadius.circular(AppRadius.chip),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-          child: Row(
-            children: [
-              const Icon(Icons.event_outlined,
-                  size: 20, color: AppColors.inkMuted),
-              const SizedBox(width: 12),
-              Expanded(child: Text(formatDateTime(dt), style: AppTypo.body)),
-              const Icon(Icons.expand_more, color: AppColors.inkMuted),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

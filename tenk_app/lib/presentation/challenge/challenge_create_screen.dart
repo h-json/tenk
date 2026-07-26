@@ -5,6 +5,7 @@ import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../../design/tokens.dart';
+import '../common/date_time_picker.dart';
 import '../common/field_label.dart';
 import '_formatters.dart';
 
@@ -59,15 +60,16 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
 
   Future<void> _pickStart() async {
     final today = _today();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _startDate.isBefore(today) ? today : _startDate,
-      firstDate: today,
-      lastDate: today.add(const Duration(days: 365)),
+    final picked = await pickTenkDate(
+      context,
+      initial: _startDate,
+      first: today,
+      last: today.add(const Duration(days: 365)),
+      helpText: '시작일 선택',
     );
     if (picked == null) return;
     setState(() {
-      _startDate = DateTime(picked.year, picked.month, picked.day);
+      _startDate = picked;
       final maxEnd = _startDate.add(const Duration(days: _maxDurationDays - 1));
       if (_endDate.isBefore(_startDate)) _endDate = _startDate;
       if (_endDate.isAfter(maxEnd)) _endDate = maxEnd;
@@ -75,17 +77,15 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   }
 
   Future<void> _pickEnd() async {
-    final maxEnd = _startDate.add(const Duration(days: _maxDurationDays - 1));
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _endDate,
-      firstDate: _startDate,
-      lastDate: maxEnd,
+    final picked = await pickTenkDate(
+      context,
+      initial: _endDate,
+      first: _startDate,
+      last: _startDate.add(const Duration(days: _maxDurationDays - 1)),
+      helpText: '종료일 선택',
     );
     if (picked == null) return;
-    setState(() {
-      _endDate = DateTime(picked.year, picked.month, picked.day);
-    });
+    setState(() => _endDate = picked);
   }
 
   Future<void> _submit() async {

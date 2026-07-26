@@ -8,13 +8,13 @@ import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
-import '../../design/tokens.dart';
-import '../challenge/_formatters.dart';
+import '../common/date_time_picker.dart';
 import '../common/field_label.dart';
 import 'amount_camera_screen.dart';
 import 'amount_video_preview_screen.dart';
 import 'spend_category.dart';
 import 'widgets/budget_hint_row.dart';
+import 'widgets/date_time_fields.dart';
 import 'widgets/video_attachment_section.dart';
 
 /// 기록 수정 화면. 카드 탭으로 진입한다.
@@ -209,7 +209,12 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
   bool get _videoFromServer => _videoAction == VideoAction.keep && _hasExistingServerVideo;
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(context: context, initialTime: _time);
+    final picked = await pickTenkTime(
+      context,
+      initial: _time,
+      // "입력"/"선택" 중 후자로 — 사용자가 시계(dial) 모드로 전환해도 어색하지 않게.
+      helpText: '기록 시각 선택',
+    );
     if (picked == null) return;
     setState(() => _time = picked);
   }
@@ -385,43 +390,11 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     return [
       const FieldLabel('일시'),
       const SizedBox(height: 8),
-      Row(
-        children: [
-          Expanded(
-            child: _ReadonlyField(
-              icon: Icons.event_busy_outlined,
-              text: formatDate(widget.original.spentDt),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Material(
-              color: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.circular(AppRadius.chip),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: _pickTime,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 15),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.schedule_outlined,
-                          size: 20, color: AppColors.inkMuted),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(_time.format(context),
-                            style: AppTypo.body),
-                      ),
-                      const Icon(Icons.expand_more,
-                          color: AppColors.inkMuted),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+      // 날짜는 고정 — 바꾸려면 삭제 후 재등록 (도메인 규칙). 그래서 onDateTap 없음.
+      DateTimeFields(
+        date: widget.original.spentDt,
+        time: _time,
+        onTimeTap: _pickTime,
       ),
       const SizedBox(height: 24),
     ];
@@ -495,39 +468,5 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
       ),
       const SizedBox(height: 32),
     ];
-  }
-}
-
-/// 편집 불가 읽기 전용 필드 (지출 날짜). 톤다운된 채움 스타일.
-class _ReadonlyField extends StatelessWidget {
-  const _ReadonlyField({
-    required this.icon,
-    required this.text,
-  });
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.chip),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.inkMuted),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTypo.body.copyWith(color: AppColors.inkMuted),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
