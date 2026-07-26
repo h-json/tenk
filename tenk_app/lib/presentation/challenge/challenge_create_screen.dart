@@ -30,6 +30,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   late DateTime _endDate;
   late final _nameController = TextEditingController(text: widget.defaultName);
   final _amountController = TextEditingController(text: '10000');
+  final _amountFocus = FocusNode();
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
 
@@ -49,6 +50,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -130,6 +132,8 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
                 controller: _nameController,
                 maxLength: 100,
                 textInputAction: TextInputAction.next,
+                // 사이에 기간 탭 필드가 있어 traversal 자동 계산이 그쪽으로 새므로 목표 금액을 직접 지정.
+                onFieldSubmitted: (_) => _amountFocus.requestFocus(),
                 decoration: const InputDecoration(
                   hintText: '예: 외식 줄이기',
                 ),
@@ -175,6 +179,7 @@ class _ChallengeCreateScreenState extends State<ChallengeCreateScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _amountController,
+                focusNode: _amountFocus,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(

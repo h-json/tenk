@@ -458,6 +458,8 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _contentController,
+        textInputAction: TextInputAction.next,
+        onFieldSubmitted: (_) => _amountFocus.requestFocus(),
         decoration: const InputDecoration(
           hintText: '예) 김밥 한 줄',
         ),

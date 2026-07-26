@@ -32,6 +32,10 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
   final _month = TextEditingController();
   final _day = TextEditingController();
 
+  final _yearFocus = FocusNode();
+  final _monthFocus = FocusNode();
+  final _dayFocus = FocusNode();
+
   bool _saving = false;
   String? _error;
 
@@ -40,6 +44,9 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
     _year.dispose();
     _month.dispose();
     _day.dispose();
+    _yearFocus.dispose();
+    _monthFocus.dispose();
+    _dayFocus.dispose();
     super.dispose();
   }
 
@@ -157,10 +164,13 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
                               flex: 4,
                               child: _BirthField(
                                 controller: _year,
+                                focusNode: _yearFocus,
                                 label: '년',
                                 maxLength: 4,
                                 enabled: !_saving,
+                                autofocus: true,
                                 onChanged: _clearError,
+                                next: _monthFocus,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -168,10 +178,13 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
                               flex: 3,
                               child: _BirthField(
                                 controller: _month,
+                                focusNode: _monthFocus,
                                 label: '월',
                                 maxLength: 2,
                                 enabled: !_saving,
                                 onChanged: _clearError,
+                                previous: _yearFocus,
+                                next: _dayFocus,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -179,10 +192,12 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
                               flex: 3,
                               child: _BirthField(
                                 controller: _day,
+                                focusNode: _dayFocus,
                                 label: '일',
                                 maxLength: 2,
                                 enabled: !_saving,
                                 onChanged: _clearError,
+                                previous: _monthFocus,
                                 onSubmitted: (_) => _submit(),
                               ),
                             ),
@@ -240,37 +255,83 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
 }
 
 /// 생년월일 입력 한 칸. 기본값 없이 비워둔 채로 시작한다 (중립 심사).
+///
+/// 자릿수를 채우면 [next] 로 자동 이동하고, 빈 칸에서 백스페이스를 누르면 [previous] 로 되돌아간다
+/// (자동 이동만 있고 복귀가 없으면 오타 수정이 답답해진다). 복귀 시 글자를 대신 지우지는 않는다 —
+/// 포커스만 넘기고, 이어지는 백스페이스가 사용자 의도대로 마지막 글자를 지운다.
+///
+/// ⚠️ 빈 칸 백스페이스 감지는 **소프트 키보드가 KEYCODE_DEL 을 실제로 보내는 Android(Gboard) 기준**이다.
+/// 안 오는 IME 에서는 자동 복귀만 조용히 빠지고 탭으로 이동하면 되므로 기능이 깨지지는 않는다.
 class _BirthField extends StatelessWidget {
   const _BirthField({
     required this.controller,
+    required this.focusNode,
     required this.label,
     required this.maxLength,
     required this.enabled,
     required this.onChanged,
+    this.autofocus = false,
+    this.previous,
+    this.next,
     this.onSubmitted,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String label;
   final int maxLength;
   final bool enabled;
   final ValueChanged<String> onChanged;
+  final bool autofocus;
+  final FocusNode? previous;
+  final FocusNode? next;
   final ValueChanged<String>? onSubmitted;
+
+  KeyEventResult _onKeyEvent(FocusNode _, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.backspace) {
+      return KeyEventResult.ignored;
+    }
+    if (previous == null || controller.text.isNotEmpty) {
+      return KeyEventResult.ignored;
+    }
+    previous!.requestFocus();
+    return KeyEventResult.handled;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      enabled: enabled,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(maxLength),
-      ],
-      textAlign: TextAlign.center,
-      decoration: InputDecoration(labelText: label),
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
+    return Focus(
+      // 키 이벤트를 가로채기만 하는 래퍼 — 이 노드 자체가 포커스를 먹으면 탭 순서가 한 칸씩 밀린다.
+      canRequestFocus: false,
+      onKeyEvent: _onKeyEvent,
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        enabled: enabled,
+        autofocus: autofocus,
+        keyboardType: TextInputType.number,
+        textInputAction:
+            next == null ? TextInputAction.done : TextInputAction.next,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(maxLength),
+        ],
+        textAlign: TextAlign.center,
+        decoration: InputDecoration(labelText: label),
+        onChanged: (value) {
+          onChanged(value);
+          // 자릿수를 다 채웠을 때만 이동한다 ('3월' 처럼 한 자리로 끝내려면 다음 칸을 직접 탭).
+          if (value.length == maxLength) next?.requestFocus();
+        },
+        onSubmitted: (value) {
+          if (next != null) {
+            next!.requestFocus();
+            return;
+          }
+          onSubmitted?.call(value);
+        },
+      ),
     );
   }
 }
