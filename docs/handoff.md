@@ -36,7 +36,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 160개 — 단위 115 + 통합 40 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **앱 버전 통합 테스트는 `app_config` 테이블 선적용 필요** (schema.sql CREATE+INSERT).
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 161개 — 단위 116 + 통합 40 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **앱 버전 통합 테스트는 `app_config` 테이블 선적용 필요** (schema.sql CREATE+INSERT).
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -56,7 +56,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **160개**(단위 115 + 통합 40 + WebMvc 4 + 컨텍스트 1, 2026-07-26 실측). **전원 통과**. 통합 40 = 기존 36 + 앱 버전 게이트 E2E 4. 단위 115 = 기존 106 + SemanticVersion 3 + AppVersionService 6. (2026-07-26: 자정~새벽에 깨지던 `UserServiceTest.updateNickname_rejects_when_changed_today_already` 의 시각 의존 flaky 를 자정 기준으로 고정해 수정.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **161개**(단위 116 + 통합 40 + WebMvc 4 + 컨텍스트 1, 2026-07-26 실측). **전원 통과**. 통합 40 = 기존 36 + 앱 버전 게이트 E2E 4. 단위 116 = 기존 106 + SemanticVersion 3 + AppVersionService 6 + 닉네임 24h 경계 1. (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -94,6 +94,7 @@
   - [ ] **시딩 쓰려면 내부 테스터 계정을 TESTER 로 승격** (선택): `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼 노출됨).
 - [ ] 🟠 **다음 prod 백엔드 재배포 묶음 (미착수 — 여러 건 모아 한 번에 업로드 예정)** — 코드/로컬은 완료됐고 **라이브 반영만** 남은 것들:
   - **앱 버전 게이트 (#5, 2026-07-26 구현)**: 라이브 DB 에 `app_config` **CREATE TABLE + INSERT**(id=1, min/latest='1.0.0', Android URL, ios NULL) 선적용 → `docker compose pull && up -d`. **안 하면 ddl-auto=validate 로 부팅 실패**. `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). SQL·배포 순서는 아래 §4 "앱 버전 게이트 라이브 배포" + [docker-deployment.md](docker-deployment.md).
+  - **닉네임 제한 24시간화 (#11, 2026-07-26)**: 코드만 바뀜 — **DB 작업 없음**(컬럼 변화 없음). 이미지 재배포만 하면 반영. 배포 전까지 실기기(`(device)` 구성 = prod)에선 옛 규칙(다음 날 자정)으로 응답하니 검증은 에뮬+로컬 백엔드로.
   - (이후 다른 백엔드 변경이 생기면 이 묶음에 추가해 한 번에 배포)
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
 - [x] **'내 정보' 성별 선택 입력 — ✅ 완료 (2026-07-21)** — 입력 / '입력 안 함'으로 되돌리기 양방향
@@ -131,8 +132,9 @@
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
 - [ ] **#9 DB 컬럼 enum 전환 검토** — 문자열로 저장 중인 코드성 컬럼을 `@Enumerated`/enum 으로 정리. 특히 `amount.category` 는 현재 **의도적으로 String** (검증 이전 자유 텍스트 row 읽기 호환 — [../CLAUDE.md](../CLAUDE.md) 지출 카테고리 규칙). 전환하려면 레거시 자유 텍스트 데이터 마이그레이션(재시딩/백필)이 선행돼야 함. 착수 전 대상 컬럼 목록화 + 마이그레이션 전략부터.
 - [ ] **#10 email NULL 원인 분석** — `user.email` 이 NULL 로 들어가는 케이스 분석. 카카오 동의 항목에서 이메일 미제공/미동의 시 [AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 가 어떻게 처리하는지 확인 → 정책 결정(이메일 없이도 가입 허용? 재동의 유도?). 우선 **분석 태스크** — 실제 NULL row 가 있는지 + 코드 경로 추적부터.
-- [ ] **#11 닉네임 변경 안내 날짜 텍스트 삭제** — [MyInfoScreen](../tenk_app/lib/presentation/profile/my_info_screen.dart) 닉네임 행의 "X년 XX월 XX일 이후에 다시 변경할 수 있어요." 라벨(`lock_outline` 옆) 제거. 하루 1회 제한 로직·서버 검증은 그대로 두고 UI 문구만 삭제.
+- [x] ✅ **#11 닉네임 변경 안내 정리 + 제한 규칙 24시간화 (2026-07-26)** — 상시 라벨 제거(행엔 `lock_outline` 만), 안내는 **탭했을 때 SnackBar 로만** + **분까지** 표기("2026년 7월 27일 14시 32분 이후에…"). 착수 중 안내문("24시간")과 실제 규칙("다음 날 자정")의 불일치가 드러나 **규칙을 24시간으로 통일**(밤 11시 변경 후 1시간 뒤 재변경되던 구멍 제거). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "닉네임". **백엔드 변경 포함 → 라이브 반영은 아래 배포 묶음에.**
 - [ ] **#12 메뉴 진입 시 매번 로딩 대기 UX 개선** — [ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart)(메뉴) 진입할 때마다 `/api/users/me` 를 다시 fetch 해 로딩 스피너를 보게 됨. 캐시(이미 로드한 User 재사용) 또는 낙관적 렌더(스켈레톤/즉시 표시 후 백그라운드 갱신)로 체감 지연 제거. 하위 화면('내 정보'/'계정 설정')에 User 를 넘겨 재fetch 안 하는 기존 패턴과 정합.
+- [ ] **#13 생년월일 입력 자동 포커스 이동** — [AgeGateScreen](../tenk_app/lib/presentation/legal/age_gate_screen.dart) 의 연/월/일 3칸 입력에서, 연도 4자리·월/일 2자리를 채우면 자동으로 다음 칸으로 포커스 이동(`TextInputFormatter` maxLength + `FocusNode` 넘김). 중립성 3원칙(컷오프 비노출·기본값 없음·이탈 차단)은 유지 — 자동 이동은 편의 기능이라 무관.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
