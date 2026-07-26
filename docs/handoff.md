@@ -18,6 +18,7 @@
 - ✅ **연령 확인 게이트 + Play 앱 콘텐츠 답안지 (2026-07-20)** — 만 14세 미만 차단(즉시 파기), 계정 삭제 안내 페이지 신설, [play-console-app-content.md](play-console-app-content.md) 작성.
 - ✅ **성별 선택 수집 + '내 정보' 하위 화면 분리 (2026-07-21)** — 성별은 통계용 선택 항목으로 '내 정보'에서만 입력·해제(가입 흐름 무변경). 닉네임·성별을 '내 정보'로 묶고 상위 화면은 순수 메뉴로 재편 — **상위 화면 이름은 '메뉴'(임시), 확정은 아래 §1 남은 일**. 테스트 **151개** 전원 통과, **에뮬 E2E 검증 완료**. **남은 것은 prod 배포 + Play 콘솔 폼 입력뿐** — 아래 "남은 일 §0".
 - ✅ **테스터 로그인 회의 + 구현 + prod 배포 완료 (2026-07-25)** — 결정: App access=**데모 카카오 계정**, 앱/서버의 **테스트 로그인 완전 제거**, 시딩은 **계정 role(USER/TESTER)** 로 재게이팅. 회의록 [decisions.md](decisions.md) "테스터 로그인 회의", Play 답안 [play-console-app-content.md](play-console-app-content.md) §2. **테스트 147개 전원 통과 + flutter analyze clean**. **prod 배포 완료** — 연령 게이트·성별도 이번에 함께 LIVE(3컬럼 ALTER + 새 이미지). §0.
+- ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11, 2026-07-26)** — 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과. **에뮬 E2E 미검증 + 백엔드 재배포 대기** (스키마 변경 없음). §0-DEPLOY.
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
@@ -132,7 +133,7 @@
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
 - [ ] **#9 DB 컬럼 enum 전환 검토** — 문자열로 저장 중인 코드성 컬럼을 `@Enumerated`/enum 으로 정리. 특히 `amount.category` 는 현재 **의도적으로 String** (검증 이전 자유 텍스트 row 읽기 호환 — [../CLAUDE.md](../CLAUDE.md) 지출 카테고리 규칙). 전환하려면 레거시 자유 텍스트 데이터 마이그레이션(재시딩/백필)이 선행돼야 함. 착수 전 대상 컬럼 목록화 + 마이그레이션 전략부터.
 - [ ] **#10 email NULL 원인 분석** — `user.email` 이 NULL 로 들어가는 케이스 분석. 카카오 동의 항목에서 이메일 미제공/미동의 시 [AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 가 어떻게 처리하는지 확인 → 정책 결정(이메일 없이도 가입 허용? 재동의 유도?). 우선 **분석 태스크** — 실제 NULL row 가 있는지 + 코드 경로 추적부터.
-- [x] ✅ **#11 닉네임 변경 안내 정리 + 제한 규칙 24시간화 (2026-07-26)** — 상시 라벨 제거(행엔 `lock_outline` 만), 안내는 **탭했을 때 SnackBar 로만** + **분까지** 표기("2026년 7월 27일 14시 32분 이후에…"). 착수 중 안내문("24시간")과 실제 규칙("다음 날 자정")의 불일치가 드러나 **규칙을 24시간으로 통일**(밤 11시 변경 후 1시간 뒤 재변경되던 구멍 제거). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "닉네임". **백엔드 변경 포함 → 라이브 반영은 아래 배포 묶음에.**
+- ~~#11 닉네임 변경 안내 날짜 텍스트 삭제~~ → ✅ 완료 (2026-07-26). 제한 규칙까지 실제 24시간으로 통일. 상세는 [handoff-archive.md](handoff-archive.md), 문구 근거는 [decisions.md](decisions.md) "닉네임 쿨다운 안내 문구".
 - [ ] **#12 메뉴 진입 시 매번 로딩 대기 UX 개선** — [ProfileScreen](../tenk_app/lib/presentation/profile/profile_screen.dart)(메뉴) 진입할 때마다 `/api/users/me` 를 다시 fetch 해 로딩 스피너를 보게 됨. 캐시(이미 로드한 User 재사용) 또는 낙관적 렌더(스켈레톤/즉시 표시 후 백그라운드 갱신)로 체감 지연 제거. 하위 화면('내 정보'/'계정 설정')에 User 를 넘겨 재fetch 안 하는 기존 패턴과 정합.
 - [ ] **#13 생년월일 입력 자동 포커스 이동** — [AgeGateScreen](../tenk_app/lib/presentation/legal/age_gate_screen.dart) 의 연/월/일 3칸 입력에서, 연도 4자리·월/일 2자리를 채우면 자동으로 다음 칸으로 포커스 이동(`TextInputFormatter` maxLength + `FocusNode` 넘김). 중립성 3원칙(컷오프 비노출·기본값 없음·이탈 차단)은 유지 — 자동 이동은 편의 기능이라 무관.
 

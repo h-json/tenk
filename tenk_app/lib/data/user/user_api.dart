@@ -14,7 +14,7 @@ class UserApi {
     return User.fromJson(unwrapData(res.data));
   }
 
-  /// 닉네임 변경. 백엔드가 trim 후 1~50자 / 보안 문자 / 하루 1회 제한을 검증한다.
+  /// 닉네임 변경. 백엔드가 trim 후 1~50자 / 보안 문자 / 24시간 1회 제한을 검증한다.
   /// 성공 시 갱신된 사용자 정보 반환 (nicknameChangeAvailableFrom 도 새 값).
   Future<User> updateNickname(String nickname) async {
     final res = await _dio.patch(

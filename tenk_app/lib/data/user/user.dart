@@ -28,7 +28,7 @@ class User {
   final String? nickname;
 
   /// 다음 닉네임 변경이 가능해지는 시각. null = 지금 바로 변경 가능.
-  /// 백엔드가 `nicknameChangedDt.toLocalDate().plusDays(1).atStartOfDay()` 로 계산해 내려준다.
+  /// 백엔드가 `nicknameChangedDt + 24시간` 으로 계산해 내려준다 (날짜/자정 기준 아님 — 시각이 임의 값).
   final DateTime? nicknameChangeAvailableFrom;
 
   /// 필수 동의(이용약관 + 개인정보 수집·이용) 미완료 여부. true 면 동의 화면으로 게이트.

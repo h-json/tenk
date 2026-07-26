@@ -50,7 +50,7 @@ public class User {
     private String nickname;
 
     // 사용자가 직접 닉네임을 변경한 마지막 시각. NULL = 한 번도 변경 안 함 (가입 시점의 카카오 닉네임 그대로).
-    // 하루 1회 제한은 UserService 에서 이 값과 LocalDate.now() 를 비교해 검증.
+    // 24시간 1회 제한은 UserService 가 이 값 + NICKNAME_CHANGE_COOLDOWN 과 현재 시각을 비교해 검증.
     @Column(name = "nickname_changed_dt")
     private LocalDateTime nicknameChangedDt;
 
@@ -112,7 +112,7 @@ public class User {
     }
 
     /**
-     * 닉네임 변경. {@code now} 가 nicknameChangedDt 로 박혀 "하루 1회" 제한 산정 기준이 된다.
+     * 닉네임 변경. {@code now} 가 nicknameChangedDt 로 박혀 "24시간 1회" 제한 산정 기준이 된다.
      * 기존 닉네임과 동일하면 no-op — 가입 화면에서 카카오 닉네임 그대로 두고 '확인' 누른 케이스가
      * 의도치 않게 1회 변경으로 카운트되는 걸 막는다.
      */

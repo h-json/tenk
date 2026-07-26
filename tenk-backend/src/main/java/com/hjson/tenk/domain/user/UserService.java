@@ -3,6 +3,7 @@ package com.hjson.tenk.domain.user;
 import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.domain.auth.RefreshTokenRepository;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -24,6 +25,13 @@ public class UserService {
     private static final Pattern NICKNAME_FORBIDDEN_CHARS = Pattern.compile("[\\p{Cc}\\p{Cf}]");
 
     private static final int NICKNAME_MAX_LENGTH = 50;
+
+    /**
+     * 닉네임 재변경 대기 시간. 마지막 변경 시각 기준 <b>정확히 24시간</b>이며, 날짜(자정) 기준이 아니다.
+     * 앱 안내문("변경 후 24시간 동안은 다시 변경할 수 없어요")과 같은 값이어야 한다.
+     * {@code UserResponse.computeAvailableFrom} 이 같은 값으로 "다시 가능해지는 시각"을 계산한다.
+     */
+    private static final Duration NICKNAME_CHANGE_COOLDOWN = Duration.ofHours(24);
 
     /** 이용 가능 최소 연령. 이용약관(terms.html)의 "만 14세 미만은 서비스 이용 대상이 아닙니다" 와 같은 값이어야 한다. */
     private static final int MINIMUM_AGE = 14;
@@ -47,8 +55,9 @@ public class UserService {
         if (normalized.equals(user.getNickname())) {
             return; // 멱등 — 같은 값으로 PATCH 한 경우엔 1회 제한도 카운트하지 않는다
         }
-        enforceDailyChangeLimit(user, LocalDate.now());
-        user.changeNickname(normalized, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        enforceChangeCooldown(user, now);
+        user.changeNickname(normalized, now);
     }
 
     /**
@@ -115,12 +124,12 @@ public class UserService {
         return trimmed;
     }
 
-    private void enforceDailyChangeLimit(User user, LocalDate today) {
+    private void enforceChangeCooldown(User user, LocalDateTime now) {
         LocalDateTime last = user.getNicknameChangedDt();
         if (last == null) {
             return; // 한 번도 변경한 적 없으면 자유
         }
-        if (!today.isAfter(last.toLocalDate())) {
+        if (now.isBefore(last.plus(NICKNAME_CHANGE_COOLDOWN))) {
             throw new BusinessException(ErrorCode.USER_NICKNAME_CHANGE_TOO_FREQUENT);
         }
     }

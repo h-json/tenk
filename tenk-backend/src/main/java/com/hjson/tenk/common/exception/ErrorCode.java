@@ -16,7 +16,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U0001", "사용자를 찾을 수 없습니다."),
     USER_ALREADY_WITHDRAWN(HttpStatus.BAD_REQUEST, "U0002", "이미 탈퇴한 사용자입니다."),
     USER_NICKNAME_INVALID(HttpStatus.BAD_REQUEST, "U0003", "사용할 수 없는 문자가 포함된 닉네임이에요."),
-    USER_NICKNAME_CHANGE_TOO_FREQUENT(HttpStatus.BAD_REQUEST, "U0004", "닉네임은 하루에 한 번만 변경할 수 있어요."),
+    USER_NICKNAME_CHANGE_TOO_FREQUENT(HttpStatus.BAD_REQUEST, "U0004", "닉네임은 24시간에 한 번만 변경할 수 있어요."),
     USER_BIRTH_DATE_INVALID(HttpStatus.BAD_REQUEST, "U0005", "생년월일이 올바르지 않아요."),
     USER_UNDER_MINIMUM_AGE(HttpStatus.FORBIDDEN, "U0006", "만 14세 미만은 서비스를 이용할 수 없어요. 계정과 입력하신 정보는 삭제되었습니다."),
 

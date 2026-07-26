@@ -126,14 +126,6 @@ class _MyInfoScreenState extends State<MyInfoScreen>
           ),
           onTap: _busy ? null : () => _openNicknameDialog(user),
         ),
-        if (!canChange)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
-            child: Text(
-              nextNicknameChangeMessage(user.nicknameChangeAvailableFrom),
-              style: const TextStyle(fontSize: 12, color: AppColors.inkSub),
-            ),
-          ),
 
         const Divider(height: 1),
         // 성별은 기능에 쓰이지 않는 통계용 선택 항목 — '(선택)' 표기와 미입력 기본값을 유지할 것.
@@ -161,13 +153,34 @@ class _MyInfoScreenState extends State<MyInfoScreen>
   }
 }
 
-/// "X년 X월 X일 이후에 다시 변경할 수 있어요." — 닉네임 하루 1회 제한 안내.
+/// 닉네임 24시간 1회 제한 안내. **잠긴 상태에서 탭했을 때만** 노출한다 —
+/// 목록 행에 상시 표시하지 않는 게 의도 (행에는 `lock_outline` 아이콘만).
+///
+/// 구성은 **규칙 먼저, 가능 시점은 짧게**. 연도는 넣지 않고 날짜도 절대 표기 대신
+/// `now` 기준 오늘/내일 라벨을 쓴다 — 쿨다운이 정확히 24시간이라 변경 직후엔 늘 '내일',
+/// 다음 날 다시 열면 '오늘'이 된다. 사용자가 뺄셈하지 않아도 되는 게 핵심.
 String nextNicknameChangeMessage(DateTime? from) {
-  if (from == null) return '닉네임은 하루에 한 번만 변경할 수 있어요.';
-  final y = from.year;
-  final m = from.month.toString().padLeft(2, '0');
-  final d = from.day.toString().padLeft(2, '0');
-  return '$y년 $m월 $d일 이후에 다시 변경할 수 있어요.';
+  const rule = '닉네임은 24시간에 한 번만 바꿀 수 있어요.';
+  if (from == null) return rule;
+  return '$rule ${_dayLabel(from)} ${_clockLabel(from)}부터 가능해요.';
+}
+
+String _dayLabel(DateTime at) {
+  final days = DateUtils.dateOnly(at)
+      .difference(DateUtils.dateOnly(DateTime.now()))
+      .inDays;
+  return switch (days) {
+    0 => '오늘',
+    1 => '내일',
+    _ => '${at.month}월 ${at.day}일', // 24시간 쿨다운에선 안 나오지만 방어적으로
+  };
+}
+
+/// "오후 10시 11분" — 정각이면 분은 생략한다.
+String _clockLabel(DateTime at) {
+  final hour12 = at.hour % 12 == 0 ? 12 : at.hour % 12;
+  final base = '${at.hour < 12 ? '오전' : '오후'} $hour12시';
+  return at.minute == 0 ? base : '$base ${at.minute}분';
 }
 
 /// 성별 선택 결과. `null` pop(=취소)과 "입력 안 함으로 되돌리기"(`value == null`)를 구분하려고 감싼다.

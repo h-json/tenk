@@ -3,7 +3,7 @@
 -- ddl-auto=validate 이므로 운영 전 이 스크립트를 수동 적용해야 함.
 -- ERD 대비 변경 사항:
 --   user             : password 제거, provider/provider_user_id/email 추가
---                      + nickname_changed_dt (직접 변경 마지막 시각, NULL=미변경) — 하루 1회 제한용
+--                      + nickname_changed_dt (직접 변경 마지막 시각, NULL=미변경) — 24시간 1회 제한용
 --                      + terms/privacy_agreed_dt (필수 동의 시각) + birth_date (연령 확인) + gender (선택)
 --                      + role (USER/TESTER — 테스터만 시딩 권한)
 --   challenge        : start_date / end_date (DATE, 양끝 포함) + result 컬럼 추가
@@ -34,7 +34,7 @@ CREATE TABLE `user` (
     `email`               VARCHAR(255)                                   NULL,
     `nickname`            VARCHAR(255)                                   NOT NULL,
     -- 사용자가 '내 정보' 또는 가입 화면에서 직접 닉네임을 변경한 마지막 시각.
-    -- NULL = 아직 한 번도 변경한 적 없음. 하루 1회 제한은 이 컬럼의 DATE 부분과 오늘을 비교.
+    -- NULL = 아직 한 번도 변경한 적 없음. 24시간 1회 제한은 이 값 + 24h 와 현재 시각을 비교 (날짜/자정 기준 아님).
     `nickname_changed_dt` DATETIME                                       NULL,
     -- 필수 동의(이용약관 / 개인정보 수집·이용) 시각. NULL = 미동의 → 클라이언트가 동의 화면 게이트.
     -- 라이브 DB 는 이 컬럼을 ALTER 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩):
