@@ -508,7 +508,7 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 
 - **브랜드 표기 = `TenK`** (2026-07-28 확정, 이전 표기 `Tenk` 전면 교체). **사용자에게 보이는 문자열은 전부 `TenK`** — 앱 내 문구(로그인 로고·결과 카드 워터마크·동의/닉네임/업데이트 안내·라이선스 화면·`MaterialApp.title`), Android `android:label`([AndroidManifest.xml](tenk_app/android/app/src/main/AndroidManifest.xml)), iOS `CFBundleDisplayName`([Info.plist](tenk_app/ios/Runner/Info.plist)), 법적 문서 3종(privacy/terms/delete-account).
   - **바꾸지 않는 것**: `applicationId`/`CFBundleName` = `tenk_app`(내부 식별자 — 바꾸면 카카오 URL scheme·서명이 깨진다), 코드 식별자(`TenkApp`/`buildTenkTheme`/`pickTenkDate` 등), 도메인 `tenk.hjson248.com`, **갤러리 앨범명 `Tenk`**(바꾸면 기존 저장물과 앨범이 갈라진다 — 표기 통일보다 사용자 자산의 연속성이 우선).
-  - **Play Console 스토어 등록명은 콘솔에서 직접 수정해야 한다** (코드로 안 바뀜). 앱 표시 이름과 어긋나면 심사·사용자 혼동 요인.
+  - **Play Console 스토어 등록명은 콘솔에서만 바뀐다** (코드로 안 바뀜). 현재 `TenK` 로 등록돼 있어 앱 표시 이름과 일치 — 표기를 또 바꾸면 양쪽을 같이 맞출 것.
 - **base URL 은 릴리스 빌드 시 반드시 명시 주입**: `--dart-define=API_BASE_URL=https://tenk.hjson248.com`. 안 주면 기본값 `10.0.2.2`(에뮬레이터 전용)로 나가 실기기에서 백엔드 못 붙는다.
 - **Android 서명 (직접 APK 공유 방침)**:
   - 릴리스 keystore = `tenk_app/android/tenk-release.keystore` (PKCS12), 자격증명은 `tenk_app/android/key.properties`. **둘 다 git 추적** — private 레포 방침(yaml 자격증명과 동일). Flutter 기본 `.gitignore` 가 `key.properties`/`*.keystore` 를 무시하므로 두 `.gitignore`(루트 + `android/`)에서 해당 라인을 제거해 추적한다.
