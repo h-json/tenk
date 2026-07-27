@@ -48,7 +48,13 @@ class UserApi {
   }
 
   /// 회원 탈퇴 (soft delete + RT 일괄 무효화).
-  Future<void> withdraw() async {
-    await _dio.delete('/api/users/me');
+  ///
+  /// [reason]·[detail] 은 **선택**이며 계정과 연결되지 않는 익명 통계로만 저장된다.
+  /// 사유를 필수로 만들지 말 것 — 탈퇴가 가입보다 어려워진다.
+  Future<void> withdraw({String? reason, String? detail}) async {
+    await _dio.delete(
+      '/api/users/me',
+      data: reason == null ? null : {'reason': reason, 'detail': detail},
+    );
   }
 }

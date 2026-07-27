@@ -5,6 +5,7 @@ import com.hjson.tenk.domain.user.dto.BirthDateRequest;
 import com.hjson.tenk.domain.user.dto.GenderUpdateRequest;
 import com.hjson.tenk.domain.user.dto.NicknameUpdateRequest;
 import com.hjson.tenk.domain.user.dto.UserResponse;
+import com.hjson.tenk.domain.user.dto.WithdrawRequest;
 import com.hjson.tenk.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,10 +67,16 @@ public class UserController {
         return ApiResponse.ok(UserResponse.from(userService.getActiveUser(userId)));
     }
 
-    @Operation(summary = "회원 탈퇴(소프트 딜리트) — 모든 RT가 함께 무효화됨")
+    @Operation(summary = "회원 탈퇴(소프트 딜리트) — 모든 RT가 함께 무효화됨",
+            description = "탈퇴 사유(reason/detail)는 선택이며 body 를 생략해도 된다. "
+                    + "사유는 계정과 연결되지 않는 익명 테이블에 기록된다.")
     @DeleteMapping("/me")
-    public ApiResponse<Void> withdraw(@CurrentUserId Long userId) {
-        userService.withdraw(userId);
+    public ApiResponse<Void> withdraw(@CurrentUserId Long userId,
+                                      @Valid @RequestBody(required = false) WithdrawRequest request) {
+        userService.withdraw(
+                userId,
+                request == null ? null : request.reason(),
+                request == null ? null : request.detail());
         return ApiResponse.ok();
     }
 }

@@ -112,6 +112,8 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
           return;
         }
       }
+      // 앨범명만 'Tenk' 로 남긴다 (표기는 TenK 로 통일됐지만) — 바꾸면 이전에 저장한 결과물과
+      // 새 결과물이 서로 다른 앨범으로 갈라진다. 표기 통일보다 사용자 자산의 연속성이 우선.
       await Gal.putImage(path, album: 'Tenk');
       if (!mounted) return;
       setState(() => _savedToGallery = true);

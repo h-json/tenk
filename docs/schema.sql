@@ -159,6 +159,19 @@ CREATE TABLE `refresh_token` (
         FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
 );
 
+-- 탈퇴 사유 (선택 입력). **user_id 를 일부러 두지 않는다** — 계정과 연결하지 않으면 개인정보가 아니라
+-- 익명정보라서 개인정보처리방침 수집표에 항목을 늘릴 필요가 없고, 보관 기간 논쟁 없이 계속 보존할 수
+-- 있으며, 계정이 파기된 뒤에도 통계가 남는다. 여기에 user 참조나 식별 가능한 값을 추가하지 말 것.
+-- 계정 파기 배치(WithdrawnUserPurgeService)의 삭제 대상이 아니다.
+-- 라이브 DB 는 이 테이블을 CREATE 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩).
+CREATE TABLE `withdrawal_feedback` (
+    `withdrawal_feedback_id` BIGINT AUTO_INCREMENT NOT NULL,
+    `reason_code`            VARCHAR(30)           NOT NULL,  -- WithdrawalReason enum name
+    `detail`                 VARCHAR(200)          NULL,      -- '기타' 선택 시의 자유 서술
+    `created_dt`             DATETIME              NOT NULL,
+    PRIMARY KEY (`withdrawal_feedback_id`)
+);
+
 -- 앱 버전 정책 (단일 행). 강제/권장 업데이트 게이트가 이 값을 읽어 클라 버전과 비교한다.
 --   min_supported_version : 이 버전 미만은 강제 업데이트(앱 사용 차단)
 --   latest_version        : 이 버전 미만은 권장 업데이트(안내만, 계속 사용 가능)

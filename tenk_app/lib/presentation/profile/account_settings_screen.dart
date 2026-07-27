@@ -5,6 +5,7 @@ import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../login/login_screen.dart';
+import 'withdraw_screen.dart';
 
 /// 메뉴 → '계정 설정' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
 ///
@@ -66,32 +67,30 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     }
   }
 
-  Future<void> _confirmWithdraw() async {
+  /// 탈퇴 의사부터 확인하고, 확정한 사람에게만 사유를 묻는다 ([WithdrawScreen]).
+  /// 아직 마음을 못 정한 사람에게 설문부터 들이밀지 않으려는 순서다.
+  ///
+  /// 다이얼로그는 제목 없이 설명 다음에 질문이 오는 한 문단 (앱 공통 형식). 무엇을 잃는지 읽은 뒤에
+  /// 결정을 묻는다. 철회 가능하다는 사실은 여기서 알리지 않는다 — 결정을 흐리는 잡음이라, 실제로
+  /// 돌아왔을 때 로그인 화면에서 안내한다. 다만 "영구히 삭제되고 복구할 수 없어요" 로도 되돌리지 말 것.
+  Future<void> _startWithdraw() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      // 제목 없이 설명 다음에 질문이 오는 한 문단. 무엇을 잃는지 읽은 뒤에 결정을 묻는 순서이고,
-      // 위계(크기·굵기·색)를 나누지 않아 한 호흡으로 읽힌다. 순서를 뒤집거나 강조를 넣지 말 것.
-      //
-      // 철회 가능하다는 사실은 여기서 알리지 않는다 (의도). 탈퇴를 결심한 사람에게 "되돌릴 수 있다" 는
-      // 안내는 결정을 흐리는 잡음이라, 철회는 실제로 돌아왔을 때 로그인 화면에서 안내한다.
-      // 다만 "영구히 삭제되고 복구할 수 없어요" 로도 되돌리지 말 것. 사실이 아니게 됐다.
-      builder: (_) => AlertDialog(
-        // 제목 슬롯을 안 쓰므로 위쪽 여백을 조금 더 준다 (기본값 20 은 title 이 있다는 전제).
+      builder: (ctx) => AlertDialog(
         contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         content: const Text(
-          // 줄바꿈은 넣지 않는다. 다이얼로그 폭이 기기마다 달라 강제 개행은 오히려 어긋난다.
           '탈퇴하면 모든 챌린지와 기록을 더 이상 볼 수 없고, '
           '일정 기간이 지나면 완전히 삭제돼요. 정말 탈퇴하시겠어요?',
           style: AppTypo.body,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('취소'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('탈퇴'),
           ),
         ],
@@ -99,22 +98,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     );
     if (confirmed != true || !mounted) return; // 다이얼로그 대기 중 화면이 사라졌을 수 있다
 
-    setState(() => _busy = true);
-    try {
-      await UserScope.of(context).withdraw();
-      if (!mounted) return;
-      // withdraw 직후 storage 의 토큰은 더 이상 유효하지 않음. logout() 의 storage.clear() 만 활용.
-      await AuthScope.of(context).logout();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-        (_) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showSnack('탈퇴 실패: ${toApiException(e).message}');
-      setState(() => _busy = false);
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const WithdrawScreen()),
+    );
   }
 
   /// 로그인 공급자 표시명. 아직 로드 전이거나 모르는 값이면 현재 유일한 공급자인 카카오로 폴백.
@@ -158,7 +144,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ListTile(
               leading: const Icon(Icons.delete_forever),
               title: const Text('회원 탈퇴'),
-              onTap: _busy ? null : _confirmWithdraw,
+              onTap: _busy ? null : _startWithdraw,
             ),
             if (_busy)
               const Padding(

@@ -15,14 +15,14 @@ Future<void> openStorePage(BuildContext context, String? url) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (url == null || url.isEmpty) {
     messenger?.showSnackBar(
-      const SnackBar(content: Text('스토어 주소를 불러올 수 없어요. 스토어에서 Tenk 를 검색해 주세요.')),
+      const SnackBar(content: Text('스토어 주소를 불러올 수 없어요. 스토어에서 TenK 를 검색해 주세요.')),
     );
     return;
   }
   final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   if (!ok) {
     messenger?.showSnackBar(
-      const SnackBar(content: Text('스토어를 열 수 없어요. 스토어에서 Tenk 를 검색해 주세요.')),
+      const SnackBar(content: Text('스토어를 열 수 없어요. 스토어에서 TenK 를 검색해 주세요.')),
     );
   }
 }

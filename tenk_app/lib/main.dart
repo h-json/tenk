@@ -93,7 +93,7 @@ class TenkApp extends StatelessWidget {
               child: AppScope(
                 api: appApi,
                 child: MaterialApp(
-                  title: 'Tenk',
+                  title: 'TenK',
                   navigatorKey: navigatorKey,
                   theme: buildTenkTheme(),
                   // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.

@@ -41,7 +41,7 @@ class LegalNoticeScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
               onTap: () => showLicensePage(
                 context: context,
-                applicationName: 'Tenk',
+                applicationName: 'TenK',
               ),
             ),
           ],

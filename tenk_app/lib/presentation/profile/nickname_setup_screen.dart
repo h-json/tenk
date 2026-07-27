@@ -155,7 +155,7 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tenk 에서 사용할 닉네임을 정해주세요.\n카카오 프로필 이름이 자동으로 채워져 있어요.',
+            'TenK 에서 사용할 닉네임을 정해주세요.\n카카오 프로필 이름이 자동으로 채워져 있어요.',
             style: AppTypo.body.copyWith(color: AppColors.inkSub),
           ),
           const SizedBox(height: 28),

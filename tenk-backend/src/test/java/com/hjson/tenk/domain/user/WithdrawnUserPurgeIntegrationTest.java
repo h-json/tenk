@@ -61,7 +61,7 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
     @DisplayName("탈퇴 직후 계정은 보관 기간이 남아 파기 대상이 아니다")
     void freshlyWithdrawnUserIsNotPurgeable() {
         Long userId = seedUserWithData("purge-fresh");
-        tx.executeWithoutResult(status -> userService.withdraw(userId));
+        tx.executeWithoutResult(status -> userService.withdraw(userId, null, null));
 
         assertThat(purgeService.findPurgeableUserIds()).doesNotContain(userId);
     }
@@ -143,7 +143,7 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
     private Long seedWithdrawnUser(String providerUserId) {
         Long userId = seedUserWithData(providerUserId);
         tx.executeWithoutResult(status -> {
-            userService.withdraw(userId);
+            userService.withdraw(userId, null, null);
             User user = userRepository.findById(userId).orElseThrow();
             ReflectionTestUtils.setField(user, "deletedDt",
                     LocalDateTime.now().minus(WithdrawnUserPurgeService.RETENTION).minusDays(1));

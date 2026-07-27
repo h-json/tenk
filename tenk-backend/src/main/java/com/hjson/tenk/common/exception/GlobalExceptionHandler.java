@@ -5,6 +5,7 @@ import com.hjson.tenk.common.api.ApiResponse.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -33,6 +34,20 @@ public class GlobalExceptionHandler {
         ErrorCode code = ErrorCode.INVALID_INPUT;
         return ResponseEntity.status(code.getStatus())
                 .body(ApiResponse.fail(new ApiError(code.getCode(), message)));
+    }
+
+    /**
+     * 요청 본문 자체를 못 읽는 경우 — 깨진 JSON, 타입 불일치, <b>enum 에 없는 코드</b> 등.
+     * 핸들러가 없으면 {@code handleEtc} 로 떨어져 <b>클라이언트 잘못인데 500</b> 이 나간다.
+     * 파싱 실패 원문(필드 경로·기대 타입)은 내부 정보라 노출하지 않고 로그로만 남긴다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                                 HttpServletRequest req) {
+        log.warn("[UnreadableBody] {} {} -> {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        ErrorCode code = ErrorCode.INVALID_INPUT;
+        return ResponseEntity.status(code.getStatus())
+                .body(ApiResponse.fail(new ApiError(code.getCode(), code.getMessage())));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

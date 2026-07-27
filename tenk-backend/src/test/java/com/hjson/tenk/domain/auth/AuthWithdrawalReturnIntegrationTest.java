@@ -178,7 +178,7 @@ class AuthWithdrawalReturnIntegrationTest extends IntegrationTestBase {
 
     private Long seedWithdrawnUser() {
         Long userId = seedUser();
-        tx.executeWithoutResult(status -> userService.withdraw(userId));
+        tx.executeWithoutResult(status -> userService.withdraw(userId, null, null));
         return userId;
     }
 }

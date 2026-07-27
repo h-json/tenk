@@ -89,6 +89,7 @@ class _ExportResultScreenState extends State<ExportResultScreen> {
           return;
         }
       }
+      // 앨범명만 'Tenk' 유지 — 바꾸면 기존 저장물과 앨범이 갈라진다 (result_card_screen 과 같은 이유).
       await Gal.putVideo(widget.videoPath, album: 'Tenk');
       if (!mounted) return;
       setState(() => _savedToGallery = true);

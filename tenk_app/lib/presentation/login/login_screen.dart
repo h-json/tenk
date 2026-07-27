@@ -191,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  'Tenk',
+                  'TenK',
                   style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),

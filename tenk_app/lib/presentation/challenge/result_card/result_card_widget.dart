@@ -418,7 +418,7 @@ class _Footer extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Tenk',
+          'TenK',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w900,

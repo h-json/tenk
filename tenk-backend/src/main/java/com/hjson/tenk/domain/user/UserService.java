@@ -42,6 +42,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final WithdrawnUserPurgeService purgeService;
+    private final WithdrawalFeedbackRepository withdrawalFeedbackRepository;
 
     public User getActiveUser(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
@@ -100,11 +101,21 @@ public class UserService {
         getActiveUser(userId).changeGender(gender);
     }
 
+    /**
+     * 회원 탈퇴 (soft delete + RT 일괄 무효화).
+     *
+     * <p>{@code reason} 은 <b>선택</b>이다 — null 이면 아무것도 기록하지 않고 그대로 탈퇴시킨다.
+     * 사유를 필수로 만들지 말 것: 탈퇴가 가입보다 어려워지면 안 된다. 기록은 계정과 연결되지 않는
+     * 익명 테이블({@link WithdrawalFeedback})에 남으므로 계정 파기 후에도 통계로 남는다.
+     */
     @Transactional
-    public void withdraw(Long userId) {
+    public void withdraw(Long userId, WithdrawalReason reason, String detail) {
         User user = getActiveUser(userId);
         if (user.isDeleted()) {
             throw new BusinessException(ErrorCode.USER_ALREADY_WITHDRAWN);
+        }
+        if (reason != null) {
+            withdrawalFeedbackRepository.save(WithdrawalFeedback.of(reason, detail));
         }
         user.withdraw();
         refreshTokenRepository.revokeAllByUserId(userId);

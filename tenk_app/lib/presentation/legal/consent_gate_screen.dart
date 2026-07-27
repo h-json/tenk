@@ -82,7 +82,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '아래 필수 항목에 동의하면 Tenk 를 시작할 수 있어요.',
+                          '아래 필수 항목에 동의하면 TenK 를 시작할 수 있어요.',
                           style: AppTypo.body.copyWith(color: AppColors.inkSub),
                         ),
                         const SizedBox(height: 24),
