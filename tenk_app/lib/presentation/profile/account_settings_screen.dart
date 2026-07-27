@@ -8,9 +8,9 @@ import '../login/login_screen.dart';
 
 /// 메뉴 → '계정 설정' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
 ///
-/// [user] 는 보통 메뉴가 이미 로드한 값을 넘겨받는다 (연동 계정 이메일은 세션 중 안 바뀌므로 재fetch 불필요).
+/// [user] 는 보통 메뉴가 이미 로드한 값을 넘겨받는다 (연동 계정 표시는 세션 중 안 바뀌므로 재fetch 불필요).
 /// **null 이면 스스로 읽는다** — 메뉴가 `/me` 를 기다리지 않고 즉시 그려지기 때문에 아직 값이 없을 수 있다.
-/// 이때도 화면을 스피너로 막지 않는다: 로그아웃·탈퇴는 user 없이도 되고, 이메일 자리는 폴백 문구가 있다.
+/// 이때도 화면을 스피너로 막지 않는다: 로그아웃·탈퇴는 user 없이도 되고, 연동 계정 자리는 폴백 문구가 있다.
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key, required this.user});
 
@@ -45,7 +45,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       final user = await api.getMe();
       if (mounted) setState(() => _user = user);
     } catch (_) {
-      // 이메일만 폴백 문구로 남는다. 로그아웃·탈퇴는 그대로 동작.
+      // 연동 계정만 폴백 문구로 남는다. 로그아웃·탈퇴는 그대로 동작.
     }
   }
 
@@ -69,10 +69,20 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   Future<void> _confirmWithdraw() async {
     final confirmed = await showDialog<bool>(
       context: context,
+      // 제목 없이 설명 다음에 질문이 오는 한 문단. 무엇을 잃는지 읽은 뒤에 결정을 묻는 순서이고,
+      // 위계(크기·굵기·색)를 나누지 않아 한 호흡으로 읽힌다. 순서를 뒤집거나 강조를 넣지 말 것.
+      //
+      // 철회 가능하다는 사실은 여기서 알리지 않는다 (의도). 탈퇴를 결심한 사람에게 "되돌릴 수 있다" 는
+      // 안내는 결정을 흐리는 잡음이라, 철회는 실제로 돌아왔을 때 로그인 화면에서 안내한다.
+      // 다만 "영구히 삭제되고 복구할 수 없어요" 로도 되돌리지 말 것. 사실이 아니게 됐다.
       builder: (_) => AlertDialog(
-        title: const Text('정말 탈퇴하시겠어요?'),
+        // 제목 슬롯을 안 쓰므로 위쪽 여백을 조금 더 준다 (기본값 20 은 title 이 있다는 전제).
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         content: const Text(
-          '탈퇴하면 모든 정보와 기록이 영구히 삭제되고 복구할 수 없어요.',
+          // 줄바꿈은 넣지 않는다. 다이얼로그 폭이 기기마다 달라 강제 개행은 오히려 어긋난다.
+          '탈퇴하면 모든 챌린지와 기록을 더 이상 볼 수 없고, '
+          '일정 기간이 지나면 완전히 삭제돼요. 정말 탈퇴하시겠어요?',
+          style: AppTypo.body,
         ),
         actions: [
           TextButton(

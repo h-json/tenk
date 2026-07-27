@@ -25,6 +25,26 @@ class AuthApi {
     return AuthTokens.fromJson(unwrapData(res.data));
   }
 
+  /// 유예 기간이라 아직 남아 있는 탈퇴 계정을 되살리고 토큰을 받는다 (기록 유지).
+  /// 카카오 로그인이 `U0007` 로 거부됐을 때, 사용자 확인을 받은 뒤에만 호출한다.
+  Future<AuthTokens> kakaoRestore(String kakaoAccessToken) async {
+    final res = await _rawDio.post(
+      '/api/auth/kakao/restore',
+      data: {'accessToken': kakaoAccessToken},
+    );
+    return AuthTokens.fromJson(unwrapData(res.data));
+  }
+
+  /// 탈퇴 계정을 즉시 파기하고 같은 카카오 계정으로 새로 가입한다 (기록 삭제).
+  /// **되돌릴 수 없으므로** 반드시 2차 확인을 받은 뒤 호출할 것.
+  Future<AuthTokens> kakaoRejoin(String kakaoAccessToken) async {
+    final res = await _rawDio.post(
+      '/api/auth/kakao/rejoin',
+      data: {'accessToken': kakaoAccessToken},
+    );
+    return AuthTokens.fromJson(unwrapData(res.data));
+  }
+
   Future<void> logout() async {
     await _authDio.post('/api/auth/logout');
   }

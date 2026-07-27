@@ -30,8 +30,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class WithdrawnUserPurgeService {
 
-    /** 탈퇴 후 보관 기간. 지나면 파기. 추후 환경별 조정이 필요하면 @ConfigurationProperties 로 승격. */
-    static final Period RETENTION = Period.ofMonths(3);
+    /**
+     * 탈퇴 후 보관 기간. 지나면 파기. 추후 환경별 조정이 필요하면 @ConfigurationProperties 로 승격.
+     *
+     * <p>보관하는 유일한 목적은 <b>탈퇴 철회</b>다 (부정 이용 방지·문의 대응이 아니다 — Tenk 은 결제·보상이
+     * 없어 어뷰징 유인이 없고, 그런 목적이라면 개인정보 최소보유 원칙상 근거가 약하다). 실수로 탈퇴한 걸
+     * 깨닫는 데 필요한 시간이 기준이라 1개월. 바꾸면 privacy.html §3 · delete-account.html 도 같이 갱신할 것.
+     */
+    static final Period RETENTION = Period.ofMonths(1);
 
     private final UserRepository userRepository;
     private final ChallengeRepository challengeRepository;
@@ -60,12 +66,19 @@ public class WithdrawnUserPurgeService {
     }
 
     /**
-     * 보관 기간 없이 즉시 파기. 연령 확인에서 <b>만 14세 미만</b>으로 판명된 계정처럼 애초에 이용
-     * 대상이 아니어서 데이터를 남길 근거가 없는 경우에만 쓴다.
+     * 보관 기간 없이 즉시 파기. 데이터를 더 들고 있을 근거가 사라진 경우에만 쓴다. 현재 호출자는 둘:
+     * <ul>
+     *   <li>연령 확인에서 <b>만 14세 미만</b>으로 판명된 계정 — 애초에 이용 대상이 아니다.</li>
+     *   <li>탈퇴 계정으로 돌아온 사용자가 <b>"새로 시작하기"</b>를 고른 경우 — 보관의 유일한 목적이던
+     *       철회를 사용자가 스스로 포기했으므로 유예를 기다릴 이유가 없고, 그래야 같은 카카오 계정으로
+     *       곧바로 재가입할 수 있다 ({@code (provider, provider_user_id)} unique 해제).</li>
+     * </ul>
      *
-     * <p>{@code REQUIRES_NEW} 인 이유: 호출자({@link UserService#verifyAge})가 파기 직후
-     * {@code USER_UNDER_MINIMUM_AGE} 예외를 던져 자기 트랜잭션을 롤백시킨다. 같은 트랜잭션에서
-     * 지우면 그 롤백에 삭제까지 함께 되돌아가 계정이 살아남는다.
+     * <p>{@code REQUIRES_NEW} 인 이유는 두 호출자가 조금 다르다. 연령 미달은 호출자
+     * ({@link UserService#verifyAge})가 파기 직후 {@code USER_UNDER_MINIMUM_AGE} 예외를 던져 자기
+     * 트랜잭션을 롤백시키므로 같은 트랜잭션에서 지우면 삭제까지 되돌아간다. 재가입은 파기가 <b>먼저
+     * 커밋</b>돼야 같은 unique 키로 새 계정을 insert 할 수 있다. 어느 쪽이든 자기 호출(self-invocation)이면
+     * 프록시를 안 타 무력화되니 반드시 다른 빈으로 주입받아 호출할 것.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void purgeImmediately(Long userId) {

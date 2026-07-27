@@ -27,6 +27,9 @@ public class SecurityConfig {
             "/terms.html",          // 이용약관 정적 페이지 (가입 동의 화면에서 링크)
             "/delete-account.html", // 계정·데이터 삭제 안내 (Play Console '데이터 삭제' URL — 앱 밖에서도 요청 가능해야 함)
             "/api/auth/kakao/login",
+            // 탈퇴 유예 기간 중 돌아온 사용자의 두 갈래. 로그인 전 경로라 인증 불가 — 카카오 토큰 재검증으로 본인 확인
+            "/api/auth/kakao/restore", // 철회 (기록 유지)
+            "/api/auth/kakao/rejoin",  // 재가입 (옛 계정 즉시 파기)
             "/api/auth/refresh",
             "/api/app/version",     // 앱 버전 게이트 — 로그인 전 부팅 시점에 호출되므로 인증 불필요
             // /api/dev/seed 는 인증 유지 (TESTER 권한 검증은 서비스에서)

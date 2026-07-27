@@ -19,6 +19,10 @@ public enum ErrorCode {
     USER_NICKNAME_CHANGE_TOO_FREQUENT(HttpStatus.BAD_REQUEST, "U0004", "닉네임은 24시간에 한 번만 변경할 수 있어요."),
     USER_BIRTH_DATE_INVALID(HttpStatus.BAD_REQUEST, "U0005", "생년월일이 올바르지 않아요."),
     USER_UNDER_MINIMUM_AGE(HttpStatus.FORBIDDEN, "U0006", "만 14세 미만은 서비스를 이용할 수 없어요. 계정과 입력하신 정보는 삭제되었습니다."),
+    // 탈퇴했지만 보관 기간이라 계정이 살아 있는 상태. 클라이언트는 이 코드를 받으면 철회 확인 다이얼로그를 띄운다
+    // (사용자가 수습할 수 있는 상황이므로 USER_ALREADY_WITHDRAWN 과 분리했다).
+    USER_WITHDRAWAL_RESTORABLE(HttpStatus.BAD_REQUEST, "U0007", "탈퇴한 계정이에요. 탈퇴를 철회하면 이전 기록을 그대로 이어서 쓸 수 있어요."),
+    USER_NOT_WITHDRAWN(HttpStatus.BAD_REQUEST, "U0008", "탈퇴하지 않은 계정이에요."),
 
     AUTH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AU0001", "유효하지 않은 토큰입니다."),
     AUTH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AU0002", "만료된 토큰입니다."),

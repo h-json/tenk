@@ -22,6 +22,7 @@
 - ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11) · 메뉴 진입 로딩 제거 (#12) — 2026-07-26.** #11: 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과 + **에뮬 E2E 검증 완료**. #12: 메뉴를 낙관적 렌더로 전환(`/me` 안 기다림) + `flutter analyze` 완전 clean. **#11 은 백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
 - ✅ **폼 키보드 이동 통일 (#13, 2026-07-26)** — 생년월일 3칸 자동 이동·백스페이스 복귀가 발단이었지만 **키보드 '다음' 동선을 전 폼으로 전수 적용**(기록/수정 내용→금액, 챌린지 생성 이름→목표금액). 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter" 에 명문화. **앱 전용 변경이라 백엔드 재배포와 무관** (다음 앱 릴리스에 실림). `flutter analyze` clean + 에뮬 E2E 검증 완료.
 - ✅ **날짜·시간 picker 정리 (#3, 2026-07-27)** — ① 로케일 `ko` 고정(`flutter_localizations`)으로 picker 한국어화 + 시각 표기를 기기 12/24h 설정 따라가게 통일(폼 `10:11 PM` vs 목록 `22:11` 로 갈라져 있던 것 해소) ② **시각 picker 를 카카오톡 예약·갤럭시 알람식 휠로 교체** — 오전·오후 / 시 1~12 / 분 00~59 무한 순환, 가운데 탭 직접 입력, 시가 11↔12 넘으면 오전/오후 자동 전환, **아날로그 시계(dial) 제거** ③ 기록 화면 일시를 `날짜 | 시간` 2칸으로 분리(수정 화면과 공용 위젯). **앱 전용 변경이라 백엔드 재배포와 무관** (다음 앱 릴리스에 실림). `flutter analyze` clean + 에뮬 E2E 검증 완료.
+- ✅ **탈퇴 UX 재설계 (#1, 2026-07-27)** — 탈퇴 후 **유예 1개월**(3개월에서 단축), 그 안에 돌아오면 **철회 / 재가입을 사용자가 고른다**(U0007 → 선택 다이얼로그 → `/api/auth/kakao/restore` 또는 `/rejoin`). **재가입은 옛 계정을 즉시 파기해 기다리지 않는다** — "탈퇴 후 한 달간 재가입 불가" UX 를 만들지 않는 게 핵심 원칙. 보관 목적도 "부정 이용 방지" → **"탈퇴 철회 대응"** 으로 바로잡고 privacy·delete-account 갱신. 회의록은 [decisions.md](decisions.md) "탈퇴 UX 회의". 테스트 **175개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. **백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
@@ -40,7 +41,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 161개 — 단위 116 + 통합 40 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **앱 버전 통합 테스트는 `app_config` 테이블 선적용 필요** (schema.sql CREATE+INSERT).
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 175개 — 단위 123 + 통합 47 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **앱 버전 통합 테스트는 `app_config` 테이블 선적용 필요** (schema.sql CREATE+INSERT).
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -60,7 +61,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **161개**(단위 116 + 통합 40 + WebMvc 4 + 컨텍스트 1, 2026-07-26 실측). **전원 통과**. 통합 40 = 기존 36 + 앱 버전 게이트 E2E 4. 단위 116 = 기존 106 + SemanticVersion 3 + AppVersionService 6 + 닉네임 24h 경계 1. (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **175개**(단위 123 + 통합 47 + WebMvc 4 + 컨텍스트 1, 2026-07-27 실측). **전원 통과**. 통합 47 = 기존 40 + 탈퇴 복귀 E2E 7. 단위 123 = 기존 116 + 탈퇴 복귀 7. (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -121,6 +122,7 @@
 | #5 | 앱 버전 게이트 / 강제·권장 업데이트 | ✅ `app_config` CREATE + INSERT | ✅ |
 | #10 | 이메일 수집 중단 | ✅ `user.email` DROP COLUMN | ✅ (privacy.html 도 이미지에 구워져 함께 반영) |
 | #11 | 닉네임 제한 24시간화 | ❌ 없음 | ✅ |
+| #1 | 탈퇴 UX 재설계 (유예 1개월 + 철회/재가입 선택) | ❌ 없음 | ✅ (privacy.html·delete-account.html 문구 갱신 포함) |
 
 **1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
 
@@ -169,6 +171,10 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - [ ] `https://tenk.hjson248.com/privacy.html` 수집항목에 **이메일이 없어졌는지**
 - [ ] 실기기(`(device)` 구성)로 카카오 로그인 → 메뉴 → 계정 설정에 "카카오 계정으로 로그인 중" / 앱 버전 행 "최신 버전이에요"
 - [ ] 닉네임 변경 후 재탭 → "내일 오후 ○시 ○분부터 가능해요"
+- [ ] 탈퇴한 계정으로 재로그인 → 선택 다이얼로그 → **[이어서 쓰기]** 시 이전 챌린지가 그대로 보이는지
+- [ ] 같은 흐름에서 **[새로 시작하기]** → 2차 확인 → 온보딩(연령→동의→닉네임) 후 빈 목록, 그리고 **곧바로 다시 로그인해도 U0007 이 안 뜨는지**(재가입 불가 상태가 남지 않았는지)
+- [ ] `https://tenk.hjson248.com/delete-account.html` 에 철회·재가입 안내 + **1개월** 표기, 수집항목에 이메일 없음
+- [ ] `privacy.html` §3 보관 기간이 **1개월**, 목적이 "탈퇴 철회 대응"
 
 **롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
 
@@ -193,7 +199,7 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 
 > 사용자가 한 번에 넘긴 미착수 목록. 각 항목은 착수 전 별도 설계/합의 필요 ([[feedback-plan-before-code-edit]]). 규모가 큰 건은 회의 안건으로 승격 ([[feedback-defer-decisions-to-dedicated-meeting]]).
 
-- [ ] **#1 탈퇴 철회 흐름** — 탈퇴 후 3개월 보관 기간 안에 같은 카카오로 재로그인하면, 현재는 `USER_ALREADY_WITHDRAWN` 로 막힌다. 대신 **"탈퇴한 계정입니다. 탈퇴를 철회하시겠습니까?"** 확인을 받아 → 철회 선택 시 `is_deleted`/`deleted_dt` 를 해제해 복구, 거부 시 기존 3개월 보관 유지. 백엔드([AuthService.provisionUser](../tenk-backend/src/main/java/com/hjson/tenk/domain/auth/AuthService.java) 의 탈퇴 계정 분기) + 철회 엔드포인트 + Flutter 로그인 흐름 분기 동반. 보관 만료(hard delete) 후엔 철회 불가(계정이 이미 없음).
+- ~~#1 탈퇴 철회 흐름~~ → ✅ 완료 (2026-07-27), **탈퇴 UX 전반 재설계로 확장**. 유예 1개월 + 복귀 시 **철회/재가입 선택**(U0007 → 선택 다이얼로그 → `/restore` 또는 `/rejoin`, 재가입은 2차 확인 후 옛 계정 즉시 파기). 판정은 계정 row 생존 하나뿐(배치 타이밍 사각지대 방지). 보관 목적을 "탈퇴 철회 대응"으로 바로잡고 privacy.html·delete-account.html 갱신, 탈퇴 확인 문구는 철회를 광고하지 않으면서 참인 문장으로. 테스트 **175개** 전원 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 회의록 [decisions.md](decisions.md) "탈퇴 UX 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 후 유예 기간". ⚠️ **백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
 - [ ] **#2 메뉴 항목 추가** — ✅ **이름·아이콘 확정 (2026-07-25): '메뉴' + `Icons.menu`** + ✅ **앱 버전 행 완료 (2026-07-26, #5·라이선스와 함께)** — 현재 버전(`v1.0.0`)+최신여부 표시, 업데이트 있으면 스토어로. 남은 것: **피드백 보내기** 항목 추가. (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
 - ~~#3 날짜·시간 선택 UI 정리~~ → ✅ 완료 (2026-07-27, 2단계). ① 로케일 `ko` 고정 + **시각 표기를 로케일 기반으로 통일**(24h 고정 `formatDateTime` 제거) + 공용 헬퍼 [common/date_time_picker.dart](../tenk_app/lib/presentation/common/date_time_picker.dart) ② **시각 picker 를 휠(드럼) 자체 위젯으로 교체**([wheel_time_picker.dart](../tenk_app/lib/presentation/common/wheel_time_picker.dart) — 무한 순환·직접 입력·오전/오후 자동 전환, **dial 제거**) + 기록 화면 일시를 `날짜 | 시간` **2칸**으로 분리([DateTimeFields](../tenk_app/lib/presentation/amount/widgets/date_time_fields.dart) 공유). 날짜 picker 는 Material 그대로. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter". **앱 전용 변경이라 백엔드 재배포와 무관**.
 - [ ] **#4 모달 → 화면 전환** — 카테고리 셀렉박스 / 성별 선택 팝업 / 닉네임 변경 팝업 등 다이얼로그를 별도 화면(push)으로 재구성. 연령·동의·닉네임을 이미 별도 화면으로 분리한 방향과 일관 ([../CLAUDE.md](../CLAUDE.md) 게이트 화면 분리 원칙). 대상: [spend_category.dart](../tenk_app/lib/presentation/amount/spend_category.dart) 드롭다운, [my_info_screen.dart](../tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`·성별 다이얼로그.
@@ -224,13 +230,13 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.
 - **CI 도입** — 현재 통합 테스트가 로컬 `tenk` 스키마를 비우는 구조라 CI 에서 그대로 못 돈다. 도입 시 Testcontainers + 별도 `tenk_test` 스키마로 갈아탈 것.
-- **개인정보처리방침 (2026-07-07 작성 + 배포 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) 로 작성, Spring Boot static 서빙. ✅ **`https://tenk.hjson248.com/privacy.html` 배포 완료·브라우저 접속 확인** (SecurityConfig PERMIT_ALL 등록, 맥 이미지 재배포로 LIVE). 수집항목/이용목적/보관기간(탈퇴 후 3개월)/제3자(카카오)/파기/권한/문의처 포함. **Play Console 개인정보처리방침 URL 에 이 주소 입력.** 남은 것: ① ✅ **앱 내 링크 노출 + 필수 동의 플로우 완료 (2026-07-19)** — 아래 별도 항목 참고 ② 실서비스 전 변호사 검수 권장 (privacy.html + terms.html 둘 다) ③ 문구는 실제 동작(음성 미수집, 자체 서버 저장, 3개월 보관 후 파기)과 일치시켜 작성했으니 정책 바꾸면 동시 갱신.
+- **개인정보처리방침 (2026-07-07 작성 + 배포 LIVE)** — [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) 로 작성, Spring Boot static 서빙. ✅ **`https://tenk.hjson248.com/privacy.html` 배포 완료·브라우저 접속 확인** (SecurityConfig PERMIT_ALL 등록, 맥 이미지 재배포로 LIVE). 수집항목/이용목적/보관기간(탈퇴 후 1개월 — 2026-07-27 단축)/제3자(카카오)/파기/권한/문의처 포함. **Play Console 개인정보처리방침 URL 에 이 주소 입력.** 남은 것: ① ✅ **앱 내 링크 노출 + 필수 동의 플로우 완료 (2026-07-19)** — 아래 별도 항목 참고 ② 실서비스 전 변호사 검수 권장 (privacy.html + terms.html 둘 다) ③ 문구는 실제 동작(음성 미수집, 자체 서버 저장, 1개월 보관 후 파기)과 일치시켜 작성했으니 정책 바꾸면 동시 갱신.
 
 - **필수 동의 플로우 (2026-07-19 구현 완료)** — "앱 내 링크 노출" 태스크를 출시 기준으로 확장. **이용약관([terms.html](../tenk-backend/src/main/resources/static/terms.html), 신규 작성) + 개인정보 수집·이용** 2개 필수 동의를 **동의 화면(ConsentGateScreen)** 에서 받고 `user.terms_agreed_dt`/`privacy_agreed_dt` 에 기록. **동의 화면과 닉네임 설정 화면은 분리** — 신규 가입은 동의(ConsentGateScreen) → 닉네임(NicknameSetupScreen) 2단계, 기존 미동의자는 동의 → 홈. 규칙·구조는 [../CLAUDE.md](../CLAUDE.md) "인증 — 필수 동의" 섹션이 진실의 원천. **⚠️ 라이브 DB 는 새 컬럼을 ALTER 로 추가해야 부팅됨**(ddl-auto=validate): `ALTER TABLE user ADD COLUMN terms_agreed_dt DATETIME NULL AFTER nickname_changed_dt, ADD COLUMN privacy_agreed_dt DATETIME NULL AFTER terms_agreed_dt;` (TEST enum 마이그레이션과 동일 패턴).
   - ✅ **prod 배포 + 에뮬 E2E 검증 완료 (2026-07-20)** — 이력·검증 상세는 [handoff-archive.md](handoff-archive.md) 참고.
   - ✅ **통합 테스트 작성 완료 (2026-07-20)** — [UserConsentIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/UserConsentIntegrationTest.java) 5건(MockMvc E2E): 신규 유저 `consentRequired=true` / 동의 POST 후 false + DB 스탬프 / 재호출 멱등(최초 시각 보존) / 미인증 401 / **TEST 계정 auto-consent 가드**. 스탬프 규칙 자체는 `UserServiceTest` 단위 5건이 담당.
   - **남은 것**: terms.html 변호사 검수.
-- **회원 탈퇴 hard delete (2026-07-07 구현 완료)** — soft delete + 3개월 보관 후 물리 삭제. `User.withdraw()` 는 여전히 soft delete(`deleted_dt`) + RT 무효화, 새벽 1:30 배치 [UserRetentionScheduler](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) → [WithdrawnUserPurgeService.purge](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java) 가 `deleted_dt` +3개월 지난 계정을 challenge/amount/media_file row + 디스크 `uploads/` 영상 + refresh_token 까지 FK 순서(디스크→media_file→challenge_badge→amount→challenge→refresh_token→user)로 삭제. 유저 1명 단위 트랜잭션, 파일은 best-effort(`deleteQuietly`). user 는 hard delete 라 provider/provider_user_id 재사용 가능. 보관기간 상수는 `WithdrawnUserPurgeService.RETENTION`. ✅ **통합 테스트 작성 완료 (2026-07-20)** — [WithdrawnUserPurgeIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeIntegrationTest.java) 5건: 탈퇴 직후·미탈퇴는 파기 대상 아님 / `deletedDt` reflection backdate 후 대상 포함 / purge 시 challenge·amount·media_file·challenge_badge·refresh_token row 전멸 + **디스크 mp4 실제 삭제**(`deleteQuietly` 가 조용히 실패해도 아무도 모르는 지점이라 이게 유일한 감시) / 타 계정 데이터 무손상. **남은 것**: 3개월 미도래 계정은 그대로라 UI "영구히 삭제" 문구와 즉시성엔 여전히 시차 있음(정책상 의도).
+- **회원 탈퇴 hard delete (2026-07-07 구현 완료, 2026-07-27 유예 1개월로 단축)** — soft delete + 1개월 유예 후 물리 삭제. `User.withdraw()` 는 여전히 soft delete(`deleted_dt`) + RT 무효화, 새벽 1:30 배치 [UserRetentionScheduler](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) → [WithdrawnUserPurgeService.purge](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java) 가 `deleted_dt` +1개월 지난 계정을 challenge/amount/media_file row + 디스크 `uploads/` 영상 + refresh_token 까지 FK 순서(디스크→media_file→challenge_badge→amount→challenge→refresh_token→user)로 삭제. 유저 1명 단위 트랜잭션, 파일은 best-effort(`deleteQuietly`). user 는 hard delete 라 provider/provider_user_id 재사용 가능. 보관기간 상수는 `WithdrawnUserPurgeService.RETENTION`. ✅ **통합 테스트 작성 완료 (2026-07-20)** — [WithdrawnUserPurgeIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeIntegrationTest.java) 5건: 탈퇴 직후·미탈퇴는 파기 대상 아님 / `deletedDt` reflection backdate 후 대상 포함 / purge 시 challenge·amount·media_file·challenge_badge·refresh_token row 전멸 + **디스크 mp4 실제 삭제**(`deleteQuietly` 가 조용히 실패해도 아무도 모르는 지점이라 이게 유일한 감시) / 타 계정 데이터 무손상. **해소됨(2026-07-27)**: 예전엔 "보관 기간 미도래 계정이 남아 있는데 UI 는 '영구히 삭제'라고 말하는" 불일치가 있었으나, 탈퇴 UX 재설계로 문구를 실제 동작에 맞추고 유예를 1개월로 줄이면서 정리됨.
 
 ### 5. 업적(achievement) 시스템 (우선순위 최후)
 > 남은 일 중 **가장 후순위** — 핵심 흐름·배포·운영이 모두 정리된 뒤 착수 (2026-07-19 §1 에서 이관).

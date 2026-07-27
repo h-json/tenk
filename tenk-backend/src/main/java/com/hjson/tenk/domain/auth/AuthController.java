@@ -28,6 +28,22 @@ public class AuthController {
         return ApiResponse.ok(authService.kakaoLogin(request.accessToken()));
     }
 
+    @Operation(summary = "탈퇴 철회 로그인",
+            description = "보관 기간이라 아직 남아 있는 탈퇴 계정을 되살리고 토큰을 발급한다. "
+                    + "카카오 로그인이 USER_WITHDRAWAL_RESTORABLE(U0007) 로 거부됐을 때 사용자 확인을 받고 호출한다.")
+    @PostMapping("/kakao/restore")
+    public ApiResponse<AuthTokens> kakaoRestore(@Valid @RequestBody KakaoLoginRequest request) {
+        return ApiResponse.ok(authService.restoreWithdrawnAccount(request.accessToken()));
+    }
+
+    @Operation(summary = "탈퇴 계정 버리고 재가입",
+            description = "유예 기간 중인 탈퇴 계정을 즉시 파기하고 같은 카카오 계정으로 새로 가입한다. "
+                    + "이전 챌린지·기록·영상은 복구할 수 없으므로 클라이언트가 확인을 받은 뒤 호출한다.")
+    @PostMapping("/kakao/rejoin")
+    public ApiResponse<AuthTokens> kakaoRejoin(@Valid @RequestBody KakaoLoginRequest request) {
+        return ApiResponse.ok(authService.rejoinAfterWithdrawal(request.accessToken()));
+    }
+
     @Operation(summary = "토큰 갱신",
             description = "RT 한 번 사용 시 폐기되고 새 AT/RT가 발급된다 (rotation).")
     @PostMapping("/refresh")
