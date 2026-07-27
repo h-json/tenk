@@ -10,13 +10,14 @@ import '../login/login_screen.dart';
 ///
 /// 라벨은 **해요체 문장으로 어미까지 통일**한다. 명사형("이용 불편")과 문장형이 섞이면 훑어보기가
 /// 어려워지고, 실제로 그렇게 만든 국내 앱들이 지적받았다. 마지막 '기타' 만 관례대로 명사.
-/// 개수는 6개 — 선택지가 많을수록 고르는 데 걸리는 시간이 늘어 9개는 과하다는 게 사례들의 결론이다.
+/// 선택지가 많을수록 고르는 데 걸리는 시간이 늘어난다 — 늘리려면 대신 뺄 것을 같이 정할 것.
 const List<({String code, String label})> _reasons = [
-  (code: 'RECORDING_BURDEN', label: '기록하는 게 번거로워요'),
-  (code: 'GOAL_MISMATCH', label: '챌린지가 저와 잘 안 맞아요'),
-  (code: 'NO_LONGER_NEEDED', label: '이제 필요하지 않아요'),
+  (code: 'INCONVENIENT', label: '사용하기 불편해요'),
+  (code: 'MISSING_FEATURE', label: '원하는 기능이 없어요'),
+  (code: 'LOST_INTEREST', label: '흥미가 떨어졌어요'),
+  (code: 'GOAL_ACHIEVED', label: '목표를 이뤘어요'),
+  (code: 'USING_OTHER_APP', label: '다른 앱을 쓰고 있어요'),
   (code: 'BUGS', label: '오류가 자주 생겨요'),
-  (code: 'PRIVACY_CONCERN', label: '개인정보가 걱정돼요'),
   (code: 'ETC', label: '기타'),
 ];
 

@@ -93,7 +93,7 @@ class WithdrawalFeedbackIntegrationTest extends IntegrationTestBase {
         mockMvc.perform(delete("/api/users/me")
                         .header(HttpHeaders.AUTHORIZATION, bearer(userId))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"GOAL_MISMATCH\"}"))
+                        .content("{\"reason\":\"GOAL_ACHIEVED\"}"))
                 .andExpect(status().isOk());
 
         purgeService.purge(userId);

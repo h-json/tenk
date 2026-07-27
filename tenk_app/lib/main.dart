@@ -106,6 +106,15 @@ class TenkApp extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                     GlobalCupertinoLocalizations.delegate,
                   ],
+                  // 빈 곳을 탭하면 키보드를 닫는다. 화면마다 GestureDetector 를 다는 대신
+                  // 여기 한 곳에서 전 화면에 적용한다 (입력칸이 있는 화면이 계속 늘어난다).
+                  // translucent + onTap 이라 하위 위젯의 탭은 그대로 먹는다 — 제스처 아레나에서
+                  // 안쪽 recognizer 가 우선이므로 버튼·칩 동작을 가로채지 않는다.
+                  builder: (context, child) => GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                    child: child,
+                  ),
                   home: const SessionGate(),
                 ),
               ),
