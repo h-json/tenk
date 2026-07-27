@@ -152,10 +152,29 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               onTap: _busy ? null : _logout,
             ),
             const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.delete_forever, color: AppColors.danger),
-              title: const Text('회원 탈퇴', style: TextStyle(color: AppColors.danger)),
-              onTap: _busy ? null : _confirmWithdraw,
+            // 탈퇴는 목록 항목이 아니라 하단의 작은 링크로 둔다. 예전엔 danger 색 아이콘 + 빨간 텍스트라
+            // 화면에서 가장 눈에 띄었는데, 상시 노출되는 목록에 경고색을 켜둘 이유가 없다 (위험 신호는
+            // 확인 다이얼로그의 '탈퇴' 버튼에만 남긴다).
+            //
+            // 다만 **더 깊이 숨기지는 말 것** — Play 데이터 삭제 정책이 앱 내 삭제 경로를 쉽게 찾을 수
+            // 있어야 한다고 요구하고, 탈퇴가 가입보다 어려워서도 안 된다. 톤을 낮추는 선까지가 안전선이다.
+            // 버튼이라는 걸 알 수 있게 밑줄은 유지한다.
+            const SizedBox(height: AppSpacing.xxl),
+            Center(
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.inkMuted,
+                  minimumSize: const Size(0, 44), // 톤은 낮춰도 탭 타깃은 줄이지 않는다
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                onPressed: _busy ? null : _confirmWithdraw,
+                child: const Text('회원 탈퇴'),
+              ),
             ),
             if (_busy)
               const Padding(
