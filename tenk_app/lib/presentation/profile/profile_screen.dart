@@ -168,7 +168,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 /// 메뉴의 '앱 버전' 행. 현재 버전을 표시하고, 서버 정책상 업데이트가 있으면 안내 + 탭 시 스토어로.
-/// User 로딩과 별개의 비동기 자원이라 (AsyncStateMixin 을 겹쳐 쓰지 않고) 자체 상태를 든다.
+///
+/// **판정은 앱 시작 때 이미 끝나 있다** — SessionGate 가 강제 업데이트 게이트를 위해 `checkVersion()`
+/// 을 호출하고 `AppApi.lastKnownVersion` 에 남긴다. 그래서 이 행은 같은 걸 다시 묻지 않고 첫
+/// 프레임에 버전+상태를 완성된 상태로 그린다(로딩 표시 없음). 부팅 확인이 실패해 캐시가 비어 있을
+/// 때만 여기서 한 번 더 확인한다.
+///
+/// 업데이트 안내는 **눌러야 알 수 있으면 안 된다** — 알려야 할 순간에 아무도 누르지 않기 때문에,
+/// 상태는 항상 그 자리에 떠 있어야 한다. '탭하면 확인' 방식으로 바꾸지 말 것.
 class _AppVersionTile extends StatefulWidget {
   const _AppVersionTile();
 
@@ -177,24 +184,45 @@ class _AppVersionTile extends StatefulWidget {
 }
 
 class _AppVersionTileState extends State<_AppVersionTile> {
+  /// ListTile 이 leading 아이콘·제목을 배치하는 기본 치수. 이 행은 leading 슬롯을 쓰지 않고
+  /// 직접 그리므로, 같은 값을 써야 다른 메뉴 항목과 가로가 정확히 맞는다.
+  static const double _iconSize = 24;
+  static const double _leadingGap = 16;
+
   String? _version;
   AppVersionInfo? _info;
   bool _started = false;
+  bool _checking = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return; // InheritedWidget 은 initState 밖(여기)에서 읽는다. 1회만.
     _started = true;
-    _load();
+
+    // 첫 build 이전이라 setState 없이 그대로 채운다 → '확인 중…' 플래시가 없다.
+    final api = AppScope.of(context);
+    _version = api.cachedVersion;
+    _info = api.lastKnownVersion;
+    if (_version == null || _info == null) _load(); // 정상 경로에선 네트워크 0회.
   }
 
   Future<void> _load() async {
+    if (_checking) return;
+    setState(() => _checking = true);
     final api = AppScope.of(context);
-    final version = await api.currentVersion();
-    if (mounted) setState(() => _version = version);
-    final info = await api.checkVersion();
-    if (mounted) setState(() => _info = info);
+    try {
+      final version = await api.currentVersion();
+      if (mounted) setState(() => _version = version);
+      final info = await api.checkVersion();
+      if (mounted) setState(() => _info = info);
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -202,34 +230,58 @@ class _AppVersionTileState extends State<_AppVersionTile> {
     final versionText = _version == null ? '확인 중…' : 'v$_version';
     final info = _info;
     final hasUpdate = info != null && (info.updateAvailable || info.updateRequired);
+    final isLatest = info?.status == AppVersionStatus.latest;
+
+    // 탭 3분기. 최신일 때도 눌리게 두는 이유: 아무 반응 없는 행은 고장처럼 보인다.
+    final VoidCallback? onTap;
+    if (hasUpdate) {
+      onTap = () => openStorePage(context, info.storeUrl);
+    } else if (isLatest) {
+      // "이미 최신이에요" 처럼 쓰지 말 것 — 업데이트하러 눌렀다고 전제하는 말이라,
+      // 그냥 버전을 확인하러 누른 사람에게는 어긋난다. 상태만 담백하게 알린다.
+      onTap = () => _showSnack('최신 버전을 이용 중이에요.');
+    } else {
+      onTap = _checking ? null : _load; // 확인 실패 상태 → 다시 확인.
+    }
 
     String? statusLabel;
     Color statusColor = AppColors.inkMuted;
     if (hasUpdate) {
       statusLabel = '업데이트가 있어요';
       statusColor = AppColors.primary;
-    } else if (info?.status == AppVersionStatus.latest) {
+    } else if (isLatest) {
       statusLabel = '최신 버전이에요';
     }
-    // info 가 null(로딩 중)이거나 unknown(확인 실패)이면 상태 라벨 없이 버전만 노출.
+    // 확인 전이거나 unknown(확인 실패)이면 상태 라벨 없이 버전만 노출.
 
+    // 아이콘·버전을 **첫째 줄에** 맞추기 위해 ListTile 의 `leading`/`trailing` 슬롯을 쓰지 않는다.
+    // 그 슬롯들은 (titleAlignment 를 뭘로 주든) 두 줄 전체를 기준으로 배치돼 제목 줄과 어긋나고,
+    // 가운데 정렬이면 둘째 줄이 제목과 동등한 무게로 읽힌다 — 상태 라벨은 **부가 줄**이라 그러면 안 된다.
+    // 그래서 첫째 줄 요소를 전부 `title` 의 Row 하나에 담고, 가로 위치만 ListTile 기본값으로 재현한다.
     return ListTile(
-      leading: const Icon(Icons.info_outline),
-      title: const Text('앱 버전'),
-      subtitle: statusLabel == null
-          ? null
-          : Text(statusLabel, style: TextStyle(color: statusColor)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      title: Row(
         children: [
-          Text(versionText, style: const TextStyle(color: AppColors.inkSub)),
+          const Icon(Icons.info_outline, color: AppColors.inkSub), // = ListTile leading 색
+          const SizedBox(width: _leadingGap),
+          const Text('앱 버전'),
+          const Spacer(),
+          // 이 행의 주인공은 버전 숫자다 — 제목과 같은 크기로 두고 색만 낮춘다.
+          Text(versionText,
+              style: AppTypo.body.copyWith(color: AppColors.inkSub)),
           if (hasUpdate) ...[
             const SizedBox(width: 6),
             const Icon(Icons.chevron_right, color: AppColors.inkMuted),
           ],
         ],
       ),
-      onTap: hasUpdate ? () => openStorePage(context, info.storeUrl) : null,
+      subtitle: statusLabel == null
+          ? null
+          // 제목 글자 아래에 맞춰 들여쓴다 (아이콘 폭 + 간격).
+          : Padding(
+              padding: const EdgeInsets.only(left: _iconSize + _leadingGap),
+              child: Text(statusLabel, style: TextStyle(color: statusColor)),
+            ),
+      onTap: onTap,
     );
   }
 }
