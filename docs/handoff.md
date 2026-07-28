@@ -27,6 +27,7 @@
 - ✅ **브랜드 표기 `Tenk` → `TenK` 통일 (2026-07-28)** — 사용자 노출 문자열 전부(앱 문구 7곳 + Android/iOS 표시 이름 + 법적 문서 3종). 내부 식별자·도메인·**갤러리 앨범명은 유지**(앨범이 갈라짐). Play Console 스토어 등록명은 **이미 TenK 로 등록돼 있음**(2026-07-28 확인). 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포".
 - ✅ **탈퇴 사유 수집 (#14, 2026-07-28)** — 탈퇴를 화면으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블**(user_id 없음)이라 개인정보 수집표가 안 늘고 계정 파기 후에도 통계가 남는다. 곁가지로 잘못된 요청 body 가 500 이던 전역 갭을 400 으로 수정. 테스트 **183개** 통과 + **에뮬 E2E 검증 완료**. **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
 - ✅ **메뉴 '앱 버전' 행 로딩 제거 + #12·#14 잔여 갈래 종결 (2026-07-28)** — 로딩의 원인이 네트워크가 아니라 **부팅 때 이미 한 판정을 버리고 다시 묻던 것**이었다. `AppApi` 가 성공한 판정만 캐시하고 타일이 동기로 읽어 **정상 경로 네트워크 0회**. '탭하면 확인' 안은 기각(업데이트 안내는 push 여야 함). '내 정보' 스피너는 **정상으로 결론**, #14 잔여 2건은 **삭제**. `flutter analyze` clean + **에뮬 E2E 검증 완료**. 회의록 [decisions.md](decisions.md) "메뉴 앱 버전 행". **앱 전용이라 §0-DEPLOY 와 무관.**
+- ✅ **의견 보내기 + 문의 창구 (#2, 2026-07-28)** — 메뉴에 '의견 보내기' 신설(유형 4종 + 내용 + **회신 이메일 선택**). 저장은 **익명 테이블**(user_id 없음)이고 회신 이메일만 개인정보라 **1년 상한 배치**로 지운다. 곁가지로 **법적 고지에 '문의' 행(mailto)** 추가 — privacy 를 열어 스크롤해야 보이던 창구를 두 단계로 줄였다. 문의≠피드백 구분과 리서치 근거는 [decisions.md](decisions.md) "의견 보내기 회의"(문구 다듬기 2차 포함 — 칩→셀렉박스, 감사 인사는 인트로가 전담). 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
@@ -45,7 +46,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 183개 — 단위 127 + 통합 51 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **앱 버전 통합 테스트는 `app_config` 테이블 선적용 필요** (schema.sql CREATE+INSERT).
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 195개 — 단위 134 + 통합 56 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블 선적용 필요** (schema.sql 참고).
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -65,7 +66,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **183개**(단위 127 + 통합 51 + WebMvc 4 + 컨텍스트 1, 2026-07-28 실측). **전원 통과**. 통합 51 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4. 단위 127 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4. ⚠️ **`withdrawal_feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **195개**(단위 134 + 통합 56 + WebMvc 4 + 컨텍스트 1, 2026-07-28 실측). **전원 통과**. 통합 56 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 보내기 5. 단위 134 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 엔티티 7. ⚠️ **`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -128,6 +129,7 @@
 | #11 | 닉네임 제한 24시간화 | ❌ 없음 | ✅ |
 | #1 | 탈퇴 UX 재설계 (유예 1개월 + 철회/재가입 선택) | ❌ 없음 | ✅ (privacy.html·delete-account.html 문구 갱신 포함) |
 | #14 | 탈퇴 사유 수집 | ✅ **`withdrawal_feedback` CREATE** | ✅ |
+| #2 | 의견 보내기 + 문의 창구 | ✅ **`feedback` CREATE** | ✅ (privacy.html 수집표·보유기간 갱신 포함) |
 
 **1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
 
@@ -170,6 +172,21 @@ CREATE TABLE \`withdrawal_feedback\` (
   PRIMARY KEY (\`withdrawal_feedback_id\`)
 );
 "
+
+# (e) #2 의견 테이블 (익명 — user_id 없음. reply_email 만 개인정보이고 1년 상한 배치가 지운다)
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
+CREATE TABLE \`feedback\` (
+  \`feedback_id\` BIGINT AUTO_INCREMENT NOT NULL,
+  \`type\`        VARCHAR(20)           NOT NULL,
+  \`content\`     VARCHAR(1000)         NOT NULL,
+  \`reply_email\` VARCHAR(100)          NULL,
+  \`app_version\` VARCHAR(20)           NULL,
+  \`platform\`    VARCHAR(10)           NULL,
+  \`os_version\`  VARCHAR(100)          NULL,
+  \`created_dt\`  DATETIME              NOT NULL,
+  PRIMARY KEY (\`feedback_id\`)
+);
+"
 ```
 
 **3단계 — 이미지 재배포** (맥)
@@ -192,6 +209,10 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - [ ] `https://tenk.hjson248.com/delete-account.html` 에 철회·재가입 안내 + **1개월** 표기, 수집항목에 이메일 없음, 서비스명이 **TenK**
 - [ ] 앱 실행 시 런처 아이콘 이름·로그인 화면 로고가 **TenK** 로 보이는지 (표시 이름은 재설치/업데이트 후 반영)
 - [ ] `privacy.html` §3 보관 기간이 **1개월**, 목적이 "탈퇴 철회 대응"
+- [ ] 메뉴 → 의견 보내기 → 유형+내용만으로 전송 → `SELECT * FROM feedback;` 에 행 + `reply_email` NULL
+- [ ] 이메일까지 적어 전송 → 저장되고, 완료 안내가 "답변은 적어주신 이메일로" 로 바뀌는지
+- [ ] 법적 고지 → '문의' 탭 → 메일 앱이 열리는지 (없는 기기면 주소 복사 안내)
+- [ ] `https://tenk.hjson248.com/privacy.html` 수집표에 **'의견 보내기 (선택) — 답변받을 이메일'** 이 있는지
 - [ ] 탈퇴 화면에서 사유를 **안 고르고** 탈퇴 가능한지 + 사유를 고르면 `withdrawal_feedback` 에 행이 생기는지 (`SELECT * FROM withdrawal_feedback;`)
 
 **롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
@@ -218,7 +239,8 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 > 사용자가 한 번에 넘긴 미착수 목록. 각 항목은 착수 전 별도 설계/합의 필요 ([[feedback-plan-before-code-edit]]). 규모가 큰 건은 회의 안건으로 승격 ([[feedback-defer-decisions-to-dedicated-meeting]]).
 
 - ~~#1 탈퇴 철회 흐름~~ → ✅ 완료 (2026-07-27), **탈퇴 UX 전반 재설계로 확장**. 유예 1개월 + 복귀 시 **철회/재가입 선택**(U0007 → 선택 다이얼로그 → `/restore` 또는 `/rejoin`, 재가입은 2차 확인 후 옛 계정 즉시 파기). 판정은 계정 row 생존 하나뿐(배치 타이밍 사각지대 방지). 보관 목적을 "탈퇴 철회 대응"으로 바로잡고 privacy.html·delete-account.html 갱신, 탈퇴 확인 문구는 철회를 광고하지 않으면서 참인 문장으로. 테스트 **175개** 전원 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 회의록 [decisions.md](decisions.md) "탈퇴 UX 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 후 유예 기간". ⚠️ **백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
-- [ ] **#2 메뉴 항목 추가** — ✅ **이름·아이콘 확정 (2026-07-25): '메뉴' + `Icons.menu`** + ✅ **앱 버전 행 완료 (2026-07-26, #5·라이선스와 함께)** — 현재 버전(`v1.0.0`)+최신여부 표시, 업데이트 있으면 스토어로. 남은 것: **피드백 보내기** 항목 추가. (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
+- ~~#2 메뉴 항목 추가~~ → ✅ 완료 (2026-07-28). 이름·아이콘 확정('메뉴' + `Icons.menu`, 07-25) → 앱 버전 행(07-26) → **의견 보내기 + 문의 창구(07-28)** 로 마무리. 의견은 **익명 저장**(user_id 없음)이고 **회신 이메일을 적었는지가 '답변이 필요한가'의 유일한 스위치**다. 곁가지로 법적 고지에 **'문의' 행(mailto)** 을 넣어 고지한 창구를 앱 안에서 두 단계로 닿게 했다. 문의≠피드백 구분과 국내 사례 리서치는 [decisions.md](decisions.md) "의견 보내기 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "의견 보내기 (피드백)". 테스트 **195개** 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**(이메일 유/무 전송·형식 오류 차단·문의 mailto). ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
+  - (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
 - ~~#3 날짜·시간 선택 UI 정리~~ → ✅ 완료 (2026-07-27, 2단계). ① 로케일 `ko` 고정 + **시각 표기를 로케일 기반으로 통일**(24h 고정 `formatDateTime` 제거) + 공용 헬퍼 [common/date_time_picker.dart](../tenk_app/lib/presentation/common/date_time_picker.dart) ② **시각 picker 를 휠(드럼) 자체 위젯으로 교체**([wheel_time_picker.dart](../tenk_app/lib/presentation/common/wheel_time_picker.dart) — 무한 순환·직접 입력·오전/오후 자동 전환, **dial 제거**) + 기록 화면 일시를 `날짜 | 시간` **2칸**으로 분리([DateTimeFields](../tenk_app/lib/presentation/amount/widgets/date_time_fields.dart) 공유). 날짜 picker 는 Material 그대로. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter". **앱 전용 변경이라 백엔드 재배포와 무관**.
 - [ ] **#4 모달 → 화면 전환** — 카테고리 셀렉박스 / 성별 선택 팝업 / 닉네임 변경 팝업 등 다이얼로그를 별도 화면(push)으로 재구성. 연령·동의·닉네임을 이미 별도 화면으로 분리한 방향과 일관 ([../CLAUDE.md](../CLAUDE.md) 게이트 화면 분리 원칙). 대상: [spend_category.dart](../tenk_app/lib/presentation/amount/spend_category.dart) 드롭다운, [my_info_screen.dart](../tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`·성별 다이얼로그.
 - [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. **남은 것: 라이브 DB `app_config` CREATE+INSERT + 백엔드 재배포 — 다음 prod 배포 때 다른 항목과 함께 일괄 업로드 예정(아래 §0-DEPLOY).** iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
@@ -233,6 +255,7 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 
 - ~~#14 탈퇴 사유 피드백 수집~~ → ✅ 완료 (2026-07-28). 탈퇴를 **화면**([WithdrawScreen](../tenk_app/lib/presentation/profile/withdraw_screen.dart))으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블 `withdrawal_feedback`**(user_id 없음 → 개인정보 아님 → privacy 수집표 무변경 + 계정 파기 후에도 잔존). '기타' 선택 시에만 자유 서술(200자, 개인정보 미기재 안내). 곁가지로 **잘못된 요청 body 가 500 으로 나가던 전역 갭**을 400 으로 수정. 테스트 **183개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 사유". ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
   - **잔여 갈래 2건은 삭제 (2026-07-28)** — "잃는 것을 숫자로"·"탈퇴 전 영상 내보내기". 사유 화면 문구 규칙과 충돌하고 결국 탈퇴를 어렵게 만드는 방향이라 백로그에서 뺐다 ([decisions.md](decisions.md) "메뉴 앱 버전 행" 곁가지).
+- [ ] **#15 Flutter 상태 관리 재검토 (Scope 7개)** — `AuthScope`/`ChallengeScope`/`AmountScope`/`MediaScope`/`UserScope`/`AppScope`/`FeedbackScope` 로 [../CLAUDE.md](../CLAUDE.md) 의 "Scope 5개 초과 시 Riverpod/Provider 재검토" 임계를 두 개 넘겼다. 지금 당장 아픈 건 없고([main.dart](../tenk_app/lib/main.dart) 중첩이 깊어진 정도) 이관은 전 화면을 건드리는 큰 작업이라 미뤄뒀다. **착수 트리거**: 화면 간 공유 상태가 생기거나(현재는 화면별 로컬 상태뿐) Scope 가 또 늘 때. 그때 Riverpod 도입 vs 현행 유지를 회의 안건으로.
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
 > **업적(achievement) 시스템**은 우선순위를 최후로 내렸다 → 맨 아래 §5.

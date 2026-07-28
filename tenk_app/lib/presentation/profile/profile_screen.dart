@@ -5,6 +5,7 @@ import '../../data/api/api_error.dart';
 import '../../data/app/app_version.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
+import '../feedback/feedback_screen.dart';
 import '../legal/legal_notice_screen.dart';
 import '../update/update_gate.dart';
 import 'account_settings_screen.dart';
@@ -14,7 +15,8 @@ import 'my_info_screen.dart';
 ///
 /// - 내 정보 → [MyInfoScreen] (닉네임 / 성별)
 /// - 계정 설정 → [AccountSettingsScreen] (연동 계정 / 로그아웃 / 회원 탈퇴)
-/// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침)
+/// - 의견 보내기 → [FeedbackScreen] (익명 저장, 회신 이메일만 선택)
+/// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침 / 문의)
 /// - 테스트 데이터 재생성 (TESTER 권한 계정만)
 ///
 /// 화면 제목은 '메뉴'로 확정됐다 (2026-07-25). 이 허브는 설정(preference) 모음이 아니라
@@ -129,6 +131,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             MaterialPageRoute<void>(
               builder: (_) => AccountSettingsScreen(user: _user),
             ),
+          ),
+        ),
+        const Divider(height: 1),
+        // ── 의견 보내기 (하위 화면) ──
+        // 정적 문서(법적 고지)보다 위에 둔다 — 사용자가 능동적으로 하는 행동이라서.
+        ListTile(
+          leading: const Icon(Icons.chat_bubble_outline),
+          title: const Text('의견 보내기'),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const FeedbackScreen()),
           ),
         ),
         const Divider(height: 1),

@@ -4,6 +4,7 @@ import '../data/amount/amount_api.dart';
 import '../data/app/app_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
+import '../data/feedback/feedback_api.dart';
 import '../data/media/media_api.dart';
 import '../data/user/user_api.dart';
 
@@ -116,8 +117,8 @@ class UserScope extends InheritedWidget {
 /// 트리 어디서든 [AppApi](앱 버전 게이트)를 꺼내쓰기 위한 단순 InheritedWidget.
 /// SessionGate(부팅 강제/권장 업데이트)와 메뉴의 '앱 버전' 항목이 사용.
 ///
-/// ⚠️ 이걸로 Scope 가 6개 — CLAUDE.md 의 "5개 초과 시 Riverpod/Provider 재검토" 임계를 넘었다.
-/// 지금은 boilerplate 비용이 아직 이관을 정당화하지 못해 유지하되, 다음 도메인 추가 시 재검토할 것.
+/// ⚠️ Scope 가 5개를 넘긴 지점 — CLAUDE.md 의 "Riverpod/Provider 재검토" 임계다.
+/// 아래 [FeedbackScope] 까지 7개가 됐고, 상태 관리 이관은 별도 안건으로 handoff 에 남겼다.
 class AppScope extends InheritedWidget {
   const AppScope({
     super.key,
@@ -135,5 +136,26 @@ class AppScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(AppScope oldWidget) => api != oldWidget.api;
+}
+
+/// 트리 어디서든 [FeedbackApi]를 꺼내쓰기 위한 단순 InheritedWidget.
+/// 메뉴의 '의견 보내기' 화면이 사용.
+class FeedbackScope extends InheritedWidget {
+  const FeedbackScope({
+    super.key,
+    required this.api,
+    required super.child,
+  });
+
+  final FeedbackApi api;
+
+  static FeedbackApi of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<FeedbackScope>();
+    assert(scope != null, 'FeedbackScope not found in widget tree');
+    return scope!.api;
+  }
+
+  @override
+  bool updateShouldNotify(FeedbackScope oldWidget) => api != oldWidget.api;
 }
 

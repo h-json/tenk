@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../config/legal_config.dart';
 import '../../design/tokens.dart';
 import 'consent_section.dart';
+import 'support_contact.dart';
 
-/// '내 정보' → '법적 고지' 하위 화면. 이용약관·개인정보처리방침을 외부 브라우저로 연다(상시 접근).
+/// '내 정보' → '법적 고지' 하위 화면. 이용약관·개인정보처리방침을 외부 브라우저로 열고(상시 접근),
+/// 고지한 문의처 메일도 여기서 바로 열 수 있다.
 class LegalNoticeScreen extends StatelessWidget {
   const LegalNoticeScreen({super.key});
 
@@ -43,6 +45,18 @@ class LegalNoticeScreen extends StatelessWidget {
                 context: context,
                 applicationName: 'TenK',
               ),
+            ),
+            const Divider(height: 1),
+            // 문의 창구. 개인정보처리방침·이용약관에 고지한 주소를 앱 안에서도 바로 열 수 있게 둔다
+            // (개인정보 열람·정정·삭제 요구 접수 경로이기도 하다).
+            // 일반적인 의견은 메뉴의 '의견 보내기'로 받고, 여기는 답변이 필요한 문의용이다.
+            ListTile(
+              leading: const Icon(Icons.mail_outline),
+              title: const Text('문의'),
+              subtitle: const Text(supportEmail, style: AppTypo.caption),
+              trailing: const Icon(Icons.open_in_new,
+                  size: 18, color: AppColors.inkMuted),
+              onTap: () => openSupportEmail(context),
             ),
           ],
         ),

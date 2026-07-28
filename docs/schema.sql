@@ -12,11 +12,14 @@
 --                      + memo (NULL 허용, 영상 export 시 자막 디폴트 오버라이드 용도)
 --   refresh_token    : 신설 — JWT 모바일 인증의 RT 보관소
 --   app_config       : 신설 — 앱 최신/최소 지원 버전 + 스토어 URL (단일 행). 강제/권장 업데이트 게이트용
+--   feedback         : 신설 — 메뉴 '의견 보내기'. 익명(user_id 없음) + 회신용 이메일만 선택 개인정보
 -- ============================================================
 
 use `tenk`;
 
 -- 외래키 순서를 고려한 드롭
+DROP TABLE IF EXISTS `feedback`;
+DROP TABLE IF EXISTS `withdrawal_feedback`;  -- 둘 다 독립 테이블 (FK 없음)
 DROP TABLE IF EXISTS `app_config`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `challenge_badge`;
@@ -170,6 +173,25 @@ CREATE TABLE `withdrawal_feedback` (
     `detail`                 VARCHAR(200)          NULL,      -- '기타' 선택 시의 자유 서술
     `created_dt`             DATETIME              NOT NULL,
     PRIMARY KEY (`withdrawal_feedback_id`)
+);
+
+-- 앱에서 보낸 의견 (메뉴 → '의견 보내기'). withdrawal_feedback 과 같은 이유로 **user_id 를 두지 않는다**
+-- (익명정보 → 보관 기간 논쟁 없음, 계정 파기 배치의 삭제 대상 아님).
+-- 단 `reply_email` 은 예외적으로 개인정보다 — **선택 입력**이고 적은 사람에게 답장할 때만 쓴다.
+-- 이 컬럼 때문에 개인정보처리방침 수집표에 '회신용 이메일(선택)' 한 줄이 있다. 지우거나 필수로 바꾸면
+-- privacy.html 과 Play 데이터 안전 답안도 같이 손볼 것.
+-- 진단 정보(app_version/platform/os_version)는 틀려도 거부하지 않고 잘라 담는다.
+-- 라이브 DB 는 이 테이블을 CREATE 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩).
+CREATE TABLE `feedback` (
+    `feedback_id`  BIGINT AUTO_INCREMENT NOT NULL,
+    `type`         VARCHAR(20)           NOT NULL,  -- FeedbackType enum name
+    `content`      VARCHAR(1000)         NOT NULL,
+    `reply_email`  VARCHAR(100)          NULL,      -- 선택. 적은 경우에만 답변 대상
+    `app_version`  VARCHAR(20)           NULL,      -- 이하 진단용 (클라이언트가 함께 전송)
+    `platform`     VARCHAR(10)           NULL,      -- android / ios
+    `os_version`   VARCHAR(100)          NULL,
+    `created_dt`   DATETIME              NOT NULL,
+    PRIMARY KEY (`feedback_id`)
 );
 
 -- 앱 버전 정책 (단일 행). 강제/권장 업데이트 게이트가 이 값을 읽어 클라 버전과 비교한다.

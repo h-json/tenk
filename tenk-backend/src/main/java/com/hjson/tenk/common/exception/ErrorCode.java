@@ -51,6 +51,10 @@ public enum ErrorCode {
 
     BADGE_NOT_FOUND(HttpStatus.NOT_FOUND, "B0001", "배지를 찾을 수 없습니다."),
 
+    FEEDBACK_CONTENT_INVALID(HttpStatus.BAD_REQUEST, "F0001", "의견은 1~1000자로 써주세요."),
+    FEEDBACK_TYPE_INVALID(HttpStatus.BAD_REQUEST, "F0002", "의견 유형을 골라주세요."),
+    FEEDBACK_REPLY_EMAIL_INVALID(HttpStatus.BAD_REQUEST, "F0003", "이메일 형식이 올바르지 않아요."),
+
     TEST_ONLY_OPERATION(HttpStatus.FORBIDDEN, "T0001", "테스트 데이터 기능을 사용할 권한이 없는 계정입니다.");
 
     private final HttpStatus status;
