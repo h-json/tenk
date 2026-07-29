@@ -473,7 +473,9 @@ Lottie 자산: `tenk_app/assets/lottie/` — 현재 `confetti.json` (배지 축�
 - **`presentation/`에서 `data/api/*Api`를 직접 import 금지.** 항상 `Scope.of(context)`를 거쳐서만 접근. composition root(`main.dart`)에서 주입된 인스턴스만 화면이 본다.
 - **`data/`에서 `presentation/` import 금지.** 단방향 의존성.
 - **Repository 패턴은 강제하지 않음**: 하나의 도메인이 *여러 출처*(예: 외부 SDK + 백엔드 + storage)를 합쳐야 할 때만 `*_repository.dart`를 만든다. 단일 백엔드 호출만 하는 도메인은 `*_api.dart`만으로 충분. (예: [auth_repository.dart](tenk_app/lib/data/auth/auth_repository.dart)는 카카오 SDK + AuthApi + TokenStorage 3개를 합치므로 가치 있음. challenge는 아직 api만으로 충분.)
-- **Scope는 도메인별로 하나씩** `app/scopes.dart`에 추가. Scope 개수가 5개를 넘기는 시점에 Riverpod/Provider 도입을 재검토 (지금은 boilerplate가 그만한 비용을 정당화하지 못함).
+- **Scope는 도메인별로 하나씩** `app/scopes.dart`에 추가. 개수 임계는 **10개** — 넘으면 Riverpod/Provider 도입을 재검토한다 (2026-07-29 회의에서 5→10 상향).
+  - **단 개수는 보조 지표일 뿐이고, 진짜 착수 트리거는 "화면 간 공유 상태가 생길 때"다.** Scope 에 담기는 건 앱 생애 내내 값이 안 바뀌는 **stateless API 객체**뿐이라 `updateShouldNotify` 가 사실상 항상 false — 개수가 늘어도 리빌드·정합성 비용이 0 이다. 실제 비용은 [main.dart](tenk_app/lib/main.dart) 의 중첩 한 겹 + 조립 보일러플레이트(생성·필드·중첩 3곳)뿐. **공유 상태가 없는 한 개수만 보고 도입하지 말 것** — 상태 관리 라이브러리를 DI 용도로만 끌고 오는 건 과설계다.
+  - 상태는 화면별 로컬(`AsyncStateMixin`)로 들고, 화면 간에는 명시적으로 넘긴다(예: 메뉴 → 계정 설정에 `User` 전달). 이 방식이 깨지는 순간(예: 배지 알림을 여러 진입점에서 띄우려고 global notifier 로 승격)이 곧 재검토 시점. 근거는 [decisions.md](docs/decisions.md) "Flutter 상태 관리 재검토".
 - **새 화면 코드가 `import '../../main.dart'` 하면 잘못된 방향.** Scope·SessionGate·navigatorKey는 모두 `app/`에 있다.
 
 ## 코딩 컨벤션 — 백엔드

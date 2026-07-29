@@ -11,7 +11,10 @@ import '../data/user/user_api.dart';
 /// 트리 어디서든 [AuthRepository]를 꺼내쓰기 위한 단순 InheritedWidget.
 ///
 /// 도메인이 늘어나면 같은 패턴으로 `XxxScope`를 추가한다. Riverpod/Provider 도입은
-/// Scope가 5개를 넘어가는 시점에 재검토 (지금은 boilerplate가 그만한 비용을 정당화하지 못함).
+/// Scope가 10개를 넘어가는 시점에 재검토하되, **진짜 트리거는 화면 간 공유 상태**다 —
+/// 여기 담기는 건 값이 안 바뀌는 stateless API 객체뿐이라(updateShouldNotify 가 사실상
+/// 항상 false) 개수 자체는 비용이 아니다. 근거는 CLAUDE.md "레이어 규칙" +
+/// docs/decisions.md "Flutter 상태 관리 재검토".
 class AuthScope extends InheritedWidget {
   const AuthScope({
     super.key,
@@ -116,9 +119,6 @@ class UserScope extends InheritedWidget {
 
 /// 트리 어디서든 [AppApi](앱 버전 게이트)를 꺼내쓰기 위한 단순 InheritedWidget.
 /// SessionGate(부팅 강제/권장 업데이트)와 메뉴의 '앱 버전' 항목이 사용.
-///
-/// ⚠️ Scope 가 5개를 넘긴 지점 — CLAUDE.md 의 "Riverpod/Provider 재검토" 임계다.
-/// 아래 [FeedbackScope] 까지 7개가 됐고, 상태 관리 이관은 별도 안건으로 handoff 에 남겼다.
 class AppScope extends InheritedWidget {
   const AppScope({
     super.key,
