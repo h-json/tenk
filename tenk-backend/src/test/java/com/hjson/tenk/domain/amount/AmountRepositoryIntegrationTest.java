@@ -172,8 +172,10 @@ class AmountRepositoryIntegrationTest extends IntegrationTestBase {
     private void insertAmount(Long challengeId, LocalDateTime spentDt) {
         tx.executeWithoutResult(status ->
                 em.createNativeQuery(
+                                // category 는 반드시 SpendCategory 코드여야 한다 — 네이티브 INSERT 라
+                                // 엔티티 검증을 우회하는데, 읽을 때 @Enumerated(STRING) 매핑이 깨진다.
                                 "INSERT INTO amount (challenge_id, category, content, amount, is_no_spend, spent_dt, created_dt) "
-                                        + "VALUES (?1, 'x', 'x', 1, 0, ?2, NOW())")
+                                        + "VALUES (?1, 'FOOD', 'x', 1, 0, ?2, NOW())")
                         .setParameter(1, challengeId)
                         .setParameter(2, spentDt)
                         .executeUpdate());

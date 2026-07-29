@@ -101,7 +101,20 @@ CREATE TABLE `challenge` (
 CREATE TABLE `amount` (
     `amount_id`         BIGINT AUTO_INCREMENT                            NOT NULL,
     `challenge_id`      BIGINT                                           NOT NULL,
-    `category`          VARCHAR(255)                                     NULL,
+    -- SpendCategory enum name (고정 9종). 무지출이면 NULL.
+    -- 2026-07-30: 엔티티가 String → @Enumerated(STRING) 로 바뀌면서 폭도 255 → 20 으로 줄였다.
+    -- ⚠️ 라이브 DB 는 아래를 **이미지 재배포 전에** 적용할 것 — enum 에 없는 값이 남아 있으면
+    --    그 row 조회가 예외로 죽는다 (Gender.OTHER 와 같은 함정).
+    --   -- (a) 무엇을 접게 되는지 먼저 남겨둘 것:
+    --   SELECT `category`, COUNT(*) FROM `amount` WHERE `is_no_spend`=0 GROUP BY `category`;
+    --   -- (b) 카테고리 검증(2026-07-11) 이전에 저장된 자유 텍스트를 ETC 로 접는다.
+    --   --     클라이언트가 이미 미매칭 코드를 '기타'로 폴백해 그리고 있어 화면상 변화는 없다.
+    --   UPDATE `amount` SET `category`='ETC'
+    --    WHERE `is_no_spend`=0 AND `category` IS NOT NULL
+    --      AND `category` NOT IN ('FOOD','TRANSPORT','SHOPPING','LEISURE',
+    --                             'HEALTH','EDUCATION','EVENT','LIVING','ETC');
+    --   ALTER TABLE `amount` MODIFY COLUMN `category` VARCHAR(20) NULL;
+    `category`          VARCHAR(20)                                      NULL,
     `content`           VARCHAR(255)                                     NULL,
     `amount`            INT                                              NOT NULL,
     `is_no_spend`       TINYINT(1)    DEFAULT 0                          NOT NULL,

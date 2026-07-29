@@ -5,11 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
+import com.hjson.tenk.domain.amount.dto.AmountResponse;
 import com.hjson.tenk.domain.challenge.Challenge;
 import com.hjson.tenk.domain.user.AuthProvider;
 import com.hjson.tenk.domain.user.User;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AmountTest {
@@ -83,12 +85,24 @@ class AmountTest {
         Challenge c = fiveDayChallenge();
         LocalDateTime when = c.getStartDate().atTime(9, 30);
         Amount a = Amount.spend(c, "FOOD", "lunch", 5_000, "회식 핑계", when);
-        assertThat(a.getCategory()).isEqualTo("FOOD");
+        assertThat(a.getCategory()).isEqualTo(SpendCategory.FOOD);
         assertThat(a.getContent()).isEqualTo("lunch");
         assertThat(a.getAmount()).isEqualTo(5_000);
         assertThat(a.isNoSpend()).isFalse();
         assertThat(a.getMemo()).isEqualTo("회식 핑계");
         assertThat(a.getSpentDt()).isEqualTo(when);
+    }
+
+    /// 엔티티 필드는 enum 이지만 **응답은 코드 문자열**이어야 한다 — Flutter 가 코드를 받아 라벨·아이콘으로
+    /// 매핑하는 계약이라, 여기가 깨지면 앱의 카테고리 표시가 통째로 '기타' 폴백으로 무너진다.
+    @Test
+    void response_emits_category_as_code_string() {
+        Challenge c = fiveDayChallenge();
+        Amount spend = Amount.spend(c, "FOOD", "lunch", 5_000, null, c.getStartDate().atTime(9, 0));
+        assertThat(AmountResponse.of(spend, List.of()).category()).isEqualTo("FOOD");
+
+        Amount noSpend = Amount.noSpend(c, null, c.getStartDate().atTime(20, 0));
+        assertThat(AmountResponse.of(noSpend, List.of()).category()).isNull();
     }
 
     @Test

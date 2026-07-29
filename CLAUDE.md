@@ -68,7 +68,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **195개** (2026-07-28 실측): 단위 134 (기존 116 + 탈퇴 복귀(철회·재가입) 7 + 탈퇴 사유 4 + **의견 엔티티 7**) + `@SpringBootTest` 통합 56 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2 + devtools 시딩 3 + 필수 동의·선택 수집 E2E 5 + 탈퇴 계정 파기 5 + 연령 확인 E2E 6 + 앱 버전 게이트 E2E 4 + 탈퇴 복귀 E2E 7 + 탈퇴 사유 E2E 4 + **의견 보내기 E2E 5**) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. **전원 통과**(2026-07-27 기준). ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 app_config CREATE+INSERT 선적용 필요. (테스트 로그인 제거로 devtools 5→3 / 동의 6→5 / 연령 7→6, 총 151→147.) `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **200개** (2026-07-30 실측): 단위 139 (기존 116 + 탈퇴 복귀(철회·재가입) 7 + 탈퇴 사유 4 + 의견 엔티티 7 + **지출 카테고리 enum 5**) + `@SpringBootTest` 통합 56 (배지 이벤트 8 + 배치 2 + Amount 쿼리 경계 5 + Media JOIN FETCH 2 + devtools 시딩 3 + 필수 동의·선택 수집 E2E 5 + 탈퇴 계정 파기 5 + 연령 확인 E2E 6 + 앱 버전 게이트 E2E 4 + 탈퇴 복귀 E2E 7 + 탈퇴 사유 E2E 4 + **의견 보내기 E2E 5**) + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. **전원 통과**(2026-07-27 기준). ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 app_config CREATE+INSERT 선적용 필요. (테스트 로그인 제거로 devtools 5→3 / 동의 6→5 / 연령 7→6, 총 151→147.) `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
@@ -199,9 +199,13 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 - **지출 기록**: `category`, `content` NOT BLANK, `amount > 0`, **영상 선택**. `spent_dt`는 클라이언트가 챌린지 기간 안의 임의 일시를 보낼 수 있다.
 - **카테고리(`category`)**: **고정 9종 중 택1** (자유 텍스트 아님). "만원 챌린지 = 가볍고 잦은 소비" 주제에 맞춘 목록. `amount.category` 컬럼(VARCHAR)에는 **안정적인 코드**(`FOOD` 등 enum name)를 저장하고, **표시는 한글 라벨·Material 벡터 아이콘**으로 클라가 매핑한다 (라벨을 바꿔도 DB 마이그레이션 불필요). 아이콘은 색이 박히지 않은 `IconData` — 렌더 시점에 테마 색으로 칠하므로 추후 챌린지별 색 부여에도 자유롭게 대응.
   - 9종: `FOOD` 식비 / `TRANSPORT` 교통비 / `SHOPPING` 쇼핑 / `LEISURE` 여가 / `HEALTH` 건강 / `EDUCATION` 교육 / `EVENT` 경조사 / `LIVING` 생활비 / `ETC` 기타.
-  - **진실의 원천 = 서버 enum** [SpendCategory](tenk-backend/src/main/java/com/hjson/tenk/domain/amount/SpendCategory.java) (코드+한글 label). `Amount.spend()/update()` 지출 분기가 `requireValidCode` 로 검증 → 9종 밖이면 `AMOUNT_CATEGORY_INVALID`(A0008). **엔티티 컬럼은 `@Enumerated` 가 아니라 String** — 검증 도입 이전에 저장된 자유 텍스트 row 를 읽을 때 enum 매핑 크래시가 안 나게(쓰기는 엄격, 읽기는 관대). 그래서 **schema.sql 변경 불필요**.
+  - **진실의 원천 = 서버 enum** [SpendCategory](tenk-backend/src/main/java/com/hjson/tenk/domain/amount/SpendCategory.java) (코드+한글 label). 엔티티 필드는 **`SpendCategory` + `@Enumerated(EnumType.STRING)`**(컬럼 `VARCHAR(20)`, 2026-07-30 전환 — 그 전엔 raw String 이었다).
+    - **외부 입력(String) → enum 변환은 `SpendCategory.from(String)` 한 곳에서만** 하고, 호출은 **엔티티 정적 팩토리 안**(`Amount.spend()`/`update()` 의 지출 분기)에서만 한다. 9종 밖이면 `AMOUNT_CATEGORY_INVALID`(A0008).
+    - ⚠️ **`from` 은 null·공백에 예외를 던지지 않고 null 을 돌려준다 — 이 계약을 깨지 말 것.** "카테고리를 안 보냄"은 `AMOUNT_CATEGORY_CONTENT_REQUIRED`(A0005)이고 "이상한 값을 보냄"이 A0008 이라, 미입력 판정은 호출자(엔티티)가 먼저 한다. `from` 이 공백에 던지면 두 에러가 하나로 뭉개진다. 회귀 가드는 [SpendCategoryTest](tenk-backend/src/test/java/com/hjson/tenk/domain/amount/SpendCategoryTest.java).
+    - **요청/응답 DTO 필드는 계속 `String`** — 요청은 Jackson 이 먼저 파싱에 실패하면 A0008(한국어 메시지) 대신 범용 400 이 나가고, 응답은 클라가 코드를 받아 라벨·아이콘으로 매핑하는 계약이라 wire format 을 유지해야 한다. `AmountResponse` 는 `.name()` 으로 내보낸다. 회귀 가드는 `AmountTest.response_emits_category_as_code_string`.
+    - **네이티브 SQL 로 amount 를 넣는 테스트 헬퍼는 반드시 유효 코드를 쓸 것** — 엔티티 검증을 우회하므로 `'x'` 같은 값을 넣으면 *읽을 때* enum 매핑이 깨진다 (실제로 통합 테스트 5건이 이 이유로 깨졌다).
   - 클라 매핑은 [spend_category.dart](tenk_app/lib/presentation/amount/spend_category.dart) `kSpendCategories` (code/label/icon) + `spendCategoryForCode()`(미매칭→기타 폴백)가 진실의 원천. 입력은 기록/수정 화면의 **`DropdownButtonFormField` 셀렉박스**(항목마다 아이콘+라벨, value=code. 폼 필드라 validator 로 미선택 검증), 표시는 상세 타일 leading 아이콘·타이틀 라벨 + export 목록 라벨. **카테고리 목록을 바꾸면 서버 enum + 클라 `kSpendCategories` 를 같은 코드로 동시 갱신** (아이콘도 함께). export JSON 통계의 `CategorySummary.category` 는 코드 그대로(외부 연동 안정 키).
-  - **마이그레이션 주의**: 검증 이전 자유 텍스트 카테고리(예: "카페")로 저장된 기록은 표시상 '기타' 아이콘으로 폴백되고, 수정 저장 시 9종 중 재선택이 강제된다. `/dev/seed` 재시딩하면 전부 정상.
+  - **마이그레이션 주의**: 검증 도입(2026-07-11) 이전의 자유 텍스트 카테고리(예: "카페")는 **enum 전환과 함께 `ETC` 로 접었다** — 클라가 이미 미매칭 코드를 '기타'로 폴백해 그리고 있어 화면상 변화는 없다. 라이브 반영은 **`UPDATE` 먼저, 이미지 재배포 나중**([schema.sql](docs/schema.sql) `amount.category` 주석에 SQL 이 그대로 있음). 순서를 뒤집으면 `Gender.OTHER` 때와 같은 함정 — 남은 값이 있는 row 조회가 예외로 죽는다.
 - **메모(`memo`, VARCHAR 500, NULL 허용)**: 지출/무지출 양쪽 모두 선택 입력. 사용자가 그 기록에 남기는 자유 텍스트. **UI 노출 라벨은 "한 줄 평"** (필드명·코드·이 문서의 도메인 규칙은 `memo` 로 유지 — 라벨만 사용자용). **빈 문자열/공백은 엔티티에서 null 로 정규화** (DTO 분기를 깔끔하게). 용도는 영상 export 자막 디폴트 오버라이드 — 메모 있으면 그 값, 없으면 지출="내용 금액원" / 무지출="무지출" 폴백.
 - **무지출 기록**: `is_no_spend = true`, `amount = 0`, `category/content` NULL 허용, **영상 선택**. **제약 (도메인 정합성)**:
   - **일시 입력 불가** — 클라이언트가 보낸 `dateTime`은 서비스에서 무시되고 서버가 `LocalDateTime.now()`(분초까지)를 박는다. "오늘 하루 지출이 없다"는 행위만 의미 있으므로 과거/미래 무지출은 성립하지 않는다.
@@ -483,6 +487,11 @@ Lottie 자산: `tenk_app/assets/lottie/` — 현재 `confetti.json` (배지 축�
 - **컨트롤러는 얇게**, 비즈니스 로직은 서비스에. 엔티티는 정적 팩토리 메서드로 생성하고 invariant 검증.
 - **에러는 `BusinessException(ErrorCode.XXX)`로 던지기.** 새 케이스는 `ErrorCode` enum에 추가. 메시지는 한국어.
 - **DTO는 record로**. 요청 DTO는 Bean Validation 어노테이션 사용.
+- **코드성 컬럼은 `VARCHAR` + `@Enumerated(EnumType.STRING)` 로 통일한다** (2026-07-30 확정, 8개 전부 적용됨).
+  - **MariaDB 네이티브 `ENUM(...)` 을 쓰지 말 것.** 상수 목록이 코드와 DB 두 곳에 생겨 어긋나고(`AuthProvider.TEST` 가 실제로 그랬다), 값을 추가·삭제할 때마다 `ALTER TABLE` 이 필요해진다 — `VARCHAR` 면 `UPDATE` 한 줄로 끝난다(`Gender.OTHER` 제거가 그 사례). 정렬이 사전순이 아니라 선언 순서인 점, 정수와 비교하면 인덱스로 해석되는 점도 함정이다. 근거는 [decisions.md](docs/decisions.md) "DB 코드성 컬럼 정리".
+  - **`@Enumerated(EnumType.ORDINAL)` 은 절대 쓰지 말 것** — 상수 순서만 바꿔도 과거 데이터의 의미가 통째로 뒤집힌다. 현재 한 곳도 없다.
+  - ⚠️ **enum 상수를 지우거나 이름을 바꿀 땐 DB 정리가 한 쌍이다** — `UPDATE <table> SET <col>=NULL(또는 대체값) WHERE <col>='<지운 값>';` 을 **이미지 재배포 전에** 칠 것. enum 에 없는 문자열이 남아 있으면 그 row 조회가 예외로 죽는다.
+  - **룩업 테이블(FK)은 "코드 말고 그 값에 딸린 다른 정보가 있을 때"만.** 해당하는 건 `badge`(조건값·아이콘 경로) 하나이고 이미 그렇게 돼 있다. 코드가 전부인 값에 테이블을 만들면 컬럼 하나짜리 테이블이 된다 — 과설계.
 - **트랜잭션**: 서비스 클래스는 기본 `@Transactional(readOnly = true)`, 쓰기 메서드만 `@Transactional`.
 - **사용자 ID 주입**: 컨트롤러 파라미터에 `@CurrentUserId Long userId` 사용. (내부적으로 `@AuthenticationPrincipal(expression="userId")`)
 - **댓글은 최소화.** "왜"가 비자명할 때만 작성. JavaDoc은 정책 문서 역할일 때만 (예: `BadgeGrantService` 상단).

@@ -32,7 +32,9 @@
 - ✅ **성별 회의 (#16, 2026-07-29)** — "수정할 수 있게 두면 무의미한 데이터가 쌓이나"에 대해 **현행 유지** 결론. 노이즈는 편집이 아니라 최초 입력에서 들어오고, 편집 차단은 오탭을 영구 고착시켜 오히려 나빠진다. 법상 정정·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 회의록 [decisions.md](decisions.md) "성별 수집·변경".
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ✅ **Flutter 상태 관리 재검토 (#15, 2026-07-29)** — Scope 7개로 자체 임계(5개)를 넘긴 건 사실이나, **Scope 에 든 게 전부 stateless API 객체라 지금 있는 건 상태 관리가 아니라 DI** 였다. **현행 유지 + 임계 5→10 상향 + "진짜 트리거는 화면 간 공유 상태" 명문화**로 종결(코드 변경은 주석 2곳). 회의록 [decisions.md](decisions.md) "Flutter 상태 관리 재검토".
+- ✅ **DB 코드성 컬럼 정리 (#9, 2026-07-30)** — 조사해보니 **두 축**이 따로 어긋나 있었다: ⓐ DB 자료형(네이티브 `ENUM` 3개 vs `VARCHAR` 5개 — 시간순 흔적) ⓑ Java 매핑(`amount.category` 만 raw String). **둘 다 정리** — ⓐ `VARCHAR` 통일(Java 변경 0), ⓑ `@Enumerated(STRING)` 전환 + 레거시 → `ETC` (DTO 는 String 유지라 **Flutter 변경 0**). 룩업 테이블은 기준상 `badge` 하나뿐이고 이미 그래서 도입 안 함. 테스트 **200개** 통과. 회의록 [decisions.md](decisions.md) "DB 코드성 컬럼 정리". ⚠️ **라이브 DB `ALTER`+`UPDATE` + 재배포 대기** — §0-DEPLOY.
 - ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / **#6 로고·앱 아이콘** / #7 예외처리 전수 점검 / #8 배지 획득 효과 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+  - **§0-DEPLOY 가 9건으로 늘었다** — 밀릴수록 한 번에 치는 SQL 이 많아져 위험하니 이쪽을 먼저 비우는 걸 권함.
 
 ---
 
@@ -49,7 +51,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 195개 — 단위 134 + 통합 56 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블 선적용 필요** (schema.sql 참고).
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 200개 — 단위 139 + 통합 56 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블 선적용 필요** (schema.sql 참고).
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -69,7 +71,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **195개**(단위 134 + 통합 56 + WebMvc 4 + 컨텍스트 1, 2026-07-28 실측). **전원 통과**. 통합 56 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 보내기 5. 단위 134 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 엔티티 7. ⚠️ **`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **200개**(단위 139 + 통합 56 + WebMvc 4 + 컨텍스트 1, 2026-07-30 실측). **전원 통과**. 통합 56 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 보내기 5. 단위 139 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 엔티티 7 + 지출 카테고리 enum 5(`SpendCategoryTest` 4 + `AmountTest` wire format 1). ⚠️ **`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -118,12 +120,13 @@
 
 ---
 
-#### 🚀 운영 배포 런북 (§0-DEPLOY) — 2026-07-26 묶음, 미실행
+#### 🚀 운영 배포 런북 (§0-DEPLOY) — 2026-07-30 기준 묶음, 미실행
 
 > 맥(서버)에서 실행. 배포 구조·명령의 원본은 [docker-deployment.md](docker-deployment.md) §5.1(업데이트 사이클) / §5.5(라이브 DB 스키마 변경).
-> **이 묶음은 스키마 변경 3건을 포함**하므로 `ddl-auto=validate` 특성상 **SQL 먼저, 이미지 나중**이 절대 원칙이다. 순서를 뒤집으면 백엔드가 부팅 실패한다.
+> **이 묶음은 스키마 변경을 여러 건 포함**하므로 `ddl-auto=validate` 특성상 **SQL 먼저, 이미지 나중**이 절대 원칙이다. 순서를 뒤집으면 백엔드가 부팅 실패하거나(스키마 불일치), 데이터 정리(f·h)를 빼먹으면 **enum 에 없는 값이 남은 row 조회가 예외로 죽는다**.
+> 예외는 **(g) 자료형 통일 하나뿐** — 코드 배포와 순서 커플링이 없어 언제 쳐도 된다.
 
-**들어 있는 것 (3건)**
+**들어 있는 것 (9건)**
 
 | # | 내용 | DB 작업 | 이미지 재배포 |
 |---|---|---|---|
@@ -134,6 +137,8 @@
 | #14 | 탈퇴 사유 수집 | ✅ **`withdrawal_feedback` CREATE** | ✅ |
 | #2 | 의견 보내기 + 문의 창구 | ✅ **`feedback` CREATE** | ✅ (privacy.html 수집표·보유기간 갱신 포함) |
 | #4 | 모달 전환 (곁가지로 성별 `OTHER` 제거) | ✅ **`user.gender` 의 `OTHER` → NULL** | ✅ (enum 변경이라 앱 전용이 아님) |
+| #9 ⓐ | 코드성 컬럼 자료형 통일 | ✅ **네이티브 `ENUM` 3개 → `VARCHAR`** (순서 무관 — 아래 참고) | ❌ 불필요 (Java 코드 변경 0) |
+| #9 ⓑ | `amount.category` enum 전환 | ✅ **레거시 → `ETC` + `VARCHAR(20)`** | ✅ |
 
 **1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
 
@@ -197,6 +202,30 @@ CREATE TABLE \`feedback\` (
 #     그 유저 조회가 예외로 죽는다(로그인 직후 /api/users/me 부터 깨진다).
 docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
   -e "UPDATE \`user\` SET \`gender\`=NULL WHERE \`gender\`='OTHER';"
+
+# (g) #9-ⓐ 코드성 컬럼 자료형 통일 — 네이티브 ENUM 3개를 VARCHAR 로.
+#     ⚠️ 이 셋만은 **이미지 재배포와 순서 커플링이 없다** — @Enumerated(STRING) 은 ENUM/VARCHAR
+#     양쪽 다 validate 를 통과하므로 언제 쳐도 되고 되돌리기도 싸다. (다른 SQL 과 성격이 다름)
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
+ALTER TABLE \`user\`      MODIFY COLUMN \`provider\` VARCHAR(20) NOT NULL;
+ALTER TABLE \`challenge\` MODIFY COLUMN \`result\`   VARCHAR(20) NULL;
+ALTER TABLE \`badge\`     MODIFY COLUMN \`type\`     VARCHAR(30) NOT NULL;
+"
+
+# (h) #9-ⓑ amount.category 가 enum 이 됐다 → 9종 밖의 레거시 자유 텍스트를 ETC 로 접는다.
+#     ⚠️ (f) 와 같은 함정 — **이미지 재배포 '전에'** 칠 것. enum 에 없는 값이 남아 있으면 그 기록
+#     조회가 예외로 죽는다. 클라는 이미 미매칭 코드를 '기타'로 폴백해 그리므로 화면상 변화는 없다.
+#     먼저 무엇을 접게 되는지 기록으로 남길 것:
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
+  -e "SELECT \`category\`, COUNT(*) FROM \`amount\` WHERE \`is_no_spend\`=0 GROUP BY \`category\`;"
+
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
+UPDATE \`amount\` SET \`category\`='ETC'
+ WHERE \`is_no_spend\`=0 AND \`category\` IS NOT NULL
+   AND \`category\` NOT IN ('FOOD','TRANSPORT','SHOPPING','LEISURE',
+                          'HEALTH','EDUCATION','EVENT','LIVING','ETC');
+ALTER TABLE \`amount\` MODIFY COLUMN \`category\` VARCHAR(20) NULL;
+"
 ```
 
 **3단계 — 이미지 재배포** (맥)
@@ -225,6 +254,9 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - [ ] `https://tenk.hjson248.com/privacy.html` 수집표에 **'의견 보내기 (선택) — 답변받을 이메일'** 이 있는지
 - [ ] 탈퇴 화면에서 사유를 **안 고르고** 탈퇴 가능한지 + 사유를 고르면 `withdrawal_feedback` 에 행이 생기는지 (`SELECT * FROM withdrawal_feedback;`)
 - [ ] 메뉴 → 내 정보 → **성별**이 화면으로 열리고 3칸 토글(남성/입력 안 함/여성)로 저장·되돌리기가 되는지 + `SELECT gender, COUNT(*) FROM user GROUP BY gender;` 에 **`OTHER` 가 없는지**
+- [ ] 자료형 통일 확인 — `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='tenk' AND COLUMN_NAME IN ('provider','result','type','gender','role','reason_code','category');` 에 **`enum(...)` 이 하나도 없는지** (전부 varchar)
+- [ ] 지출 기록 → 카테고리 9종 중 하나 선택 후 저장 → 상세 목록에 **아이콘·라벨이 정상**(전부 '기타'로 폴백되면 응답의 category 가 코드가 아니게 된 것) + `SELECT DISTINCT category FROM amount;` 가 9종 코드뿐인지
+- [ ] 챌린지 확정 후 `GET /api/challenges/{id}/export` 의 `categorySummary[].category` 가 **코드**(`FOOD`)인지 (라벨 `식비` 로 바뀌면 외부 연동 키가 깨진 것)
 
 **롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
 
@@ -258,7 +290,12 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
 - [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
-- [ ] **#9 DB 컬럼 enum 전환 검토** — 문자열로 저장 중인 코드성 컬럼을 `@Enumerated`/enum 으로 정리. 특히 `amount.category` 는 현재 **의도적으로 String** (검증 이전 자유 텍스트 row 읽기 호환 — [../CLAUDE.md](../CLAUDE.md) 지출 카테고리 규칙). 전환하려면 레거시 자유 텍스트 데이터 마이그레이션(재시딩/백필)이 선행돼야 함. 착수 전 대상 컬럼 목록화 + 마이그레이션 전략부터.
+- ~~#9 DB 컬럼 enum 전환 검토~~ → ✅ 완료 (2026-07-30). 목록화를 해보니 **두 개의 다른 축**이 각각 어긋나 있었고 백로그 문구는 하나만 가리키고 있었다 — ⓐ **DB 자료형**: `user.provider`·`challenge.result`·`badge.type` 만 네이티브 `ENUM`, 나머지 5개는 `VARCHAR`(설계가 아니라 시간순 흔적) ⓑ **Java 매핑**: 8개 중 7개가 이미 `@Enumerated(STRING)`, `amount.category` 만 raw String. **둘 다 실행했다.**
+  - ⓐ **네이티브 `ENUM` 3개 → `VARCHAR`** (Java 코드 변경 0). 상수 목록이 코드와 DB 두 곳에 생겨 어긋나고(`AuthProvider.TEST` 가 그 상태였다) 값 변경마다 `ALTER` 가 붙는다 — `Gender.OTHER` 제거가 `UPDATE` 한 줄로 끝난 게 바로 전날 사례.
+  - ⓑ **`amount.category` → `SpendCategory` + `@Enumerated(STRING)`**, 컬럼도 `VARCHAR(255)→(20)`. "읽기는 관대" 의 근거(검증 이전 자유 텍스트)가 유효기간이 지났다. **변환은 `SpendCategory.from()` 한 곳, 호출은 엔티티 정적 팩토리 안에서만** — 서비스로 올리면 에러 코드가 뭉개지고(A0005 vs A0008) 무지출의 "카테고리 무시" 규칙이 깨진다. **DTO 는 `String` 유지라 wire format 무변경 → Flutter 변경 0.**
+  - **룩업 테이블은 도입 안 함** — 기준("코드 말고 딸린 정보가 있나")에 맞는 건 `badge` 하나뿐이고 이미 그렇다.
+  - 곁가지로 **네이티브 SQL 로 `'x'` 를 박던 테스트 헬퍼 2곳**을 찾아 고쳤다(엔티티 검증 우회 → 읽을 때 죽음). enum 전환이 실제로 잡아낸 문제.
+  - 테스트 **200개** 전원 통과(신규 5 — `SpendCategoryTest` 4 + wire format 가드 1). 회의록은 [decisions.md](decisions.md) "DB 코드성 컬럼 정리", 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — 백엔드". ⚠️ **라이브 DB `ALTER`+`UPDATE` + 재배포 대기** — §0-DEPLOY.
 - ~~#10 email NULL 원인 분석~~ → ✅ 완료 (2026-07-26). 원인 = 카카오 '카카오계정(이메일)' 동의항목이 **개인 개발자 일반 앱에선 '권한 없음'**(콘솔 확인). 코드 버그 아님. **수집을 접기로 결정** — 컬럼까지 삭제. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증".
 - ~~#11 닉네임 변경 안내 날짜 텍스트 삭제~~ → ✅ 완료 (2026-07-26). 제한 규칙까지 실제 24시간으로 통일. 상세는 [handoff-archive.md](handoff-archive.md), 문구 근거는 [decisions.md](decisions.md) "닉네임 쿨다운 안내 문구".
 - ~~#12 메뉴 진입 시 매번 로딩 대기 UX 개선~~ → ✅ **완결 (2026-07-26 본체 + 2026-07-28 잔여 갈래 종결)**. 본체: 메뉴를 **낙관적 렌더**로 전환(`/me` 안 기다림, 실패해도 내비게이션 안 막음). 잔여 갈래 2건은 회의로 닫음 ([decisions.md](decisions.md) "메뉴 앱 버전 행") — ① **'앱 버전' 행의 로딩 제거**: 원인이 네트워크가 아니라 *부팅 때 이미 한 판정을 버리고 다시 묻던 것* 이라, `AppApi` 가 성공한 판정만 캐시하고 타일이 동기로 읽게 바꿔 **정상 경로 네트워크 0회**. 최신 상태도 탭되게(SnackBar) + 확인 실패 시 탭=재확인. ② **'내 정보' 스피너는 정상으로 결론** — 닉네임·성별이 콘텐츠 자체이고 캐시를 끼우면 재로그인 시 이전 계정 값이 비쳐서 **드롭**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "메뉴 화면" / "앱 버전".

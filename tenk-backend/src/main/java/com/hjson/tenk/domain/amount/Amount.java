@@ -6,6 +6,8 @@ import com.hjson.tenk.domain.challenge.Challenge;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,8 +48,11 @@ public class Amount {
     @JoinColumn(name = "challenge_id", nullable = false)
     private Challenge challenge;
 
-    @Column(name = "category", length = 255)
-    private String category;
+    /// 지출 카테고리 (고정 9종). 무지출이면 null.
+    /// 외부 입력(String)은 아래 정적 팩토리에서 {@link SpendCategory#from(String)} 으로만 들어온다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 20)
+    private SpendCategory category;
 
     @Column(name = "content", length = 255)
     private String content;
@@ -75,7 +80,7 @@ public class Amount {
     @Column(name = "no_spend_day_key", insertable = false, updatable = false)
     private String noSpendDayKey;
 
-    private Amount(Challenge challenge, String category, String content, int amount, boolean noSpend,
+    private Amount(Challenge challenge, SpendCategory category, String content, int amount, boolean noSpend,
                    String memo, LocalDateTime spentDt) {
         this.challenge = challenge;
         this.category = category;
@@ -95,8 +100,7 @@ public class Amount {
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
-        SpendCategory.requireValidCode(category);
-        return new Amount(challenge, category, content, amount, false, memo, spentDt);
+        return new Amount(challenge, SpendCategory.from(category), content, amount, false, memo, spentDt);
     }
 
     public static Amount noSpend(Challenge challenge, String memo, LocalDateTime spentDt) {
@@ -125,8 +129,7 @@ public class Amount {
         if (isBlank(category) || isBlank(content)) {
             throw new BusinessException(ErrorCode.AMOUNT_CATEGORY_CONTENT_REQUIRED);
         }
-        SpendCategory.requireValidCode(category);
-        this.category = category;
+        this.category = SpendCategory.from(category);
         this.content = content;
         this.amount = amount;
         this.memo = normalizeMemo(memo);

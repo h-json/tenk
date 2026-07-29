@@ -239,7 +239,9 @@ class BadgeEventIntegrationTest extends IntegrationTestBase {
                                 "INSERT INTO amount (challenge_id, category, content, amount, is_no_spend, spent_dt, created_dt) "
                                         + "VALUES (?1, ?2, ?3, ?4, ?5, ?6, NOW())")
                         .setParameter(1, challengeId)
-                        .setParameter(2, noSpend ? null : "test-category")
+                        // 네이티브 INSERT 라 엔티티 검증을 우회한다 — category 는 반드시 SpendCategory
+                        // 코드여야 하고, 아니면 읽을 때 @Enumerated(STRING) 매핑이 깨진다.
+                        .setParameter(2, noSpend ? null : "FOOD")
                         .setParameter(3, noSpend ? null : "test-content")
                         .setParameter(4, amount)
                         .setParameter(5, noSpend ? 1 : 0)

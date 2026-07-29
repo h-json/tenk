@@ -41,12 +41,14 @@ public class ChallengeExportService {
                     long[] bucket = perDay.computeIfAbsent(day, d -> new long[]{0, 1});
                     bucket[0] += a.getAmount();
                     if (!a.isNoSpend()) bucket[1] = 0;
-                    if (!a.isNoSpend() && a.getCategory() != null) {
-                        perCategory.merge(a.getCategory(), (long) a.getAmount(), Long::sum);
+                    // export JSON 의 category 는 코드 문자열 그대로 (외부 연동 안정 키 — 라벨 아님).
+                    String categoryCode = a.getCategory() == null ? null : a.getCategory().name();
+                    if (!a.isNoSpend() && categoryCode != null) {
+                        perCategory.merge(categoryCode, (long) a.getAmount(), Long::sum);
                     }
                     List<Long> mediaIds = mediaFileRepository.findByAmount(a).stream()
                             .map(MediaFile::getId).toList();
-                    return new AmountItem(a.getId(), a.getSpentDt(), a.getCategory(),
+                    return new AmountItem(a.getId(), a.getSpentDt(), categoryCode,
                             a.getContent(), a.getAmount(), a.isNoSpend(), mediaIds);
                 })
                 .toList();
