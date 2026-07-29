@@ -18,23 +18,24 @@
 - ✅ **연령 확인 게이트 + Play 앱 콘텐츠 답안지 (2026-07-20)** — 만 14세 미만 차단(즉시 파기), 계정 삭제 안내 페이지 신설, [play-console-app-content.md](play-console-app-content.md) 작성.
 - ✅ **성별 선택 수집 + '내 정보' 하위 화면 분리 (2026-07-21)** — 성별은 통계용 선택 항목으로 '내 정보'에서만 입력·해제(가입 흐름 무변경). 닉네임·성별을 '내 정보'로 묶고 상위 화면은 순수 메뉴로 재편 — **상위 화면 이름은 '메뉴'(임시), 확정은 아래 §1 남은 일**. 테스트 **151개** 전원 통과, **에뮬 E2E 검증 완료**. **남은 것은 prod 배포 + Play 콘솔 폼 입력뿐** — 아래 "남은 일 §0".
 - ✅ **테스터 로그인 회의 + 구현 + prod 배포 완료 (2026-07-25)** — 결정: App access=**데모 카카오 계정**, 앱/서버의 **테스트 로그인 완전 제거**, 시딩은 **계정 role(USER/TESTER)** 로 재게이팅. 회의록 [decisions.md](decisions.md) "테스터 로그인 회의", Play 답안 [play-console-app-content.md](play-console-app-content.md) §2. **테스트 147개 전원 통과 + flutter analyze clean**. **prod 배포 완료** — 연령 게이트·성별도 이번에 함께 LIVE(3컬럼 ALTER + 새 이미지). §0.
-- ✅ **이메일 수집 중단 (#10, 2026-07-26)** — 원인은 카카오 이메일 동의항목 **'권한 없음'**(개인 개발자 앱). 쓰이는 곳이 표시 한 곳뿐이라 수집을 접고 **컬럼까지 DROP**. privacy.html·Play 데이터 안전의 **고지 불일치도 함께 해소**. 테스트 161개 통과 + **에뮬 E2E 검증 완료**. ⚠️ **라이브 DB ALTER 필수** — §0-DEPLOY.
-- ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11) · 메뉴 진입 로딩 제거 (#12) — 2026-07-26.** #11: 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과 + **에뮬 E2E 검증 완료**. #12: 메뉴를 낙관적 렌더로 전환(`/me` 안 기다림) + `flutter analyze` 완전 clean. **#11 은 백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
+- ✅ **이메일 수집 중단 (#10, 2026-07-26)** — 원인은 카카오 이메일 동의항목 **'권한 없음'**(개인 개발자 앱). 쓰이는 곳이 표시 한 곳뿐이라 수집을 접고 **컬럼까지 DROP**. privacy.html·Play 데이터 안전의 **고지 불일치도 함께 해소**. 테스트 161개 통과 + **에뮬 E2E 검증 완료**. ✅ **prod 배포 완료 (2026-07-30)**.
+- ✅ **닉네임 안내 문구 정리 + 제한 규칙 24시간화 (#11) · 메뉴 진입 로딩 제거 (#12) — 2026-07-26.** #11: 상시 라벨 제거·탭 시에만 안내, 어긋나 있던 "다음 날 자정" 판정을 **정확히 24시간**으로 통일. 테스트 **161개** 전원 통과 + **에뮬 E2E 검증 완료**. #12: 메뉴를 낙관적 렌더로 전환(`/me` 안 기다림) + `flutter analyze` 완전 clean. ✅ **prod 배포 완료 (2026-07-30)**.
 - ✅ **폼 키보드 이동 통일 (#13, 2026-07-26)** — 생년월일 3칸 자동 이동·백스페이스 복귀가 발단이었지만 **키보드 '다음' 동선을 전 폼으로 전수 적용**(기록/수정 내용→금액, 챌린지 생성 이름→목표금액). 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter" 에 명문화. **앱 전용 변경이라 백엔드 재배포와 무관** (다음 앱 릴리스에 실림). `flutter analyze` clean + 에뮬 E2E 검증 완료.
 - ✅ **날짜·시간 picker 정리 (#3, 2026-07-27)** — ① 로케일 `ko` 고정(`flutter_localizations`)으로 picker 한국어화 + 시각 표기를 기기 12/24h 설정 따라가게 통일(폼 `10:11 PM` vs 목록 `22:11` 로 갈라져 있던 것 해소) ② **시각 picker 를 카카오톡 예약·갤럭시 알람식 휠로 교체** — 오전·오후 / 시 1~12 / 분 00~59 무한 순환, 가운데 탭 직접 입력, 시가 11↔12 넘으면 오전/오후 자동 전환, **아날로그 시계(dial) 제거** ③ 기록 화면 일시를 `날짜 | 시간` 2칸으로 분리(수정 화면과 공용 위젯). **앱 전용 변경이라 백엔드 재배포와 무관** (다음 앱 릴리스에 실림). `flutter analyze` clean + 에뮬 E2E 검증 완료.
-- ✅ **탈퇴 UX 재설계 (#1, 2026-07-27)** — 탈퇴 후 **유예 1개월**(3개월에서 단축), 그 안에 돌아오면 **철회 / 재가입을 사용자가 고른다**(U0007 → 선택 다이얼로그 → `/api/auth/kakao/restore` 또는 `/rejoin`). **재가입은 옛 계정을 즉시 파기해 기다리지 않는다** — "탈퇴 후 한 달간 재가입 불가" UX 를 만들지 않는 게 핵심 원칙. 보관 목적도 "부정 이용 방지" → **"탈퇴 철회 대응"** 으로 바로잡고 privacy·delete-account 갱신. 회의록은 [decisions.md](decisions.md) "탈퇴 UX 회의". 테스트 **175개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. **백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
+- ✅ **탈퇴 UX 재설계 (#1, 2026-07-27)** — 탈퇴 후 **유예 1개월**(3개월에서 단축), 그 안에 돌아오면 **철회 / 재가입을 사용자가 고른다**(U0007 → 선택 다이얼로그 → `/api/auth/kakao/restore` 또는 `/rejoin`). **재가입은 옛 계정을 즉시 파기해 기다리지 않는다** — "탈퇴 후 한 달간 재가입 불가" UX 를 만들지 않는 게 핵심 원칙. 보관 목적도 "부정 이용 방지" → **"탈퇴 철회 대응"** 으로 바로잡고 privacy·delete-account 갱신. 회의록은 [decisions.md](decisions.md) "탈퇴 UX 회의". 테스트 **175개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ✅ **prod 배포 완료 (2026-07-30)**.
 - ✅ **키보드 닫기 전역 처리 + 탈퇴 사유 항목 재설계 (2026-07-28)** — 빈 곳 탭 시 키보드가 안 닫히는 문제가 **앱 전체**에 있어 `MaterialApp.builder` 한 곳에서 처리. 탈퇴 사유는 사용자 언어로 7종 재설계(개인정보 항목 제외). **에뮬 E2E 검증 완료.** 함정: `main.dart` 최상단 변경은 hot reload 로 안 실릴 수 있어 `R` 필요.
 - ✅ **브랜드 표기 `Tenk` → `TenK` 통일 (2026-07-28)** — 사용자 노출 문자열 전부(앱 문구 7곳 + Android/iOS 표시 이름 + 법적 문서 3종). 내부 식별자·도메인·**갤러리 앨범명은 유지**(앨범이 갈라짐). Play Console 스토어 등록명은 **이미 TenK 로 등록돼 있음**(2026-07-28 확인). 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포".
-- ✅ **탈퇴 사유 수집 (#14, 2026-07-28)** — 탈퇴를 화면으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블**(user_id 없음)이라 개인정보 수집표가 안 늘고 계정 파기 후에도 통계가 남는다. 곁가지로 잘못된 요청 body 가 500 이던 전역 갭을 400 으로 수정. 테스트 **183개** 통과 + **에뮬 E2E 검증 완료**. **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
+- ✅ **탈퇴 사유 수집 (#14, 2026-07-28)** — 탈퇴를 화면으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블**(user_id 없음)이라 개인정보 수집표가 안 늘고 계정 파기 후에도 통계가 남는다. 곁가지로 잘못된 요청 body 가 500 이던 전역 갭을 400 으로 수정. 테스트 **183개** 통과 + **에뮬 E2E 검증 완료**. ✅ **prod 배포 완료 (2026-07-30)**.
 - ✅ **메뉴 '앱 버전' 행 로딩 제거 + #12·#14 잔여 갈래 종결 (2026-07-28)** — 로딩의 원인이 네트워크가 아니라 **부팅 때 이미 한 판정을 버리고 다시 묻던 것**이었다. `AppApi` 가 성공한 판정만 캐시하고 타일이 동기로 읽어 **정상 경로 네트워크 0회**. '탭하면 확인' 안은 기각(업데이트 안내는 push 여야 함). '내 정보' 스피너는 **정상으로 결론**, #14 잔여 2건은 **삭제**. `flutter analyze` clean + **에뮬 E2E 검증 완료**. 회의록 [decisions.md](decisions.md) "메뉴 앱 버전 행". **앱 전용이라 §0-DEPLOY 와 무관.**
-- ✅ **의견 보내기 + 문의 창구 (#2, 2026-07-28)** — 메뉴에 '의견 보내기' 신설(유형 4종 + 내용 + **회신 이메일 선택**). 저장은 **익명 테이블**(user_id 없음)이고 회신 이메일만 개인정보라 **1년 상한 배치**로 지운다. 곁가지로 **법적 고지에 '문의' 행(mailto)** 추가 — privacy 를 열어 스크롤해야 보이던 창구를 두 단계로 줄였다. 문의≠피드백 구분과 리서치 근거는 [decisions.md](decisions.md) "의견 보내기 회의"(문구 다듬기 2차 포함 — 칩→셀렉박스, 감사 인사는 인트로가 전담). 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
-- ✅ **모달 → 화면·바텀시트 전환 (#4, 2026-07-29)** — 모달 16곳 전수 조사 후 성격별로 갈랐다: **확인·차단은 다이얼로그 유지**, **'내 정보' 속성 편집은 화면**, **폼 안 선택은 바텀시트**. 공용 위젯 4종 신설로 `DropdownButtonFormField` 를 걷어내면서도 **`FormField` 로 `validator` 를 보존**. 곁가지로 **성별 `OTHER` 제거 + 3칸 토글**. 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 기준은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준", 회의록 [decisions.md](decisions.md). ⚠️ **라이브 DB `UPDATE` + 재배포 대기** — §0-DEPLOY.
+- ✅ **의견 보내기 + 문의 창구 (#2, 2026-07-28)** — 메뉴에 '의견 보내기' 신설(유형 4종 + 내용 + **회신 이메일 선택**). 저장은 **익명 테이블**(user_id 없음)이고 회신 이메일만 개인정보라 **1년 상한 배치**로 지운다. 곁가지로 **법적 고지에 '문의' 행(mailto)** 추가 — privacy 를 열어 스크롤해야 보이던 창구를 두 단계로 줄였다. 문의≠피드백 구분과 리서치 근거는 [decisions.md](decisions.md) "의견 보내기 회의"(문구 다듬기 2차 포함 — 칩→셀렉박스, 감사 인사는 인트로가 전담). 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ✅ **prod 배포 완료 (2026-07-30)**.
+- ✅ **모달 → 화면·바텀시트 전환 (#4, 2026-07-29)** — 모달 16곳 전수 조사 후 성격별로 갈랐다: **확인·차단은 다이얼로그 유지**, **'내 정보' 속성 편집은 화면**, **폼 안 선택은 바텀시트**. 공용 위젯 4종 신설로 `DropdownButtonFormField` 를 걷어내면서도 **`FormField` 로 `validator` 를 보존**. 곁가지로 **성별 `OTHER` 제거 + 3칸 토글**. 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 기준은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준", 회의록 [decisions.md](decisions.md). ✅ **prod 배포 완료 (2026-07-30)**.
 - ✅ **성별 회의 (#16, 2026-07-29)** — "수정할 수 있게 두면 무의미한 데이터가 쌓이나"에 대해 **현행 유지** 결론. 노이즈는 편집이 아니라 최초 입력에서 들어오고, 편집 차단은 오탭을 영구 고착시켜 오히려 나빠진다. 법상 정정·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 회의록 [decisions.md](decisions.md) "성별 수집·변경".
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
 - ✅ **Flutter 상태 관리 재검토 (#15, 2026-07-29)** — Scope 7개로 자체 임계(5개)를 넘긴 건 사실이나, **Scope 에 든 게 전부 stateless API 객체라 지금 있는 건 상태 관리가 아니라 DI** 였다. **현행 유지 + 임계 5→10 상향 + "진짜 트리거는 화면 간 공유 상태" 명문화**로 종결(코드 변경은 주석 2곳). 회의록 [decisions.md](decisions.md) "Flutter 상태 관리 재검토".
-- ✅ **DB 코드성 컬럼 정리 (#9, 2026-07-30)** — 조사해보니 **두 축**이 따로 어긋나 있었다: ⓐ DB 자료형(네이티브 `ENUM` 3개 vs `VARCHAR` 5개 — 시간순 흔적) ⓑ Java 매핑(`amount.category` 만 raw String). **둘 다 정리** — ⓐ `VARCHAR` 통일(Java 변경 0), ⓑ `@Enumerated(STRING)` 전환 + 레거시 → `ETC` (DTO 는 String 유지라 **Flutter 변경 0**). 룩업 테이블은 기준상 `badge` 하나뿐이고 이미 그래서 도입 안 함. 테스트 **200개** 통과 + **에뮬 E2E 검증 완료**(유일한 실질 리스크였던 wire format 이 Jackson→Flutter 까지 그대로임을 확인). 회의록 [decisions.md](decisions.md) "DB 코드성 컬럼 정리". ⚠️ **라이브 DB `ALTER`+`UPDATE` + 재배포 대기** — §0-DEPLOY.
-- ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / **#6 로고·앱 아이콘** / #7 예외처리 전수 점검 / #8 배지 획득 효과 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
-  - **§0-DEPLOY 가 9건으로 늘었다** — 밀릴수록 한 번에 치는 SQL 이 많아져 위험하니 이쪽을 먼저 비우는 걸 권함.
+- ✅ **DB 코드성 컬럼 정리 (#9, 2026-07-30)** — 조사해보니 **두 축**이 따로 어긋나 있었다: ⓐ DB 자료형(네이티브 `ENUM` 3개 vs `VARCHAR` 5개 — 시간순 흔적) ⓑ Java 매핑(`amount.category` 만 raw String). **둘 다 정리** — ⓐ `VARCHAR` 통일(Java 변경 0), ⓑ `@Enumerated(STRING)` 전환 + 레거시 → `ETC` (DTO 는 String 유지라 **Flutter 변경 0**). 룩업 테이블은 기준상 `badge` 하나뿐이고 이미 그래서 도입 안 함. 테스트 **200개** 통과 + **에뮬 E2E 검증 완료**(유일한 실질 리스크였던 wire format 이 Jackson→Flutter 까지 그대로임을 확인). 회의록 [decisions.md](decisions.md) "DB 코드성 컬럼 정리". ✅ **prod 배포 완료 (2026-07-30)**.
+- ✅ **§0-DEPLOY 9건 prod 배포 완료 (2026-07-30)** — 밀려 있던 #5·#10·#11·#1·#14·#2·#4·#9ⓐ·#9ⓑ 를 **한 번에** 라이브 반영. 사용자가 데이터 소멸을 승인해 런북의 8단계 마이그레이션 SQL 대신 **DB 를 통째로 재생성**(볼륨 3개 삭제 → `dbinit` 재시딩 → clean init)했고, 그래서 순서 함정(레거시 값 정리·`DROP COLUMN`)이 성립하지 않았다. **서버 측 검증 전항목 통과.** 실행 기록은 [handoff-archive.md](handoff-archive.md), 재사용 가능한 절차는 [docker-deployment.md](docker-deployment.md) §5.7.
+  - ⚠️ **부수 효과: 라이브 계정·챌린지·업로드 영상이 전부 소멸했다.** 다음 로그인은 전원 신규 가입(연령→동의→닉네임)이고, **TESTER role 재승격**이 필요하다(§0 잔여).
+- ⏭️ 다음 후보: **§0 잔여(앱 릴리스 + Play 콘솔 폼 3종 + 데모 계정) — 한 묶음** / **#6 로고·앱 아이콘** / #7 예외처리 전수 점검 / #8 배지 획득 효과 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -104,164 +105,34 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**앱 콘텐츠 (프로덕션 전 필수) — 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.** 남은 실행 항목:
+**백엔드 — ✅ LIVE, 남은 항목 없음.**
 - [x] ✅ **백엔드 재배포 완료 (2026-07-25)** — 연령 게이트 + 성별 + role/테스트로그인 제거를 prod 에 배포. 라이브 DB 3컬럼(`birth_date`/`gender`/`role`) `ALTER` 선적용 → `docker compose pull && up -d` → 부팅 정상 + `/api/auth/test/login` 제거 확인(401=security-first). `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). `delete-account.html`/`privacy.html` 은 이미지에 구워져 함께 반영. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) §5.5.
-  - [ ] **시딩 쓰려면 내부 테스터 계정을 TESTER 로 승격** (선택): `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼 노출됨).
-- [ ] 🟠 **§0-DEPLOY — 다음 prod 백엔드 재배포 묶음 (미착수).** 아래 "운영 배포 런북" 이 실행 순서의 진실의 원천. 코드·로컬 검증은 전부 끝났고 **라이브 반영만** 남았다.
+- [x] ✅ **§0-DEPLOY 9건 prod 배포 완료 (2026-07-30)** — #5·#10·#11·#1·#14·#2·#4·#9ⓐ·#9ⓑ 일괄. **DB 클린 재생성** 방식(볼륨 3개 삭제 → `dbinit` 재시딩 → clean init)이라 마이그레이션 SQL 8단계를 안 탔다. **서버 측 검증 전항목 통과** — 401 envelope / 버전 게이트 `LATEST`·`UPDATE_REQUIRED` / 새 테이블 3종 / `user.email` 부재 / 코드성 8개 컬럼 전부 `varchar`(enum 0) / badge 9행. 실행 기록은 [handoff-archive.md](handoff-archive.md), **재사용 가능한 절차는 [docker-deployment.md](docker-deployment.md) §5.7**.
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
 - [x] **'내 정보' 성별 선택 입력 — ✅ 완료 (2026-07-21)** — 입력 / '입력 안 함'으로 되돌리기 양방향
-- **Play Console 폼 입력** (답안은 [play-console-app-content.md](play-console-app-content.md)):
+- [x] ✅ **테스터 로그인 회의 완료 (2026-07-25)** — 결정·구현 완료. App access=데모 카카오 계정, 앱/서버 테스트 로그인 제거, 시딩은 계정 role(USER/TESTER)로 재게이팅. 회의록·근거는 [decisions.md](decisions.md) "테스터 로그인 회의". 남은 실행 항목은 아래 "앱 릴리스 + Play 콘솔 폼" 으로 흡수됨.
+- [ ] terms.html / privacy.html 변호사 검수 (권장, 미착수)
+
+**🟠 앱 릴리스 + Play 콘솔 폼 — 한 묶음으로 처리 (다음 착수 후보).** 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.
+
+> **왜 묶는가**: 백엔드는 LIVE 지만 **앱에는 그동안의 변경이 안 실려 있다** — Play 에 게시된 마지막 빌드는 2026-07-08 분이고 그 뒤 #11·#13·#3·#1·#14·#2·#4 등 앱 측 변경이 계속 쌓였다. 어차피 새 AAB 를 올려야 하니 **실기기 검증 → 빌드·업로드 → 콘솔 폼**을 한 번에 도는 게 왕복이 적다.
+
+- [ ] **① 실기기 검증** (`--dart-define=API_BASE_URL=https://tenk.hjson248.com`). ⚠️ **클린 재생성으로 라이브 계정이 전부 사라져 전원 신규 가입으로 잡힌다.**
+  - [ ] 카카오 로그인 → 온보딩 전체(연령 → 동의 → 닉네임) 통과
+  - [ ] 메뉴 → 앱 버전 행 "최신 버전이에요" (#5)
+  - [ ] **지출 기록 → 카테고리 9종 선택 → 상세에 아이콘·라벨 정상** ← #9-ⓑ 의 유일한 실질 리스크(wire format 이 Jackson→Flutter 까지 이어지는지)
+  - [ ] 닉네임 변경 후 재탭 → "내일 오후 ○시 ○분부터 가능해요" (#11)
+  - [ ] 의견 보내기(이메일 없이) → `SELECT * FROM feedback;` 에 행 + `reply_email` NULL (#2)
+  - [ ] 내 정보 → 성별 3칸 토글 저장·되돌리기 (#4)
+  - [ ] 탈퇴(사유 미선택으로도 가능) → 재로그인 시 U0007 선택 다이얼로그 → 철회/재가입 양쪽 (#1·#14)
+  - [ ] 정적 문서 — privacy 수집표에 '의견 보내기' 행 / 보관 목적 "탈퇴 철회 대응" · 기간 1개월 / delete-account 에 `TenK` (#10·#1·#2)
+- [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨. `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
+- [ ] **③ 새 AAB 빌드·업로드** — `pubspec` version 증가 **필수**(현재 `1.0.0+3`) → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → 내부 테스트 트랙. **게시 후** 재배포 없이 SQL 한 줄로 최신 버전 반영: `UPDATE app_config SET latest_version='<새 version>' WHERE app_config_id=1;`
+- [ ] **④ Play Console 폼 입력**:
   - [x] 개인정보처리방침 URL / 광고 / 콘텐츠 등급 설문 — ✅ 완료 (2026-07-21)
   - [ ] **앱 액세스 권한(로그인 세부정보)** — 답안 확정(**데모 카카오 계정**, [play-console-app-content.md](play-console-app-content.md) §2). 남은 실행: **데모 카카오 계정 생성** + 콘솔 폼에 아이디/비번 입력 + **새 기기 로그인 재현**(추가 인증 안 뜨는지)
   - [ ] **타겟층 및 콘텐츠** (13~15 포함 → 가족 정책 확인란) — 미완
   - [ ] **데이터 안전** + 데이터 삭제 URL — 미완
-- [x] ✅ **테스터 로그인 회의 완료 (2026-07-25)** — 결정·구현 완료. App access=데모 카카오 계정, 앱/서버 테스트 로그인 제거, 시딩은 계정 role(USER/TESTER)로 재게이팅. 회의록·근거는 [decisions.md](decisions.md) "테스터 로그인 회의". 남은 실행 항목은 위 "앱 액세스 권한"(데모 계정 생성)으로 흡수됨.
-- [ ] terms.html / privacy.html 변호사 검수 (권장, 미착수)
-
----
-
-#### 🚀 운영 배포 런북 (§0-DEPLOY) — 2026-07-30 기준 묶음, 미실행
-
-> 맥(서버)에서 실행. 배포 구조·명령의 원본은 [docker-deployment.md](docker-deployment.md) §5.1(업데이트 사이클) / §5.5(라이브 DB 스키마 변경).
-> **이 묶음은 스키마 변경을 여러 건 포함**하므로 `ddl-auto=validate` 특성상 **SQL 먼저, 이미지 나중**이 절대 원칙이다. 순서를 뒤집으면 백엔드가 부팅 실패하거나(스키마 불일치), 데이터 정리(f·h)를 빼먹으면 **enum 에 없는 값이 남은 row 조회가 예외로 죽는다**.
-> 예외는 **(g) 자료형 통일 하나뿐** — 코드 배포와 순서 커플링이 없어 언제 쳐도 된다.
-
-**들어 있는 것 (9건)**
-
-| # | 내용 | DB 작업 | 이미지 재배포 |
-|---|---|---|---|
-| #5 | 앱 버전 게이트 / 강제·권장 업데이트 | ✅ `app_config` CREATE + INSERT | ✅ |
-| #10 | 이메일 수집 중단 | ✅ `user.email` DROP COLUMN | ✅ (privacy.html 도 이미지에 구워져 함께 반영) |
-| #11 | 닉네임 제한 24시간화 | ❌ 없음 | ✅ |
-| #1 | 탈퇴 UX 재설계 (유예 1개월 + 철회/재가입 선택) | ❌ 없음 | ✅ (privacy.html·delete-account.html 문구 갱신 포함) |
-| #14 | 탈퇴 사유 수집 | ✅ **`withdrawal_feedback` CREATE** | ✅ |
-| #2 | 의견 보내기 + 문의 창구 | ✅ **`feedback` CREATE** | ✅ (privacy.html 수집표·보유기간 갱신 포함) |
-| #4 | 모달 전환 (곁가지로 성별 `OTHER` 제거) | ✅ **`user.gender` 의 `OTHER` → NULL** | ✅ (enum 변경이라 앱 전용이 아님) |
-| #9 ⓐ | 코드성 컬럼 자료형 통일 | ✅ **네이티브 `ENUM` 3개 → `VARCHAR`** (순서 무관 — 아래 참고) | ❌ 불필요 (Java 코드 변경 0) |
-| #9 ⓑ | `amount.category` enum 전환 | ✅ **레거시 → `ETC` + `VARCHAR(20)`** | ✅ |
-
-**1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
-
-**2단계 — 라이브 DB 스키마 선적용** (맥)
-```bash
-cd ~/Documents/projects/claude/tenk
-set -a; . ./.env; set +a
-
-# (a) 백업 먼저 — DROP COLUMN 이 섞여 있어 되돌리기가 비싸다
-docker compose exec -T db mariadb-dump -uroot -p"$DB_ROOT_PASSWORD" tenk > ~/tenk-backup-$(date +%Y%m%d-%H%M).sql
-
-# (b) #5 app_config 생성 + 시드 1행
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
-CREATE TABLE \`app_config\` (
-  \`app_config_id\`         BIGINT AUTO_INCREMENT                   NOT NULL,
-  \`min_supported_version\` VARCHAR(20)                             NOT NULL,
-  \`latest_version\`        VARCHAR(20)                             NOT NULL,
-  \`android_store_url\`     VARCHAR(255)                            NULL,
-  \`ios_store_url\`         VARCHAR(255)                            NULL,
-  \`updated_dt\`            DATETIME DEFAULT CURRENT_TIMESTAMP      NOT NULL,
-  PRIMARY KEY (\`app_config_id\`)
-);
-INSERT INTO \`app_config\`
-  (\`app_config_id\`,\`min_supported_version\`,\`latest_version\`,\`android_store_url\`,\`ios_store_url\`)
-VALUES
-  (1,'1.0.0','1.0.0','https://play.google.com/store/apps/details?id=com.hjson.tenk_app',NULL);
-"
-
-# (c) #10 email 컬럼 제거
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
-  -e "ALTER TABLE \`user\` DROP COLUMN \`email\`;"
-
-# (d) #14 탈퇴 사유 테이블 (익명 — user_id 없음. 계정 파기 배치의 대상이 아니다)
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
-CREATE TABLE \`withdrawal_feedback\` (
-  \`withdrawal_feedback_id\` BIGINT AUTO_INCREMENT NOT NULL,
-  \`reason_code\`            VARCHAR(30)           NOT NULL,
-  \`detail\`                 VARCHAR(200)          NULL,
-  \`created_dt\`             DATETIME              NOT NULL,
-  PRIMARY KEY (\`withdrawal_feedback_id\`)
-);
-"
-
-# (e) #2 의견 테이블 (익명 — user_id 없음. reply_email 만 개인정보이고 1년 상한 배치가 지운다)
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
-CREATE TABLE \`feedback\` (
-  \`feedback_id\` BIGINT AUTO_INCREMENT NOT NULL,
-  \`type\`        VARCHAR(20)           NOT NULL,
-  \`content\`     VARCHAR(1000)         NOT NULL,
-  \`reply_email\` VARCHAR(100)          NULL,
-  \`app_version\` VARCHAR(20)           NULL,
-  \`platform\`    VARCHAR(10)           NULL,
-  \`os_version\`  VARCHAR(100)          NULL,
-  \`created_dt\`  DATETIME              NOT NULL,
-  PRIMARY KEY (\`feedback_id\`)
-);
-"
-
-# (f) #4 성별 enum 에서 OTHER 를 지웠다 → 남아 있는 'OTHER' 행을 비운다.
-#     ⚠️ 이미지 재배포 '전에' 반드시 칠 것 — @Enumerated(STRING) 이라 enum 에 없는 값이 남아 있으면
-#     그 유저 조회가 예외로 죽는다(로그인 직후 /api/users/me 부터 깨진다).
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
-  -e "UPDATE \`user\` SET \`gender\`=NULL WHERE \`gender\`='OTHER';"
-
-# (g) #9-ⓐ 코드성 컬럼 자료형 통일 — 네이티브 ENUM 3개를 VARCHAR 로.
-#     ⚠️ 이 셋만은 **이미지 재배포와 순서 커플링이 없다** — @Enumerated(STRING) 은 ENUM/VARCHAR
-#     양쪽 다 validate 를 통과하므로 언제 쳐도 되고 되돌리기도 싸다. (다른 SQL 과 성격이 다름)
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
-ALTER TABLE \`user\`      MODIFY COLUMN \`provider\` VARCHAR(20) NOT NULL;
-ALTER TABLE \`challenge\` MODIFY COLUMN \`result\`   VARCHAR(20) NULL;
-ALTER TABLE \`badge\`     MODIFY COLUMN \`type\`     VARCHAR(30) NOT NULL;
-"
-
-# (h) #9-ⓑ amount.category 가 enum 이 됐다 → 9종 밖의 레거시 자유 텍스트를 ETC 로 접는다.
-#     ⚠️ (f) 와 같은 함정 — **이미지 재배포 '전에'** 칠 것. enum 에 없는 값이 남아 있으면 그 기록
-#     조회가 예외로 죽는다. 클라는 이미 미매칭 코드를 '기타'로 폴백해 그리므로 화면상 변화는 없다.
-#     먼저 무엇을 접게 되는지 기록으로 남길 것:
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
-  -e "SELECT \`category\`, COUNT(*) FROM \`amount\` WHERE \`is_no_spend\`=0 GROUP BY \`category\`;"
-
-docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "
-UPDATE \`amount\` SET \`category\`='ETC'
- WHERE \`is_no_spend\`=0 AND \`category\` IS NOT NULL
-   AND \`category\` NOT IN ('FOOD','TRANSPORT','SHOPPING','LEISURE',
-                          'HEALTH','EDUCATION','EVENT','LIVING','ETC');
-ALTER TABLE \`amount\` MODIFY COLUMN \`category\` VARCHAR(20) NULL;
-"
-```
-
-**3단계 — 이미지 재배포** (맥)
-```bash
-docker compose pull && docker compose up -d
-docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
-```
-
-**4단계 — `dbinit` 볼륨 시드 갱신** (클린 재구축 대비. §5.4 방식)
-`tenk_dbinit` 볼륨의 `01-schema.sql` 을 이번 `docs/schema.sql` 로 교체. **안 하면 라이브는 멀쩡한데 클린 재구축 때만 스키마가 어긋나** 부팅 실패한다.
-
-**5단계 — 검증**
-- [ ] `curl 'https://tenk.hjson248.com/api/app/version?platform=android&currentVersion=1.0.0'` → `status: LATEST`
-- [ ] `curl 'https://tenk.hjson248.com/api/app/version?platform=android&currentVersion=0.9.0'` → `UPDATE_REQUIRED` (min=1.0.0 이므로)
-- [ ] `https://tenk.hjson248.com/privacy.html` 수집항목에 **이메일이 없어졌는지**
-- [ ] 실기기(`(device)` 구성)로 카카오 로그인 → 메뉴 → 계정 설정에 "카카오 계정으로 로그인 중" / 앱 버전 행 "최신 버전이에요"
-- [ ] 닉네임 변경 후 재탭 → "내일 오후 ○시 ○분부터 가능해요"
-- [ ] 탈퇴한 계정으로 재로그인 → 선택 다이얼로그 → **[이어서 쓰기]** 시 이전 챌린지가 그대로 보이는지
-- [ ] 같은 흐름에서 **[새로 시작하기]** → 2차 확인 → 온보딩(연령→동의→닉네임) 후 빈 목록, 그리고 **곧바로 다시 로그인해도 U0007 이 안 뜨는지**(재가입 불가 상태가 남지 않았는지)
-- [ ] `https://tenk.hjson248.com/delete-account.html` 에 철회·재가입 안내 + **1개월** 표기, 수집항목에 이메일 없음, 서비스명이 **TenK**
-- [ ] 앱 실행 시 런처 아이콘 이름·로그인 화면 로고가 **TenK** 로 보이는지 (표시 이름은 재설치/업데이트 후 반영)
-- [ ] `privacy.html` §3 보관 기간이 **1개월**, 목적이 "탈퇴 철회 대응"
-- [ ] 메뉴 → 의견 보내기 → 유형+내용만으로 전송 → `SELECT * FROM feedback;` 에 행 + `reply_email` NULL
-- [ ] 이메일까지 적어 전송 → 저장되고, 완료 안내가 "답변은 적어주신 이메일로" 로 바뀌는지
-- [ ] 법적 고지 → '문의' 탭 → 메일 앱이 열리는지 (없는 기기면 주소 복사 안내)
-- [ ] `https://tenk.hjson248.com/privacy.html` 수집표에 **'의견 보내기 (선택) — 답변받을 이메일'** 이 있는지
-- [ ] 탈퇴 화면에서 사유를 **안 고르고** 탈퇴 가능한지 + 사유를 고르면 `withdrawal_feedback` 에 행이 생기는지 (`SELECT * FROM withdrawal_feedback;`)
-- [ ] 메뉴 → 내 정보 → **성별**이 화면으로 열리고 3칸 토글(남성/입력 안 함/여성)로 저장·되돌리기가 되는지 + `SELECT gender, COUNT(*) FROM user GROUP BY gender;` 에 **`OTHER` 가 없는지**
-- [ ] 자료형 통일 확인 — `SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='tenk' AND COLUMN_NAME IN ('provider','result','type','gender','role','reason_code','category');` 에 **`enum(...)` 이 하나도 없는지** (전부 varchar)
-- [ ] 지출 기록 → 카테고리 9종 중 하나 선택 후 저장 → 상세 목록에 **아이콘·라벨이 정상**(전부 '기타'로 폴백되면 응답의 category 가 코드가 아니게 된 것) + `SELECT DISTINCT category FROM amount;` 가 9종 코드뿐인지
-- [ ] 챌린지 확정 후 `GET /api/challenges/{id}/export` 의 `categorySummary[].category` 가 **코드**(`FOOD`)인지 (라벨 `식비` 로 바뀌면 외부 연동 키가 깨진 것)
-
-**롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
-
-**향후 릴리스 때**: 스토어 게시가 끝나면 재배포 없이 SQL 한 줄로 최신 버전을 올린다 —
-`UPDATE app_config SET latest_version='<pubspec version>', min_supported_version='<하한>' WHERE app_config_id=1;`
 
 ---
 
@@ -281,12 +152,12 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 
 > 사용자가 한 번에 넘긴 미착수 목록. 각 항목은 착수 전 별도 설계/합의 필요 ([[feedback-plan-before-code-edit]]). 규모가 큰 건은 회의 안건으로 승격 ([[feedback-defer-decisions-to-dedicated-meeting]]).
 
-- ~~#1 탈퇴 철회 흐름~~ → ✅ 완료 (2026-07-27), **탈퇴 UX 전반 재설계로 확장**. 유예 1개월 + 복귀 시 **철회/재가입 선택**(U0007 → 선택 다이얼로그 → `/restore` 또는 `/rejoin`, 재가입은 2차 확인 후 옛 계정 즉시 파기). 판정은 계정 row 생존 하나뿐(배치 타이밍 사각지대 방지). 보관 목적을 "탈퇴 철회 대응"으로 바로잡고 privacy.html·delete-account.html 갱신, 탈퇴 확인 문구는 철회를 광고하지 않으면서 참인 문장으로. 테스트 **175개** 전원 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 회의록 [decisions.md](decisions.md) "탈퇴 UX 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 후 유예 기간". ⚠️ **백엔드 재배포 대기**(스키마 변경 없음) — §0-DEPLOY.
-- ~~#2 메뉴 항목 추가~~ → ✅ 완료 (2026-07-28). 이름·아이콘 확정('메뉴' + `Icons.menu`, 07-25) → 앱 버전 행(07-26) → **의견 보내기 + 문의 창구(07-28)** 로 마무리. 의견은 **익명 저장**(user_id 없음)이고 **회신 이메일을 적었는지가 '답변이 필요한가'의 유일한 스위치**다. 곁가지로 법적 고지에 **'문의' 행(mailto)** 을 넣어 고지한 창구를 앱 안에서 두 단계로 닿게 했다. 문의≠피드백 구분과 국내 사례 리서치는 [decisions.md](decisions.md) "의견 보내기 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "의견 보내기 (피드백)". 테스트 **195개** 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**(이메일 유/무 전송·형식 오류 차단·문의 mailto). ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
+- ~~#1 탈퇴 철회 흐름~~ → ✅ 완료 (2026-07-27), **탈퇴 UX 전반 재설계로 확장**. 유예 1개월 + 복귀 시 **철회/재가입 선택**(U0007 → 선택 다이얼로그 → `/restore` 또는 `/rejoin`, 재가입은 2차 확인 후 옛 계정 즉시 파기). 판정은 계정 row 생존 하나뿐(배치 타이밍 사각지대 방지). 보관 목적을 "탈퇴 철회 대응"으로 바로잡고 privacy.html·delete-account.html 갱신, 탈퇴 확인 문구는 철회를 광고하지 않으면서 참인 문장으로. 테스트 **175개** 전원 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 회의록 [decisions.md](decisions.md) "탈퇴 UX 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 후 유예 기간". ⚠️ ✅ **prod 배포 완료 (2026-07-30)**.
+- ~~#2 메뉴 항목 추가~~ → ✅ 완료 (2026-07-28). 이름·아이콘 확정('메뉴' + `Icons.menu`, 07-25) → 앱 버전 행(07-26) → **의견 보내기 + 문의 창구(07-28)** 로 마무리. 의견은 **익명 저장**(user_id 없음)이고 **회신 이메일을 적었는지가 '답변이 필요한가'의 유일한 스위치**다. 곁가지로 법적 고지에 **'문의' 행(mailto)** 을 넣어 고지한 창구를 앱 안에서 두 단계로 닿게 했다. 문의≠피드백 구분과 국내 사례 리서치는 [decisions.md](decisions.md) "의견 보내기 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "의견 보내기 (피드백)". 테스트 **195개** 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**(이메일 유/무 전송·형식 오류 차단·문의 mailto). ✅ **prod 배포 완료 (2026-07-30)**.
   - (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
 - ~~#3 날짜·시간 선택 UI 정리~~ → ✅ 완료 (2026-07-27, 2단계). ① 로케일 `ko` 고정 + **시각 표기를 로케일 기반으로 통일**(24h 고정 `formatDateTime` 제거) + 공용 헬퍼 [common/date_time_picker.dart](../tenk_app/lib/presentation/common/date_time_picker.dart) ② **시각 picker 를 휠(드럼) 자체 위젯으로 교체**([wheel_time_picker.dart](../tenk_app/lib/presentation/common/wheel_time_picker.dart) — 무한 순환·직접 입력·오전/오후 자동 전환, **dial 제거**) + 기록 화면 일시를 `날짜 | 시간` **2칸**으로 분리([DateTimeFields](../tenk_app/lib/presentation/amount/widgets/date_time_fields.dart) 공유). 날짜 picker 는 Material 그대로. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter". **앱 전용 변경이라 백엔드 재배포와 무관**.
-- ~~#4 모달 → 화면 전환~~ → ✅ 완료 (2026-07-29). 모달 **16곳을 전수 조사**해 성격별로 갈랐다 — **확인·차단 다이얼로그는 유지**(화면으로 빼면 되돌릴 자리가 멀어짐), **'내 정보' 의 내 속성 편집은 화면**(닉네임·성별), **폼·목록 안에서 값 하나 고르기는 바텀시트**(카테고리 ×2·의견 유형·챌린지 이름·자막). 백로그가 짚은 3개 외에 **챌린지 이름 변경·의견 유형 2건을 더 찾아** 같이 처리했다([[feedback-consistency-over-pinpoint]]). 공용 위젯 4종 신설(`showSelectionSheet`/`showTextInputSheet`/`SelectionField`/`TapFieldBox`) — 특히 `SelectionField` 는 **`FormField` 로 감싸 `validator` 를 유지**해 드롭다운을 걷어내고도 기록/수정 화면의 검증 흐름이 그대로 돈다. 곁가지로 **성별 `Gender.OTHER` 제거 + 3칸 토글**(남성/입력 안 함/여성)이 같이 들어갔다. 테스트 **195개 통과** + `flutter analyze` clean + **에뮬 E2E 검증 완료** (닉네임·성별 화면 push/pop 과 '내 정보' 즉시 반영 / 성별 3칸 토글 저장·'입력 안 함' 되돌리기 / 카테고리·의견 유형 바텀시트 선택 + **미선택 저장 시 검증 에러**(FormField 배선) / 챌린지 이름·자막 바텀시트 + 키보드 인셋). 회의록은 [decisions.md](decisions.md) "모달 → 화면·바텀시트 전환", 규칙은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준". ⚠️ **백엔드 재배포 + 라이브 DB `UPDATE` 대기** — §0-DEPLOY.
-- [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. **남은 것: 라이브 DB `app_config` CREATE+INSERT + 백엔드 재배포 — 다음 prod 배포 때 다른 항목과 함께 일괄 업로드 예정(아래 §0-DEPLOY).** iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
+- ~~#4 모달 → 화면 전환~~ → ✅ 완료 (2026-07-29). 모달 **16곳을 전수 조사**해 성격별로 갈랐다 — **확인·차단 다이얼로그는 유지**(화면으로 빼면 되돌릴 자리가 멀어짐), **'내 정보' 의 내 속성 편집은 화면**(닉네임·성별), **폼·목록 안에서 값 하나 고르기는 바텀시트**(카테고리 ×2·의견 유형·챌린지 이름·자막). 백로그가 짚은 3개 외에 **챌린지 이름 변경·의견 유형 2건을 더 찾아** 같이 처리했다([[feedback-consistency-over-pinpoint]]). 공용 위젯 4종 신설(`showSelectionSheet`/`showTextInputSheet`/`SelectionField`/`TapFieldBox`) — 특히 `SelectionField` 는 **`FormField` 로 감싸 `validator` 를 유지**해 드롭다운을 걷어내고도 기록/수정 화면의 검증 흐름이 그대로 돈다. 곁가지로 **성별 `Gender.OTHER` 제거 + 3칸 토글**(남성/입력 안 함/여성)이 같이 들어갔다. 테스트 **195개 통과** + `flutter analyze` clean + **에뮬 E2E 검증 완료** (닉네임·성별 화면 push/pop 과 '내 정보' 즉시 반영 / 성별 3칸 토글 저장·'입력 안 함' 되돌리기 / 카테고리·의견 유형 바텀시트 선택 + **미선택 저장 시 검증 에러**(FormField 배선) / 챌린지 이름·자막 바텀시트 + 키보드 인셋). 회의록은 [decisions.md](decisions.md) "모달 → 화면·바텀시트 전환", 규칙은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준". ✅ **prod 배포 완료 (2026-07-30)**.
+- [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. ✅ **prod 배포 완료 (2026-07-30)** — `app_config` 시드 1행(1.0.0/1.0.0/Play URL) 적용 + 버전 게이트 응답 확인. iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
 - [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
 - [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
@@ -295,13 +166,13 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
   - ⓑ **`amount.category` → `SpendCategory` + `@Enumerated(STRING)`**, 컬럼도 `VARCHAR(255)→(20)`. "읽기는 관대" 의 근거(검증 이전 자유 텍스트)가 유효기간이 지났다. **변환은 `SpendCategory.from()` 한 곳, 호출은 엔티티 정적 팩토리 안에서만** — 서비스로 올리면 에러 코드가 뭉개지고(A0005 vs A0008) 무지출의 "카테고리 무시" 규칙이 깨진다. **DTO 는 `String` 유지라 wire format 무변경 → Flutter 변경 0.**
   - **룩업 테이블은 도입 안 함** — 기준("코드 말고 딸린 정보가 있나")에 맞는 건 `badge` 하나뿐이고 이미 그렇다.
   - 곁가지로 **네이티브 SQL 로 `'x'` 를 박던 테스트 헬퍼 2곳**을 찾아 고쳤다(엔티티 검증 우회 → 읽을 때 죽음). enum 전환이 실제로 잡아낸 문제.
-  - 테스트 **200개** 전원 통과(신규 5 — `SpendCategoryTest` 4 + wire format 가드 1) + **에뮬 E2E 검증 완료**. 앱 코드 변경이 0이라 위험은 낮았지만, 단위 테스트가 못 덮는 구간(Jackson 직렬화 → Flutter 파싱 → 카테고리 아이콘·라벨 매핑)이 실제로 이어지는지가 이 작업의 유일한 실질 리스크였다. 회의록은 [decisions.md](decisions.md) "DB 코드성 컬럼 정리", 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — 백엔드". ⚠️ **라이브 DB `ALTER`+`UPDATE` + 재배포 대기** — §0-DEPLOY.
+  - 테스트 **200개** 전원 통과(신규 5 — `SpendCategoryTest` 4 + wire format 가드 1) + **에뮬 E2E 검증 완료**. 앱 코드 변경이 0이라 위험은 낮았지만, 단위 테스트가 못 덮는 구간(Jackson 직렬화 → Flutter 파싱 → 카테고리 아이콘·라벨 매핑)이 실제로 이어지는지가 이 작업의 유일한 실질 리스크였다. 회의록은 [decisions.md](decisions.md) "DB 코드성 컬럼 정리", 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — 백엔드". ✅ **prod 배포 완료 (2026-07-30)**.
 - ~~#10 email NULL 원인 분석~~ → ✅ 완료 (2026-07-26). 원인 = 카카오 '카카오계정(이메일)' 동의항목이 **개인 개발자 일반 앱에선 '권한 없음'**(콘솔 확인). 코드 버그 아님. **수집을 접기로 결정** — 컬럼까지 삭제. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증".
 - ~~#11 닉네임 변경 안내 날짜 텍스트 삭제~~ → ✅ 완료 (2026-07-26). 제한 규칙까지 실제 24시간으로 통일. 상세는 [handoff-archive.md](handoff-archive.md), 문구 근거는 [decisions.md](decisions.md) "닉네임 쿨다운 안내 문구".
 - ~~#12 메뉴 진입 시 매번 로딩 대기 UX 개선~~ → ✅ **완결 (2026-07-26 본체 + 2026-07-28 잔여 갈래 종결)**. 본체: 메뉴를 **낙관적 렌더**로 전환(`/me` 안 기다림, 실패해도 내비게이션 안 막음). 잔여 갈래 2건은 회의로 닫음 ([decisions.md](decisions.md) "메뉴 앱 버전 행") — ① **'앱 버전' 행의 로딩 제거**: 원인이 네트워크가 아니라 *부팅 때 이미 한 판정을 버리고 다시 묻던 것* 이라, `AppApi` 가 성공한 판정만 캐시하고 타일이 동기로 읽게 바꿔 **정상 경로 네트워크 0회**. 최신 상태도 탭되게(SnackBar) + 확인 실패 시 탭=재확인. ② **'내 정보' 스피너는 정상으로 결론** — 닉네임·성별이 콘텐츠 자체이고 캐시를 끼우면 재로그인 시 이전 계정 값이 비쳐서 **드롭**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "메뉴 화면" / "앱 버전".
 - ~~#13 생년월일 입력 자동 포커스 이동~~ → ✅ 완료 (2026-07-26). age gate 3칸 자동 이동 + 빈 칸 백스페이스 복귀 + 년 칸 autofocus. **범위를 폼 전체로 넓혀** 기록/수정(내용→금액)·챌린지 생성(이름→목표금액)의 키보드 '다음' 이동까지 통일하고 규칙을 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter" 에 박음 ([[feedback-consistency-over-pinpoint]]). 중립성 3원칙은 그대로. `flutter analyze` clean + **에뮬 E2E 검증 완료** (년 autofocus→월→일 자동 이동, 빈 칸 백스페이스 복귀, 마지막 칸 액션 키가 '다음'→'완료'로 전환, 이름→목표금액이 기간 탭 필드를 건너뜀, 내용→금액).
 
-- ~~#14 탈퇴 사유 피드백 수집~~ → ✅ 완료 (2026-07-28). 탈퇴를 **화면**([WithdrawScreen](../tenk_app/lib/presentation/profile/withdraw_screen.dart))으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블 `withdrawal_feedback`**(user_id 없음 → 개인정보 아님 → privacy 수집표 무변경 + 계정 파기 후에도 잔존). '기타' 선택 시에만 자유 서술(200자, 개인정보 미기재 안내). 곁가지로 **잘못된 요청 body 가 500 으로 나가던 전역 갭**을 400 으로 수정. 테스트 **183개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 사유". ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
+- ~~#14 탈퇴 사유 피드백 수집~~ → ✅ 완료 (2026-07-28). 탈퇴를 **화면**([WithdrawScreen](../tenk_app/lib/presentation/profile/withdraw_screen.dart))으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블 `withdrawal_feedback`**(user_id 없음 → 개인정보 아님 → privacy 수집표 무변경 + 계정 파기 후에도 잔존). '기타' 선택 시에만 자유 서술(200자, 개인정보 미기재 안내). 곁가지로 **잘못된 요청 body 가 500 으로 나가던 전역 갭**을 400 으로 수정. 테스트 **183개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 사유". ✅ **prod 배포 완료 (2026-07-30)**.
   - **잔여 갈래 2건은 삭제 (2026-07-28)** — "잃는 것을 숫자로"·"탈퇴 전 영상 내보내기". 사유 화면 문구 규칙과 충돌하고 결국 탈퇴를 어렵게 만드는 방향이라 백로그에서 뺐다 ([decisions.md](decisions.md) "메뉴 앱 버전 행" 곁가지).
 - ~~#15 Flutter 상태 관리 재검토 (Scope 7개)~~ → ✅ 완료 (2026-07-29). **현행 유지 — 임계를 5→10 으로 올리고 진짜 트리거를 따로 명문화. 코드 변경은 주석 2곳뿐.** 진단이 결론을 갈랐다: Scope 에 든 건 전부 **값이 안 바뀌는 stateless API 객체**라 `updateShouldNotify` 가 사실상 영원히 false — **지금 있는 건 상태 관리가 아니라 DI** 이고, Riverpod 은 둘을 한 몸으로 파는 물건이라 상태 관리 수요가 0 인 지금 도입하면 전 화면 이관 비용만 치른다. 5 라는 숫자엔 근거가 없었고(감으로 잡은 값), **숫자만 올리면 8개째에서 같은 고민이 반복되므로** "개수는 보조 지표, 착수 트리거는 **화면 간 공유 상태가 생길 때**"를 규칙에 같이 박았다 — 구체적 예는 배지 알림의 global `BadgeNotifier` 승격. 중첩 평탄화도 지금은 보류(임계 10 도달 시 1순위 후보). 회의록은 [decisions.md](decisions.md) "Flutter 상태 관리 재검토", 규칙은 [../CLAUDE.md](../CLAUDE.md) "레이어 규칙".
 - ~~#16 성별 회의~~ → ✅ 완료 (2026-07-29). **현행 유지 — 코드·스키마·문서(privacy.html) 변경 0.** 우려는 *수정할 수 있게 두면 무의미한 데이터가 쌓인다* 였으나, **노이즈는 편집이 아니라 최초 입력에서 들어오고** 편집을 막으면 오탭이 영구 고착돼 오히려 나빠진다(우리가 여는 건 '성별 변경'이 아니라 **'입력값 정정'**). 법상 정정·삭제·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. 곁가지로 **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 진짜 위험은 편집이 아니라 **자기선택 편향**인데 그건 항목 존폐로만 답할 문제라 함께 다뤘고, **수집 항목도 현행 유지**(제거 트리거 없음)로 결론. 회의록은 [decisions.md](decisions.md) "성별 수집·변경", 규칙은 [../CLAUDE.md](../CLAUDE.md) "성별 (선택 수집)".
@@ -316,7 +187,7 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **⚠️ 미배포 변경 3건 (2026-07-26)** — 실행 순서·SQL·검증 체크리스트는 **§0 의 "🚀 운영 배포 런북"** 하나로 모아뒀다(여기 중복 기재하지 말 것). 요약만: `app_config` CREATE+INSERT(#5) + `user.email` DROP(#10) 을 **SQL 먼저** 친 뒤 이미지 재배포. `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`.
+- **미배포 백엔드 변경 — ✅ 없음 (2026-07-30 §0-DEPLOY 9건 일괄 배포로 해소).** 앞으로 지켜야 할 것만 남긴다: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
 - **관리자 패널 (트리거: 콘텐츠 모더레이션·사용자 관리) — 지금 X, 백로그 O.** 현재 관리자 제어 대상은 TESTER 승격 + 앱 버전 정책 2개뿐이고 둘 다 저빈도 SQL 로 충분해 패널을 지을 근거가 없다(과설계). **출시 후 UGC(영상·닉네임·한 줄 평) 신고/모더레이션이 생기면** SQL 로 감당이 안 돼 이때 착수: ADMIN role + 인증 + (웹) 관리 화면. 그때 TESTER 승격·app_config·신고 상태가 모두 "DB 행 편집" 이라 패널이 자연스럽게 흡수. 근거는 [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의".
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.

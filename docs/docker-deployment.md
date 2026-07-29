@@ -164,6 +164,45 @@ tailscale status                                        # 맥 MagicDNS 이름 / 
 - **함정**: `tailscale serve` 의 TCP 문법은 버전마다 다르다 — 안 먹으면 `tailscale serve --help` 로 현재 문법 확인. Tailscale 자체는 이미 이 맥에 깔려 있음(NoMachine GUI 접속용).
 - ⚠️ 이 절은 **디버깅·점검용 임시 접속**이다. 상시 켜두지 말 것 — 끝나면 원복해 격리 기본 상태로 돌린다.
 
+### 5.7 DB 클린 재생성 (⚠️ 라이브 데이터 전량 소멸 — 소멸이 허용될 때만)
+
+밀린 스키마 변경이 여러 건 쌓였고 **라이브 데이터를 버려도 되는 상황**이면, §5.5 의 `ALTER`/`UPDATE` 를 한 건씩 순서 맞춰 치는 대신 **DB 를 통째로 다시 만드는 쪽이 더 안전하다.** 마이그레이션 SQL 은 전부 *데이터를 보존하며* 스키마를 맞추려는 작업이라, 보존이 필요 없어지면 **위험만 남고 이득이 없다**:
+
+- `@Enumerated(STRING)` 컬럼에서 **enum 에 없는 레거시 값을 이미지 재배포 전에 비워야 하는 순서 결합**이 사라진다 (안 비우면 그 row 조회가 예외로 죽는다). 클린 재생성엔 그런 값 자체가 없다.
+- `DROP COLUMN` 의 비가역성, 여러 SQL 사이의 순서 의존이 통째로 소멸한다.
+- 결과 스키마가 `docs/schema.sql` 과 **정의상 일치**한다 — 드리프트 가능성 0. `dbinit` 시드 갱신도 같은 작업에 흡수된다(별도 챙길 필요 없음).
+
+**반대로 데이터를 지키면서 가야 하면 §5.5 를 쓸 것.** 아래는 지워도 될 때만.
+
+```bash
+cd ~/Documents/projects/claude/tenk
+
+# ① schema.sql 최신본을 배포 폴더에 두고 md5 로 대조 (윈도우 개발머신 값과 일치해야 함)
+#    맥에 SSH 가 안 될 때는 Taildrop 이 편하다:  (윈도우) tailscale file cp docs/schema.sql <맥>:
+tailscale file get ~/Downloads/ ; md5 ~/Downloads/schema.sql
+cp ~/Downloads/schema.sql ./schema.sql
+
+# ② 스택 내리고 볼륨 삭제 (⚠️ 되돌릴 수 없음. 필요하면 먼저 mariadb-dump 백업)
+docker compose down
+docker volume rm tenk_db-data tenk_uploads tenk_dbinit
+
+# ③ dbinit 재시딩 — named volume 은 비어 있으면 자동으로 안 채워진다(§5.4·§9.6)
+docker volume create tenk_dbinit
+docker run -d --name seed -v tenk_dbinit:/data alpine sleep 60
+docker cp ./schema.sql seed:/data/01-schema.sql
+docker exec seed md5sum /data/01-schema.sql     # ①의 값과 같은지 재확인
+docker rm -f seed
+
+# ④ 기동 — 빈 데이터 디렉토리라 MariaDB 가 01-schema.sql 을 자동 실행한다
+docker compose pull && docker compose up -d
+docker compose logs -f backend                  # "Started TenkApplication" = validate 통과
+```
+
+- **`up -d` 때 `volume "tenk_dbinit" already exists but was not created by Docker Compose` WARN 은 정상** — ③에서 일부러 먼저 만든 것이다.
+- **`Container tenk-backend-1 Started` 는 컨테이너가 떴다는 뜻일 뿐 스프링 부팅 성공이 아니다.** 반드시 로그로 확인할 것(스키마가 어긋나면 여기서 validate 에러로 죽는다).
+- **끝난 뒤 챙길 것**: 계정이 전부 사라졌으므로 **TESTER role 재승격**이 필요하고(`UPDATE user SET role='TESTER' WHERE ...`), `app_config` 는 `schema.sql` 의 시드값으로 돌아가므로 **현재 스토어 버전과 다르면 다시 맞출 것**(`UPDATE app_config SET latest_version=...`).
+- **알려진 사소한 어긋남**: `db` 컨테이너엔 `TZ` env 가 없어 MariaDB 가 만드는 `DEFAULT current_timestamp()`(현재 `app_config.updated_dt` 하나)는 **UTC** 로 찍힌다. 도메인 시각은 전부 JPA 가 KST JVM 으로 박으므로 기능 영향은 없다.
+
 ---
 
 ## 6. 트러블슈팅 (실제로 겪은 것)
