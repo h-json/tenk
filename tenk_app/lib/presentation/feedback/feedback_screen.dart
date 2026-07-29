@@ -4,6 +4,8 @@ import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../common/field_label.dart';
+import '../common/selection_field.dart';
+import '../common/selection_sheet.dart';
 
 /// 의견 유형 코드. 서버 `FeedbackType` enum 과 **같은 코드**로 유지할 것
 /// (표시 문구는 여기서만 들고, 서버엔 안정적인 코드만 저장한다 — 지출 카테고리·탈퇴 사유와 같은 방식).
@@ -130,30 +132,25 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             const SizedBox(height: AppSpacing.xl),
 
             // 폐쇄형(유형) 먼저, 자유 서술은 그다음 — 고르는 부담이 낮은 것부터 둔다.
-            // 지출 카테고리와 같은 셀렉박스(아이콘 + 라벨, value=code)로 통일한다.
+            // 지출 카테고리와 같은 선택 바텀시트(아이콘 + 라벨, value=code)로 통일한다.
             const FieldLabel('어떤 이야기인가요?', required: true),
             const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              isExpanded: true,
-              decoration: const InputDecoration(hintText: '유형 선택'),
-              items: [
+            SelectionField<String>(
+              value: _type,
+              options: [
                 for (final type in _types)
-                  DropdownMenuItem(
+                  SelectionOption(
                     value: type.code,
-                    child: Row(
-                      children: [
-                        Icon(type.icon, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(type.label, overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
+                    label: type.label,
+                    icon: type.icon,
                   ),
               ],
+              icon: Icons.forum_outlined,
+              hintText: '유형 선택',
+              sheetTitle: '어떤 이야기인가요?',
+              enabled: !_busy,
               // 미선택 검증은 validator 대신 '보내기' 비활성으로 한다 (이 화면엔 Form 이 없다).
-              onChanged: _busy ? null : (code) => setState(() => _type = code),
+              onChanged: (code) => setState(() => _type = code),
             ),
             const SizedBox(height: AppSpacing.xl),
 

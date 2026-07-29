@@ -10,6 +10,7 @@ import '../amount/amount_record_screen.dart';
 import '../amount/spend_category.dart';
 import '../common/async_state.dart';
 import '../common/date_time_picker.dart';
+import '../common/text_input_sheet.dart';
 import '_formatters.dart';
 import 'export/export_screen.dart';
 import 'result_card/result_card_screen.dart';
@@ -145,9 +146,15 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
   }
 
   Future<void> _rename(Challenge challenge) async {
-    final newName = await showDialog<String>(
+    // 상세 화면의 맥락(진행 상황)을 유지한 채 이름만 고치는 자리라 화면이 아니라 바텀시트다
+    // — 기준은 [CLAUDE.md] "모달 사용 기준".
+    final newName = await showTextInputSheet(
       context: context,
-      builder: (_) => _RenameDialog(initial: challenge.name),
+      title: '챌린지 이름 변경',
+      initial: challenge.name,
+      hintText: '예: 외식 줄이기',
+      maxLength: _challengeNameMaxLength,
+      validator: _validateChallengeName,
     );
     if (newName == null || !mounted) return;
     setState(() => _busy = true);
@@ -1124,69 +1131,19 @@ class _AmountTile extends StatelessWidget {
 
 /// 챌린지 이름 변경 다이얼로그. '확인' 시 trim 된 새 이름을 `pop<String>` 으로 반환.
 /// 클라 1차 검증(길이/제어문자)은 서버 검증과 동일 — 진실의 원천은 서버.
-class _RenameDialog extends StatefulWidget {
-  const _RenameDialog({required this.initial});
+const int _challengeNameMaxLength = 100;
 
-  final String initial;
+// 서버 Challenge.NAME_FORBIDDEN_CHARS 와 같은 패턴 (1차 검증). 진실의 원천은 서버.
+final _challengeNameForbiddenChars = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
 
-  @override
-  State<_RenameDialog> createState() => _RenameDialogState();
-}
-
-class _RenameDialogState extends State<_RenameDialog> {
-  static final _forbiddenChars = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
-
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initial);
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+String? _validateChallengeName(String raw) {
+  final v = raw.trim();
+  if (v.isEmpty) return '이름을 입력해주세요.';
+  if (v.length > _challengeNameMaxLength) {
+    return '이름은 $_challengeNameMaxLength자 이하로 입력해주세요.';
   }
-
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).pop<String>(_controller.text.trim());
+  if (_challengeNameForbiddenChars.hasMatch(v)) {
+    return '사용할 수 없는 문자가 포함되어 있어요.';
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('챌린지 이름 변경'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          autofocus: true,
-          maxLength: 100,
-          textInputAction: TextInputAction.done,
-          onFieldSubmitted: (_) => _submit(),
-          decoration: const InputDecoration(
-            hintText: '예: 외식 줄이기',
-          ),
-          validator: (raw) {
-            final v = (raw ?? '').trim();
-            if (v.isEmpty) return '이름을 입력해주세요.';
-            if (v.length > 100) return '이름은 100자 이하로 입력해주세요.';
-            if (_forbiddenChars.hasMatch(v)) {
-              return '사용할 수 없는 문자가 포함되어 있어요.';
-            }
-            return null;
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('확인'),
-        ),
-      ],
-    );
-  }
+  return null;
 }

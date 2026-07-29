@@ -35,8 +35,8 @@ class User {
   /// 연령 확인 미완료 여부. true 면 연령 확인 화면으로 게이트 — 동의보다 먼저 통과해야 한다.
   final bool ageVerificationRequired;
 
-  /// 성별 (`MALE`/`FEMALE`/`OTHER`). **선택 입력이라 null(미입력)이 정상 상태**이고 기능에 쓰이지 않는다.
-  /// '내 정보' 화면에서만 입력·해제한다.
+  /// 성별 (`MALE`/`FEMALE`). **선택 입력이라 null(미입력)이 정상 상태**이고 기능에 쓰이지 않는다.
+  /// '내 정보' → 성별 화면에서만 입력·해제한다 (서버 enum 도 두 값뿐 — '기타'는 없다).
   final String? gender;
 
   factory User.fromJson(Map<String, dynamic> json) {

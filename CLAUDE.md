@@ -106,9 +106,13 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - **[AgeGateScreen](tenk_app/lib/presentation/legal/age_gate_screen.dart) 의 중립성 설계는 정책 요건이라 바꾸지 말 것**: ① 입력 **전에 컷오프(만 14세)를 알려주지 않는다**(역산 입력 유도가 됨) ② 기본값·초기 선택값 없음(DatePicker 대신 빈 입력칸 3개) ③ back/swipe 차단, 확인 또는 로그아웃만.
   - **왜 필요한가**: Play 타겟 연령대에 13~15세가 포함되어 **가족 정책(Families Policy)** 대상이기 때문. 카카오는 이 역할을 대신해줄 수 없다 — 로그인 단계 미성년 차단은 **카카오싱크(비즈앱+검수)** 기능이고, `birthyear` 동의항목도 별도 심사가 필요한 데다 판정은 결국 우리 몫. 근거·대안 검토는 [docs/play-console-app-content.md](docs/play-console-app-content.md) §5.
   - 내부 테스터(TESTER)도 일반 카카오 계정이라 연령 게이트를 정상적으로 탄다(예전 테스트 로그인의 auto-verify 는 제거됨).
-- **성별 (선택 수집)**: `user.gender VARCHAR(10) NULL` (`MALE`/`FEMALE`/`OTHER`, [Gender](tenk-backend/src/main/java/com/hjson/tenk/domain/user/Gender.java)). **NULL(미입력)이 정상 상태이고 서비스 기능은 이 값을 전혀 쓰지 않는다** — 수집 목적은 이용자 통계뿐. `PATCH /api/users/me/gender { gender }`, **`gender: null` 이면 미입력으로 되돌린다(수집 철회 — 이 경로를 막지 말 것)**.
+- **성별 (선택 수집)**: `user.gender VARCHAR(10) NULL` (`MALE`/`FEMALE` **2종 — '기타'는 없다**, [Gender](tenk-backend/src/main/java/com/hjson/tenk/domain/user/Gender.java)). **NULL(미입력)이 정상 상태이고 서비스 기능은 이 값을 전혀 쓰지 않는다** — 수집 목적은 이용자 통계뿐. `PATCH /api/users/me/gender { gender }`, **`gender: null` 이면 미입력으로 되돌린다(수집 철회 — 이 경로를 막지 말 것)**.
+  - **입력 UI 는 [GenderEditScreen](tenk_app/lib/presentation/profile/gender_edit_screen.dart) 의 `SegmentedButton` 3칸 — 남성 / 입력 안 함 / 여성** (2026-07-29, `OTHER` 제거와 같은 건). **'입력 안 함' 이 가운데**인 건 좌우가 값이 되는 대칭 배치라서고, 값들과 **동등한 칸**이어야 한다는 정책 요건(수집 철회의 동등 노출)도 이걸로 충족한다.
+  - ⚠️ **`Gender` 상수를 지울 때는 `UPDATE user SET gender=NULL WHERE gender='<지운 값>';` 를 반드시 짝으로 칠 것.** `@Enumerated(EnumType.STRING)` 이라 enum 에 없는 문자열이 DB 에 남아 있으면 **그 유저 조회가 예외로 죽는다.**
   - **가입 흐름에 넣지 말 것.** '내 정보' 화면([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart))에서 사용자가 원할 때만 입력한다. 다이얼로그는 ① 수집 목적을 그 자리에서 고지하고 ② '입력 안 함' 을 동등한 선택지로 노출한다. **필수로 바꾸거나 온보딩으로 옮기면 개인정보 최소수집 원칙(PIPA)에 걸린다** — 기능에 안 쓰이는 항목이라 필수 수집을 정당화할 근거가 없다.
   - 연령대 통계는 `birth_date` 로 이미 산출 가능하므로 통계 목적으로 항목을 더 늘리지 말 것.
+  - **변경을 제한하지 않는 게 의도된 설계다 (2026-07-29 확정).** 쿨다운·1회 확정 같은 마찰을 넣지 말 것 — ① 우리가 여는 건 '성별 변경'이 아니라 **'입력값 정정'** 이고, 편집을 막으면 오탭이 **영구 고착**돼 데이터 품질이 오히려 나빠진다(노이즈는 편집이 아니라 최초 입력에서 들어온다) ② 정정·삭제·철회는 법상 권리라 앱에서 막아도 **문의 창구로 수작업 처리할 의무만 남고**, 정확성·최신성 보장 원칙에도 어긋난다 ③ privacy.html §1 이 "언제든 되돌려 삭제할 수 있다" 고 **이미 공개 약속**했다. 잠그는 서비스는 실명인증 기반이거나 성별이 혜택과 연동된 경우뿐인데 TenK 은 둘 다 아니다. 근거는 [decisions.md](docs/decisions.md) "성별 수집·변경".
+  - **변경 이력·변경 시각을 저장하지 말 것.** 성별 변경 이력은 **아웃팅 위험이 있는 정보**라 통계 정확도와 바꿀 수 있는 게 아니다. 지금 이력이 안 남는 것은 우연이 아니라 규칙이다 — "감사 목적" 으로도 컬럼을 붙이지 말 것.
   - Play 데이터 안전에서 이 항목만 목적이 **'분석'** 이다(나머지는 '앱 기능'). [play-console-app-content.md](docs/play-console-app-content.md) §6-2 참고.
 - **탈퇴 사유 (선택 수집, 익명)**: 사유 1문항을 **선택으로** 받아 [withdrawal_feedback](docs/schema.sql) 에 기록한다 (`DELETE /api/users/me { reason?, detail? }` — body 를 생략해도 탈퇴된다).
   - **순서: 계정 설정 → 확인 다이얼로그(의사 확정) → [WithdrawScreen](tenk_app/lib/presentation/profile/withdraw_screen.dart)(사유) → 탈퇴 처리.** 확인을 먼저 받는 게 핵심이다 — 아직 마음을 못 정한 사람에게 설문부터 들이밀면 설문이 만류 장치처럼 읽히고 답도 부정확해진다(업계 통례도 "취소 의사 확정 후 마이크로 설문"). **순서를 뒤집지 말 것.** 확인은 다이얼로그 한 번뿐이고 사유 화면에서 또 묻지 않는다.
@@ -360,6 +364,12 @@ lib/
 └── presentation/               # 화면. data 레이어를 Scope로만 호출
     ├── common/                   # 도메인 무관 공용 위젯·헬퍼
     │   ├── async_state.dart        # AsyncStateMixin + AsyncStateView (필수 — 아래 컨벤션 참고)
+    │   ├── selection_sheet.dart    # showSelectionSheet — 목록 택1 바텀시트 ("모달 사용 기준")
+    │   ├── selection_field.dart    # SelectionField — 탭하면 선택 시트가 뜨는 **폼 필드**(FormField 라 validator 유지). Dropdown 대체
+    │   ├── text_input_sheet.dart   # showTextInputSheet — 텍스트 한 값 편집 바텀시트 (챌린지 이름 · export 자막)
+    │   ├── tap_field_box.dart      # TapFieldBox — 탭 필드 공용 룩(surfaceAlt 채움). 날짜·시간·선택 칸이 공유
+    │   ├── date_time_picker.dart   # pickTenkDate / pickTenkTime + formatTimeOfDay (직접 showDatePicker 금지)
+    │   ├── field_label.dart        # FieldLabel(required:/optional:) — 폼 라벨은 전부 이걸로
     │   └── error_view.dart
     ├── login/login_screen.dart
     ├── challenge/
@@ -393,7 +403,9 @@ lib/
     ├── profile/                      # 신규 가입 닉네임 설정 + '내 정보'
     │   ├── nickname_setup_screen.dart   # 신규 가입자 전용 (LoginScreen 이 isNewUser=true 면 분기). PopScope canPop=false 로 회피 차단. 카카오 닉네임 pre-fill. 동의 화면과 분리(닉네임만)
     │   ├── profile_screen.dart          # AppBar 햄버거(Icons.menu) 진입점 = 순수 메뉴(제목 '메뉴' 확정). 내 정보(→) + 계정 설정(→) + 의견 보내기(→) + 법적 고지(→) + 앱 버전(+최신여부) + 테스트 재생성(dev)
-    │   ├── my_info_screen.dart           # '내 정보' 하위 화면. 닉네임(변경 다이얼로그) + 성별(선택, '입력 안 함' 포함)
+    │   ├── my_info_screen.dart           # '내 정보' 하위 화면. 닉네임 · 성별 — 둘 다 **별도 화면으로 push**(다이얼로그 아님, "모달 사용 기준" 참고)
+    │   ├── nickname_edit_screen.dart     # 닉네임 변경 화면. 신규 가입용 nickname_setup_screen 과 별개 (저쪽은 back 차단 온보딩)
+    │   ├── gender_edit_screen.dart       # 성별 화면. SegmentedButton 3칸(남성/입력 안 함/여성) + 목적 고지. GenderChoice 로 pop(취소와 '입력 안 함' 구분)
     │   ├── account_settings_screen.dart # '계정 설정' 하위 화면. 연동 계정 표시 / 로그아웃 / 회원 탈퇴(→ WithdrawScreen push). 메뉴가 넘긴 User 사용, null 이면 자체 로드
     │   └── withdraw_screen.dart          # 탈퇴 사유 화면. 확인 다이얼로그를 통과한 뒤 열린다 — 사유 칩(선택, '기타'면 자유 입력) → withdraw → 로그아웃
     ├── legal/                        # 연령 확인·약관 동의·고지 (openLegalDoc 헬퍼 공유)
@@ -429,6 +441,24 @@ Lottie 자산: `tenk_app/assets/lottie/` — 현재 `confetti.json` (배지 축�
 - **하이브리드 롤아웃 (Wave 0~5 완료)**: 토큰/테마(Wave 0)를 먼저 깔고, 화면 폴리시를 우선순위 웨이브로 적용. **Wave 0(토큰·테마) → 1(목록) → 2(상세) → 3(폼·필수 별표) → 4(리워드: 배지 모달 골드 글로우 + 리워드 토큰↔결과카드 정합) → 5(통계: 상세에 카테고리별 지출 카드).** 기능은 안 건드리고 보이는 층만.
   - **Wave 5 통계**: 챌린지 상세에 `_CategoryBreakdown`(뱅크샐러드식 가로 바 — 카테고리 아이콘/라벨/금액/% + 민트 진행바). `amounts` 에서 **클라 계산**(백엔드 무관), 지출>0 일 때만 노출, 금액 큰 순. 카테고리는 코드로 그룹핑하므로 검증 이전 자유텍스트 데이터는 '기타'로 폴백되어 합쳐 보일 수 있음(정상 — 9종 셀렉박스로 재저장하면 구분됨). 상세는 목록과 같은 언어(상태 pill + 남은 금액 히어로 + `ChallengeProgressBar`)의 요약 카드로 정합화했고, 확정 대기는 앰버 틴트 카드 + 전폭 확정 버튼, 진입 카드(결과카드/영상)는 공용 `_EntryCard` 로 통일.
 - **리모델 (2026-07-15, Wave 0~5 이후)**: ① 카드 **좌측 상태색 스트라이프 제거** — 탭+섹션이 이미 상태로 분류하므로 중복. 상태색은 우상단 마커/칩에만 남김. ② **목록 카드 높이 통일** — 상태 무관 동일 구조(이름+마커 / 남은금액(또는 목표) / 진행바 / 캡션 한 줄), 배지는 카드에서 제외(상세에만 노출)해 높이 변동 제거. ③ **베이스 크림→화이트** + 쿨 그레이 뉴트럴(위 팔레트).
+### 모달 사용 기준 (다이얼로그 / 바텀시트 / 화면)
+> 2026-07-29 확정. **새 UI 를 만들 때 이 표로 형태를 먼저 정할 것** — 같은 성격의 상호작용이 화면마다 다른 형태로 뜨면 앱이 산만해진다.
+
+| 성격 | 형태 | 예 |
+|---|---|---|
+| **파괴적 행동 직전의 확인** ("정말?") | **`AlertDialog`** | 챌린지·기록 삭제, 회원 탈퇴, 테스트 재생성 |
+| **흐름을 막고 알리는 것** | **`AlertDialog`** | 만 14세 미만 안내, 권장 업데이트, 탈퇴 계정 복귀 선택 |
+| **'내 정보' 의 내 속성 편집** | **화면(push)** | 닉네임([NicknameEditScreen](tenk_app/lib/presentation/profile/nickname_edit_screen.dart)), 성별([GenderEditScreen](tenk_app/lib/presentation/profile/gender_edit_screen.dart)) |
+| **폼·목록 안에서 값 하나 고르기/고쳐쓰기** | **바텀시트** | 카테고리, 의견 유형, 챌린지 이름, export 자막 |
+| 축하·연출 | 풀스크린 모달 | 배지 획득 |
+
+- 갈림길은 **"원래 화면의 맥락을 유지해야 하나"** 하나다. 설정형 드릴다운('내 정보')은 떠나도 되니 화면, 입력 중인 폼·진행 중인 챌린지·클립 목록 위에서 값만 고치는 건 맥락이 보여야 하니 바텀시트.
+- **확인 다이얼로그를 화면으로 빼지 말 것** — 되돌릴 자리가 멀어져 오히려 위험해진다.
+- 공용 위젯 4종이 이 기준의 구현체다. **새로 만들지 말고 이걸 쓸 것**:
+  [selection_sheet.dart](tenk_app/lib/presentation/common/selection_sheet.dart) `showSelectionSheet`(목록 택1) / [text_input_sheet.dart](tenk_app/lib/presentation/common/text_input_sheet.dart) `showTextInputSheet`(텍스트 한 값) / [selection_field.dart](tenk_app/lib/presentation/common/selection_field.dart) `SelectionField`(**폼 필드** — 탭하면 선택 시트) / [tap_field_box.dart](tenk_app/lib/presentation/common/tap_field_box.dart) `TapFieldBox`(탭 필드 공용 룩 — 날짜·시간·선택 칸이 공유).
+- **`DropdownButtonFormField` 를 쓰지 말 것 (2026-07-29 전환 완료).** 카테고리·의견 유형이 쓰던 드롭다운은 전부 `SelectionField` 로 갈아탔다. `SelectionField` 는 **`FormField` 로 감싸 `validator` 를 유지**하므로 기존 `Form.validate()` 검증 흐름이 그대로 돈다 — 드롭다운으로 되돌리면 선택 UI 언어가 다시 갈라진다.
+- **`showSelectionSheet`/`showTextInputSheet` 의 반환 `null` 은 '취소'** 다. '선택 안 함' 같은 빈 값을 선택지로 두려면 sentinel 을 쓸 것 (null 을 값으로 쓰면 취소와 구분되지 않는다 — `GenderEditScreen._none` 이 그 패턴).
+
 - **폼 규칙 (Wave 3)**: 필수/선택 표기는 [common/field_label.dart](tenk_app/lib/presentation/common/field_label.dart) `FieldLabel(text, required:/optional:)` 하나로 통일 — 필수=빨간 `*`, 선택=회색 `(선택)`. **폼 라벨은 전부 `FieldLabel` 로**([[feedback-consistency-over-pinpoint]] — record/edit/create/nickname_setup 전수 적용됨). 입력칸은 **`InputDecoration` 에 `border` 를 직접 박지 말 것** — app_theme 의 `inputDecorationTheme`(채움 surfaceAlt + 라운드 + 무보더, 포커스 시 민트)를 상속받는다. 날짜/시간 등 탭 필드는 `Material(surfaceAlt)+InkWell` 채움 패턴으로 통일.
 
 ### 챌린지 목록 IA (상태 탭)

@@ -10,6 +10,7 @@ import '../../data/api/api_error.dart';
 import '../../data/challenge/challenge.dart';
 import '../common/date_time_picker.dart';
 import '../common/field_label.dart';
+import '../common/selection_field.dart';
 import 'amount_camera_screen.dart';
 import 'amount_video_preview_screen.dart';
 import 'spend_category.dart';
@@ -404,25 +405,12 @@ class _AmountEditScreenState extends State<AmountEditScreen> {
     return [
       const FieldLabel('카테고리', required: true),
       const SizedBox(height: 8),
-      DropdownButtonFormField<String>(
-        initialValue: _selectedCategoryCode,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          hintText: '카테고리 선택',
-        ),
-        items: [
-          for (final category in kSpendCategories)
-            DropdownMenuItem(
-              value: category.code,
-              child: Row(
-                children: [
-                  Icon(category.icon, size: 20),
-                  const SizedBox(width: 12),
-                  Text(category.label),
-                ],
-              ),
-            ),
-        ],
+      SelectionField<String>(
+        value: _selectedCategoryCode,
+        options: kSpendCategoryOptions,
+        icon: Icons.category_outlined,
+        hintText: '카테고리 선택',
+        sheetTitle: '카테고리',
         onChanged: (code) => setState(() => _selectedCategoryCode = code),
         validator: (code) => code == null ? '카테고리를 선택해주세요.' : null,
       ),

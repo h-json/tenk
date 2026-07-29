@@ -28,8 +28,10 @@
 - ✅ **탈퇴 사유 수집 (#14, 2026-07-28)** — 탈퇴를 화면으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블**(user_id 없음)이라 개인정보 수집표가 안 늘고 계정 파기 후에도 통계가 남는다. 곁가지로 잘못된 요청 body 가 500 이던 전역 갭을 400 으로 수정. 테스트 **183개** 통과 + **에뮬 E2E 검증 완료**. **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
 - ✅ **메뉴 '앱 버전' 행 로딩 제거 + #12·#14 잔여 갈래 종결 (2026-07-28)** — 로딩의 원인이 네트워크가 아니라 **부팅 때 이미 한 판정을 버리고 다시 묻던 것**이었다. `AppApi` 가 성공한 판정만 캐시하고 타일이 동기로 읽어 **정상 경로 네트워크 0회**. '탭하면 확인' 안은 기각(업데이트 안내는 push 여야 함). '내 정보' 스피너는 **정상으로 결론**, #14 잔여 2건은 **삭제**. `flutter analyze` clean + **에뮬 E2E 검증 완료**. 회의록 [decisions.md](decisions.md) "메뉴 앱 버전 행". **앱 전용이라 §0-DEPLOY 와 무관.**
 - ✅ **의견 보내기 + 문의 창구 (#2, 2026-07-28)** — 메뉴에 '의견 보내기' 신설(유형 4종 + 내용 + **회신 이메일 선택**). 저장은 **익명 테이블**(user_id 없음)이고 회신 이메일만 개인정보라 **1년 상한 배치**로 지운다. 곁가지로 **법적 고지에 '문의' 행(mailto)** 추가 — privacy 를 열어 스크롤해야 보이던 창구를 두 단계로 줄였다. 문의≠피드백 구분과 리서치 근거는 [decisions.md](decisions.md) "의견 보내기 회의"(문구 다듬기 2차 포함 — 칩→셀렉박스, 감사 인사는 인트로가 전담). 테스트 **195개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
+- ✅ **모달 → 화면·바텀시트 전환 (#4, 2026-07-29)** — 모달 16곳 전수 조사 후 성격별로 갈랐다: **확인·차단은 다이얼로그 유지**, **'내 정보' 속성 편집은 화면**, **폼 안 선택은 바텀시트**. 공용 위젯 4종 신설로 `DropdownButtonFormField` 를 걷어내면서도 **`FormField` 로 `validator` 를 보존**. 곁가지로 **성별 `OTHER` 제거 + 3칸 토글**. 테스트 **195개** 통과 + analyze clean. 기준은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준", 회의록 [decisions.md](decisions.md). ⚠️ **에뮬 E2E 미실행** + **라이브 DB `UPDATE` + 재배포 대기** — §0-DEPLOY.
+- ✅ **성별 회의 (#16, 2026-07-29)** — "수정할 수 있게 두면 무의미한 데이터가 쌓이나"에 대해 **현행 유지** 결론. 노이즈는 편집이 아니라 최초 입력에서 들어오고, 편집 차단은 오탭을 영구 고착시켜 오히려 나빠진다. 법상 정정·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 회의록 [decisions.md](decisions.md) "성별 수집·변경".
 - 🔵 **Play 앱 콘텐츠 폼 진행 중** — 개인정보처리방침·광고·콘텐츠 등급 ✅ / App access **답안 확정(데모 계정)**·타겟층·데이터 안전 **콘솔 입력 미완**. 데모 카카오 계정 생성 남음. §0.
-- ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
+- ⏭️ 다음 후보: 위 §0 마무리(백엔드 재배포 + 데모 계정 생성 + 콘솔 폼 3종) / **#4 모달 → 화면 전환** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 앱 아이콘 / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -130,6 +132,7 @@
 | #1 | 탈퇴 UX 재설계 (유예 1개월 + 철회/재가입 선택) | ❌ 없음 | ✅ (privacy.html·delete-account.html 문구 갱신 포함) |
 | #14 | 탈퇴 사유 수집 | ✅ **`withdrawal_feedback` CREATE** | ✅ |
 | #2 | 의견 보내기 + 문의 창구 | ✅ **`feedback` CREATE** | ✅ (privacy.html 수집표·보유기간 갱신 포함) |
+| #4 | 모달 전환 (곁가지로 성별 `OTHER` 제거) | ✅ **`user.gender` 의 `OTHER` → NULL** | ✅ (enum 변경이라 앱 전용이 아님) |
 
 **1단계 — 이미지 빌드·push** (개발 머신에서. 상세 §5.1)
 
@@ -187,6 +190,12 @@ CREATE TABLE \`feedback\` (
   PRIMARY KEY (\`feedback_id\`)
 );
 "
+
+# (f) #4 성별 enum 에서 OTHER 를 지웠다 → 남아 있는 'OTHER' 행을 비운다.
+#     ⚠️ 이미지 재배포 '전에' 반드시 칠 것 — @Enumerated(STRING) 이라 enum 에 없는 값이 남아 있으면
+#     그 유저 조회가 예외로 죽는다(로그인 직후 /api/users/me 부터 깨진다).
+docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk \
+  -e "UPDATE \`user\` SET \`gender\`=NULL WHERE \`gender\`='OTHER';"
 ```
 
 **3단계 — 이미지 재배포** (맥)
@@ -214,6 +223,7 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - [ ] 법적 고지 → '문의' 탭 → 메일 앱이 열리는지 (없는 기기면 주소 복사 안내)
 - [ ] `https://tenk.hjson248.com/privacy.html` 수집표에 **'의견 보내기 (선택) — 답변받을 이메일'** 이 있는지
 - [ ] 탈퇴 화면에서 사유를 **안 고르고** 탈퇴 가능한지 + 사유를 고르면 `withdrawal_feedback` 에 행이 생기는지 (`SELECT * FROM withdrawal_feedback;`)
+- [ ] 메뉴 → 내 정보 → **성별**이 화면으로 열리고 3칸 토글(남성/입력 안 함/여성)로 저장·되돌리기가 되는지 + `SELECT gender, COUNT(*) FROM user GROUP BY gender;` 에 **`OTHER` 가 없는지**
 
 **롤백 주의**: #10 의 `DROP COLUMN` 은 되돌려도 **값은 복구되지 않는다**(2-a 백업에서만 복원 가능). 다만 그 값들은 어차피 전부 NULL 이었으므로 실질 손실은 없다.
 
@@ -242,7 +252,8 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - ~~#2 메뉴 항목 추가~~ → ✅ 완료 (2026-07-28). 이름·아이콘 확정('메뉴' + `Icons.menu`, 07-25) → 앱 버전 행(07-26) → **의견 보내기 + 문의 창구(07-28)** 로 마무리. 의견은 **익명 저장**(user_id 없음)이고 **회신 이메일을 적었는지가 '답변이 필요한가'의 유일한 스위치**다. 곁가지로 법적 고지에 **'문의' 행(mailto)** 을 넣어 고지한 창구를 앱 안에서 두 단계로 닿게 했다. 문의≠피드백 구분과 국내 사례 리서치는 [decisions.md](decisions.md) "의견 보내기 회의", 규칙은 [../CLAUDE.md](../CLAUDE.md) "의견 보내기 (피드백)". 테스트 **195개** 통과 + `flutter analyze` clean + **에뮬 E2E 검증 완료**(이메일 유/무 전송·형식 오류 차단·문의 mailto). ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
   - (효과음/진동 설정은 #8 연동 — 그 기능 생기면 '알림/효과 설정' 하위 화면으로 추가, 최상위 토글 금지.)
 - ~~#3 날짜·시간 선택 UI 정리~~ → ✅ 완료 (2026-07-27, 2단계). ① 로케일 `ko` 고정 + **시각 표기를 로케일 기반으로 통일**(24h 고정 `formatDateTime` 제거) + 공용 헬퍼 [common/date_time_picker.dart](../tenk_app/lib/presentation/common/date_time_picker.dart) ② **시각 picker 를 휠(드럼) 자체 위젯으로 교체**([wheel_time_picker.dart](../tenk_app/lib/presentation/common/wheel_time_picker.dart) — 무한 순환·직접 입력·오전/오후 자동 전환, **dial 제거**) + 기록 화면 일시를 `날짜 | 시간` **2칸**으로 분리([DateTimeFields](../tenk_app/lib/presentation/amount/widgets/date_time_fields.dart) 공유). 날짜 picker 는 Material 그대로. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter". **앱 전용 변경이라 백엔드 재배포와 무관**.
-- [ ] **#4 모달 → 화면 전환** — 카테고리 셀렉박스 / 성별 선택 팝업 / 닉네임 변경 팝업 등 다이얼로그를 별도 화면(push)으로 재구성. 연령·동의·닉네임을 이미 별도 화면으로 분리한 방향과 일관 ([../CLAUDE.md](../CLAUDE.md) 게이트 화면 분리 원칙). 대상: [spend_category.dart](../tenk_app/lib/presentation/amount/spend_category.dart) 드롭다운, [my_info_screen.dart](../tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`·성별 다이얼로그.
+- ~~#4 모달 → 화면 전환~~ → ✅ 완료 (2026-07-29). 모달 **16곳을 전수 조사**해 성격별로 갈랐다 — **확인·차단 다이얼로그는 유지**(화면으로 빼면 되돌릴 자리가 멀어짐), **'내 정보' 의 내 속성 편집은 화면**(닉네임·성별), **폼·목록 안에서 값 하나 고르기는 바텀시트**(카테고리 ×2·의견 유형·챌린지 이름·자막). 백로그가 짚은 3개 외에 **챌린지 이름 변경·의견 유형 2건을 더 찾아** 같이 처리했다([[feedback-consistency-over-pinpoint]]). 공용 위젯 4종 신설(`showSelectionSheet`/`showTextInputSheet`/`SelectionField`/`TapFieldBox`) — 특히 `SelectionField` 는 **`FormField` 로 감싸 `validator` 를 유지**해 드롭다운을 걷어내고도 기록/수정 화면의 검증 흐름이 그대로 돈다. 곁가지로 **성별 `Gender.OTHER` 제거 + 3칸 토글**(남성/입력 안 함/여성)이 같이 들어갔다. 테스트 **195개 통과** + `flutter analyze` clean. 회의록은 [decisions.md](decisions.md) "모달 → 화면·바텀시트 전환", 규칙은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준". ⚠️ **백엔드 재배포 + 라이브 DB `UPDATE` 대기** — §0-DEPLOY.
+  - **에뮬 E2E 검증은 미실행** (다음 세션 첫 항목). 확인할 것: 닉네임·성별 화면 push/pop 과 '내 정보' 즉시 반영 / 성별 3칸 토글에서 '입력 안 함' 되돌리기 / 카테고리·의견 유형 바텀시트 선택 + **미선택 저장 시 검증 에러가 뜨는지**(FormField 배선) / 챌린지 이름·자막 바텀시트 + 키보드가 시트를 밀어 올리는지.
 - [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. **남은 것: 라이브 DB `app_config` CREATE+INSERT + 백엔드 재배포 — 다음 prod 배포 때 다른 항목과 함께 일괄 업로드 예정(아래 §0-DEPLOY).** iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
 - [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
 - [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
@@ -256,6 +267,7 @@ docker compose logs -f backend   # 부팅 성공(= validate 통과) 확인
 - ~~#14 탈퇴 사유 피드백 수집~~ → ✅ 완료 (2026-07-28). 탈퇴를 **화면**([WithdrawScreen](../tenk_app/lib/presentation/profile/withdraw_screen.dart))으로 옮기고 사유 1문항을 **선택**으로 수집. 저장은 **익명 테이블 `withdrawal_feedback`**(user_id 없음 → 개인정보 아님 → privacy 수집표 무변경 + 계정 파기 후에도 잔존). '기타' 선택 시에만 자유 서술(200자, 개인정보 미기재 안내). 곁가지로 **잘못된 요청 body 가 500 으로 나가던 전역 갭**을 400 으로 수정. 테스트 **183개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "인증 — 탈퇴 사유". ⚠️ **라이브 DB `CREATE TABLE` + 재배포 대기** — §0-DEPLOY.
   - **잔여 갈래 2건은 삭제 (2026-07-28)** — "잃는 것을 숫자로"·"탈퇴 전 영상 내보내기". 사유 화면 문구 규칙과 충돌하고 결국 탈퇴를 어렵게 만드는 방향이라 백로그에서 뺐다 ([decisions.md](decisions.md) "메뉴 앱 버전 행" 곁가지).
 - [ ] **#15 Flutter 상태 관리 재검토 (Scope 7개)** — `AuthScope`/`ChallengeScope`/`AmountScope`/`MediaScope`/`UserScope`/`AppScope`/`FeedbackScope` 로 [../CLAUDE.md](../CLAUDE.md) 의 "Scope 5개 초과 시 Riverpod/Provider 재검토" 임계를 두 개 넘겼다. 지금 당장 아픈 건 없고([main.dart](../tenk_app/lib/main.dart) 중첩이 깊어진 정도) 이관은 전 화면을 건드리는 큰 작업이라 미뤄뒀다. **착수 트리거**: 화면 간 공유 상태가 생기거나(현재는 화면별 로컬 상태뿐) Scope 가 또 늘 때. 그때 Riverpod 도입 vs 현행 유지를 회의 안건으로.
+- ~~#16 성별 회의~~ → ✅ 완료 (2026-07-29). **현행 유지 — 코드·스키마·문서(privacy.html) 변경 0.** 우려는 *수정할 수 있게 두면 무의미한 데이터가 쌓인다* 였으나, **노이즈는 편집이 아니라 최초 입력에서 들어오고** 편집을 막으면 오탭이 영구 고착돼 오히려 나빠진다(우리가 여는 건 '성별 변경'이 아니라 **'입력값 정정'**). 법상 정정·삭제·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. 곁가지로 **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 진짜 위험은 편집이 아니라 **자기선택 편향**인데 그건 항목 존폐로만 답할 문제라 함께 다뤘고, **수집 항목도 현행 유지**(제거 트리거 없음)로 결론. 회의록은 [decisions.md](decisions.md) "성별 수집·변경", 규칙은 [../CLAUDE.md](../CLAUDE.md) "성별 (선택 수집)".
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
 > **업적(achievement) 시스템**은 우선순위를 최후로 내렸다 → 맨 아래 §5.

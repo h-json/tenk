@@ -4,6 +4,7 @@ import '../../../data/amount/amount.dart';
 import '../../../data/challenge/challenge.dart';
 import '../../amount/spend_category.dart';
 import '../../common/date_time_picker.dart';
+import '../../common/text_input_sheet.dart';
 import '../_formatters.dart';
 import 'export_prefetch_screen.dart';
 import 'export_settings_screen.dart';
@@ -72,13 +73,14 @@ class _ExportScreenState extends State<ExportScreen> {
 
   Future<void> _editComment(int index) async {
     final clip = _clips[index];
-    final result = await showModalBottomSheet<String>(
+    final result = await showTextInputSheet(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => _CommentEditSheet(
-        initial: clip.comment,
-        fallback: _defaultCommentFor(clip.source),
-      ),
+      title: '자막 편집',
+      description: '영상이 재생될 때 자막으로 표시돼요. 저장된 한 줄 평은 영향받지 않아요.',
+      initial: clip.comment,
+      maxLines: 3,
+      confirmLabel: '저장',
+      resetValue: _defaultCommentFor(clip.source),
     );
     if (result == null || !mounted) return;
     setState(() => clip.comment = result);
@@ -379,90 +381,3 @@ class _CommentPreview extends StatelessWidget {
 }
 
 /// 한 클립의 자막을 편집하는 bottom sheet. 입력값을 반환하면 호출처가 그 자리에 반영.
-class _CommentEditSheet extends StatefulWidget {
-  const _CommentEditSheet({
-    required this.initial,
-    required this.fallback,
-  });
-
-  /// 현재 편집 중인 값 — 첫 진입 시 컨트롤러에 채울 텍스트.
-  final String initial;
-
-  /// memo 또는 폴백으로 계산된 디폴트. "기본값으로 되돌리기" 버튼이 이 값을 사용.
-  final String fallback;
-
-  @override
-  State<_CommentEditSheet> createState() => _CommentEditSheetState();
-}
-
-class _CommentEditSheetState extends State<_CommentEditSheet> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initial);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('자막 편집', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            '영상이 재생될 때 자막으로 표시돼요. 저장된 한 줄 평은 영향받지 않아요.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLength: 100,
-            maxLines: 3,
-            minLines: 1,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              TextButton.icon(
-                onPressed: () =>
-                    _controller.text = widget.fallback,
-                icon: const Icon(Icons.restore),
-                label: const Text('기본값'),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('취소'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(_controller.text.trim()),
-                child: const Text('저장'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

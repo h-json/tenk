@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../common/selection_sheet.dart';
+
 /// 지출 카테고리 (고정 9종). 백엔드 `SpendCategory` enum 과 코드가 1:1 매칭된다.
 ///
 /// 전송·저장은 안정적인 [code](예: `FOOD`), 표시는 [label](식비)·[icon]. 아이콘은 Material 벡터
@@ -30,6 +32,16 @@ const List<SpendCategory> kSpendCategories = [
   SpendCategory(code: 'LIVING', label: '생활비', icon: Icons.home),
   SpendCategory(code: 'ETC', label: '기타', icon: Icons.more_horiz),
 ];
+
+/// 선택 바텀시트용 변환. 기록/수정 두 화면이 같은 목록을 쓰므로 여기서 한 번만 만든다.
+List<SelectionOption<String>> get kSpendCategoryOptions => [
+      for (final category in kSpendCategories)
+        SelectionOption(
+          value: category.code,
+          label: category.label,
+          icon: category.icon,
+        ),
+    ];
 
 /// 미매칭(옛 자유 텍스트·null)일 때의 폴백 — 기타.
 const SpendCategory _fallbackCategory = SpendCategory(

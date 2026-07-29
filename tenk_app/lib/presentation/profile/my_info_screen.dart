@@ -5,6 +5,8 @@ import '../../data/api/api_error.dart';
 import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../common/async_state.dart';
+import 'gender_edit_screen.dart';
+import 'nickname_edit_screen.dart';
 
 /// '내 정보' 하위 화면 — **사용자 본인에 대한 정보**만 모은다 (닉네임 / 성별).
 ///
@@ -30,14 +32,15 @@ class _MyInfoScreenState extends State<MyInfoScreen>
     ensureLoaded();
   }
 
-  Future<void> _openNicknameDialog(User user) async {
+  Future<void> _openNicknameEditor(User user) async {
     if (!user.canChangeNicknameNow) {
       _showSnack(nextNicknameChangeMessage(user.nicknameChangeAvailableFrom));
       return;
     }
-    final next = await showDialog<String>(
-      context: context,
-      builder: (_) => _NicknameEditDialog(initial: user.nickname ?? ''),
+    final next = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) => NicknameEditScreen(initial: user.nickname ?? ''),
+      ),
     );
     if (!mounted || next == null) return; // 취소
     setState(() => _busy = true);
@@ -54,12 +57,13 @@ class _MyInfoScreenState extends State<MyInfoScreen>
     }
   }
 
-  Future<void> _openGenderDialog(User user) async {
+  Future<void> _openGenderEditor(User user) async {
     // 3-state: 값 선택 / 미입력으로 되돌리기 / 취소. 취소와 '입력 안 함' 을 구분해야 해서
     // pop 값을 감싸서 반환한다 (null 을 그냥 pop 하면 취소와 구분이 안 됨).
-    final result = await showDialog<_GenderChoice>(
-      context: context,
-      builder: (_) => _GenderPickerDialog(initial: user.gender),
+    final result = await Navigator.of(context).push<GenderChoice>(
+      MaterialPageRoute<GenderChoice>(
+        builder: (_) => GenderEditScreen(initial: user.gender),
+      ),
     );
     if (!mounted || result == null) return; // 취소
     setState(() => _busy = true);
@@ -82,7 +86,6 @@ class _MyInfoScreenState extends State<MyInfoScreen>
   static String _genderLabel(String? code) => switch (code) {
         'MALE' => '남성',
         'FEMALE' => '여성',
-        'OTHER' => '기타',
         _ => '입력 안 함',
       };
 
@@ -124,7 +127,7 @@ class _MyInfoScreenState extends State<MyInfoScreen>
               const Icon(Icons.chevron_right, color: AppColors.inkMuted),
             ],
           ),
-          onTap: _busy ? null : () => _openNicknameDialog(user),
+          onTap: _busy ? null : () => _openNicknameEditor(user),
         ),
 
         const Divider(height: 1),
@@ -140,7 +143,7 @@ class _MyInfoScreenState extends State<MyInfoScreen>
             ),
           ),
           trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
-          onTap: _busy ? null : () => _openGenderDialog(user),
+          onTap: _busy ? null : () => _openGenderEditor(user),
         ),
 
         if (_busy)
@@ -183,156 +186,3 @@ String _clockLabel(DateTime at) {
   return at.minute == 0 ? base : '$base ${at.minute}분';
 }
 
-/// 성별 선택 결과. `null` pop(=취소)과 "입력 안 함으로 되돌리기"(`value == null`)를 구분하려고 감싼다.
-class _GenderChoice {
-  const _GenderChoice(this.value);
-
-  final String? value;
-}
-
-/// 성별 선택 다이얼로그. **선택 항목**이므로 ① 수집 목적을 그 자리에서 고지하고
-/// ② '입력 안 함'(수집 철회)을 항상 동등한 선택지로 노출한다.
-class _GenderPickerDialog extends StatelessWidget {
-  const _GenderPickerDialog({required this.initial});
-
-  final String? initial;
-
-  /// '입력 안 함' 을 나타내는 sentinel. RadioGroup 의 onChanged 는 null 을 "선택 해제" 로도 쓰기 때문에
-  /// 미입력을 null 로 표현하면 두 의미가 겹친다. 전송 직전에만 null 로 되돌린다.
-  static const _none = 'NONE';
-
-  static const _options = <(String, String)>[
-    ('MALE', '남성'),
-    ('FEMALE', '여성'),
-    ('OTHER', '기타'),
-    (_none, '입력 안 함'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('성별 (선택)'),
-      contentPadding: const EdgeInsets.only(top: 12, bottom: 8),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text(
-              '이용자 통계 목적으로만 사용해요. 입력하지 않아도 모든 기능을 그대로 이용할 수 있어요.',
-              style: TextStyle(fontSize: 13, color: AppColors.inkSub),
-            ),
-          ),
-          RadioGroup<String>(
-            groupValue: initial ?? _none,
-            onChanged: (v) =>
-                Navigator.of(context).pop(_GenderChoice(v == _none ? null : v)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final (code, label) in _options)
-                  RadioListTile<String>(value: code, title: Text(label)),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-      ],
-    );
-  }
-}
-
-class _NicknameEditDialog extends StatefulWidget {
-  const _NicknameEditDialog({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_NicknameEditDialog> createState() => _NicknameEditDialogState();
-}
-
-class _NicknameEditDialogState extends State<_NicknameEditDialog> {
-  // 서버 UserService.NICKNAME_FORBIDDEN_CHARS 와 같은 패턴 (1차 검증). 진실의 원천은 서버.
-  static final RegExp _forbiddenChars = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
-  static const int _maxLength = 50;
-
-  late final TextEditingController _controller;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initial)
-      ..selection = TextSelection.collapsed(offset: widget.initial.length);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  String? _validate(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return '닉네임을 입력해주세요.';
-    if (trimmed.length > _maxLength) return '$_maxLength자 이하로 입력해주세요.';
-    if (_forbiddenChars.hasMatch(trimmed)) {
-      return '사용할 수 없는 문자가 포함돼 있어요.';
-    }
-    return null;
-  }
-
-  void _submit() {
-    final raw = _controller.text;
-    final err = _validate(raw);
-    if (err != null) {
-      setState(() => _error = err);
-      return;
-    }
-    Navigator.of(context).pop(raw.trim());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('닉네임 변경'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            maxLength: _maxLength,
-            decoration: InputDecoration(
-              hintText: '새 닉네임',
-              errorText: _error,
-            ),
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '변경 후 24시간 동안은 다시 변경할 수 없어요.',
-            style: TextStyle(fontSize: 12, color: AppColors.inkSub),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
-        ),
-        TextButton(onPressed: _submit, child: const Text('변경')),
-      ],
-    );
-  }
-}

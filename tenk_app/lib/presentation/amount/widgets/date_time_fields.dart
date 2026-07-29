@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../design/tokens.dart';
 import '../../challenge/_formatters.dart';
 import '../../common/date_time_picker.dart';
+import '../../common/tap_field_box.dart';
 
 /// 기록 화면·수정 화면이 공유하는 `날짜 | 시간` 2칸 행.
 ///
@@ -34,11 +34,12 @@ class DateTimeFields extends StatelessWidget {
       children: [
         Expanded(
           child: dateTap == null
-              ? _FieldBox.readonly(
+              ? TapFieldBox(
                   icon: Icons.event_busy_outlined,
                   text: formatDate(date),
+                  muted: true,
                 )
-              : _FieldBox.tappable(
+              : TapFieldBox(
                   icon: Icons.event_outlined,
                   text: formatDate(date),
                   onTap: dateTap,
@@ -46,73 +47,13 @@ class DateTimeFields extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _FieldBox.tappable(
+          child: TapFieldBox(
             icon: Icons.schedule_outlined,
             text: formatTimeOfDay(context, time),
             onTap: onTimeTap,
           ),
         ),
       ],
-    );
-  }
-}
-
-/// 채움(surfaceAlt) 탭 필드 — app_theme 의 입력칸 룩과 맞춘 형태.
-class _FieldBox extends StatelessWidget {
-  const _FieldBox.tappable({
-    required this.icon,
-    required this.text,
-    required VoidCallback this.onTap,
-  });
-
-  const _FieldBox.readonly({
-    required this.icon,
-    required this.text,
-  }) : onTap = null;
-
-  final IconData icon;
-  final String text;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const padding = EdgeInsets.symmetric(horizontal: 16, vertical: 15);
-    final tap = onTap;
-    final row = Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.inkMuted),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: tap == null
-                ? AppTypo.body.copyWith(color: AppColors.inkMuted)
-                : AppTypo.body,
-          ),
-        ),
-        if (tap != null)
-          const Icon(Icons.expand_more, color: AppColors.inkMuted),
-      ],
-    );
-
-    if (tap == null) {
-      return Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(AppRadius.chip),
-        ),
-        child: row,
-      );
-    }
-    return Material(
-      color: AppColors.surfaceAlt,
-      borderRadius: BorderRadius.circular(AppRadius.chip),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: tap,
-        child: Padding(padding: padding, child: row),
-      ),
     );
   }
 }
