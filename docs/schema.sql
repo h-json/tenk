@@ -14,6 +14,15 @@
 --   app_config       : 신설 — 앱 최신/최소 지원 버전 + 스토어 URL (단일 행). 강제/권장 업데이트 게이트용
 --   feedback         : 신설 — 메뉴 '의견 보내기'. 익명(user_id 없음) + 회신용 이메일만 선택 개인정보
 -- ============================================================
+-- 코드성 컬럼 규칙 (2026-07-30 통일) — 진실의 원천은 CLAUDE.md "코딩 컨벤션 — 백엔드"
+--   Java enum 을 저장하는 컬럼은 **VARCHAR + @Enumerated(EnumType.STRING)** 로 통일한다.
+--   MariaDB 네이티브 ENUM(...) 을 쓰지 말 것 — 상수 목록이 코드와 DB 두 곳에 생겨 어긋나고,
+--   값을 추가·삭제할 때마다 ALTER TABLE 이 필요해진다 (VARCHAR 면 UPDATE 한 줄로 끝난다).
+--   라이브 DB 에는 아래를 수동 적용해야 한다 (코드 배포와 순서 무관 — 양쪽 자료형 다 validate 통과):
+--     ALTER TABLE `user`      MODIFY COLUMN `provider` VARCHAR(20) NOT NULL;
+--     ALTER TABLE `challenge` MODIFY COLUMN `result`   VARCHAR(20) NULL;
+--     ALTER TABLE `badge`     MODIFY COLUMN `type`     VARCHAR(30) NOT NULL;
+-- ============================================================
 
 use `tenk`;
 
@@ -32,7 +41,9 @@ DROP TABLE IF EXISTS `user`;
 
 CREATE TABLE `user` (
     `user_id`             BIGINT AUTO_INCREMENT                          NOT NULL,
-    `provider`            ENUM('GOOGLE', 'KAKAO', 'NAVER', 'TEST')       NOT NULL,
+    -- AuthProvider enum name (GOOGLE/KAKAO/NAVER/TEST). 2026-07-30 네이티브 ENUM → VARCHAR
+    -- (코드성 컬럼 자료형 통일 — 아래 상단 주석 "코드성 컬럼 규칙" 참고).
+    `provider`            VARCHAR(20)                                    NOT NULL,
     `provider_user_id`    VARCHAR(255)                                   NOT NULL,
     -- email 컬럼은 2026-07-26 제거됨. 카카오 '카카오계정(이메일)' 동의항목이 개인 개발자 일반 앱에선
     -- '권한 없음'이라 늘 NULL 이었고, 서비스 기능에 쓰이지도 않아 수집 자체를 접었다 (최소수집 원칙).
@@ -76,7 +87,7 @@ CREATE TABLE `challenge` (
     `start_date`        DATE                                             NOT NULL,
     `end_date`          DATE                                             NOT NULL,
     `target_amount`     INT           DEFAULT 10000                      NOT NULL,
-    `result`            ENUM('SUCCESS', 'FAIL')                          NULL,
+    `result`            VARCHAR(20)                                      NULL,  -- ChallengeResult enum name
     `created_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
     `updated_dt`        DATETIME      DEFAULT CURRENT_TIMESTAMP          NOT NULL,
     `is_deleted`        TINYINT(1)    DEFAULT 0                          NOT NULL,
@@ -126,7 +137,7 @@ CREATE TABLE `media_file` (
 
 CREATE TABLE `badge` (
     `badge_id`          BIGINT AUTO_INCREMENT                            NOT NULL,
-    `type`              ENUM('STREAK', 'NO_SPEND', 'CHALLENGE_SUCCESS')  NOT NULL,
+    `type`              VARCHAR(30)                                      NOT NULL,  -- BadgeType enum name
     `condition_value`   INT                                              NOT NULL,
     `icon_path`         VARCHAR(255)                                     NOT NULL,
     PRIMARY KEY (`badge_id`),
