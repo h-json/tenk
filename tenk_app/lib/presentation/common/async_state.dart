@@ -55,7 +55,18 @@ mixin AsyncStateMixin<W extends StatefulWidget, T> on State<W> {
         _error = e;
         _loading = false;
       });
+      // 이미 보여줄 데이터가 있으면 [AsyncStateView] 가 계속 builder 를 그려서 이 `_error` 를
+      // 아무도 안 읽는다 — 화면이 그대로라 **새로고침이 성공한 것처럼 보인다**(stale 을 fresh 로 오인).
+      // 첫 로드는 ErrorView 가 받아주므로, 그 사각지대인 "데이터가 있는 상태의 실패"만 알린다.
+      if (_data != null) _notifyRefreshFailure(e);
     }
+  }
+
+  void _notifyRefreshFailure(Object error) {
+    // 화면이 이미 pop 됐거나 Scaffold 밖이면 조용히 넘어간다 — 알림 때문에 죽지 않게.
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text('새로고침 실패: ${toApiException(error).message}')),
+    );
   }
 
   /// 외부 동작(예: finalize)으로 받은 새 값을 즉시 state에 반영.

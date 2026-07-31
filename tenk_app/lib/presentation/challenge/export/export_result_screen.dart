@@ -101,10 +101,11 @@ class _ExportResultScreenState extends State<ExportResultScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_galErrorMessage(e))),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
+      // 예외 원문(영문)을 그대로 띄우지 말 것 — 원인을 아는 실패는 위 GalException 분기가 이미 처리했다.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('저장 실패: $e')),
+        const SnackBar(content: Text('갤러리에 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -120,10 +121,10 @@ class _ExportResultScreenState extends State<ExportResultScreen> {
         text: '만원 챌린지 결과 영상',
       );
       await SharePlus.instance.share(params);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('공유 실패: $e')),
+        const SnackBar(content: Text('공유하지 못했어요. 잠시 후 다시 시도해 주세요.')),
       );
     } finally {
       if (mounted) setState(() => _sharing = false);

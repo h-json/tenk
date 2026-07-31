@@ -31,6 +31,9 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
     with TickerProviderStateMixin {
   static const _recordDuration = Duration(seconds: 2);
 
+  /// 우리가 직접 던지는 [CameraException] 코드 — 플랫폼 코드와 겹치지 않게 소문자로 둔다.
+  static const _noCameraCode = 'no_camera';
+
   /// CameraX `startVideoRecording` 의 Future 가 실제 인코더 첫 프레임 쓰기 전에
   /// 먼저 resolve 되는 경우가 있어, future resolve 직후 바로 `_recordDuration`
   /// 타이머를 걸면 실제 캡처가 1초 정도로 잘려나가는 회귀가 있었다 (실측 기반).
@@ -166,7 +169,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       if (_cameras.isEmpty) {
         final cameras = await availableCameras();
         if (cameras.isEmpty) {
-          throw CameraException('no_camera', '사용 가능한 카메라를 찾지 못했어요.');
+          throw CameraException(_noCameraCode, '사용 가능한 카메라를 찾지 못했어요.');
         }
         _cameras = cameras;
       }
@@ -265,9 +268,9 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       await c.setFlashMode(next);
       if (!mounted) return;
       setState(() => _flashMode = next);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      _showError('플래시 전환 실패: ${toApiException(e).message}');
+      _showError('플래시를 전환하지 못했어요.');
     }
   }
 
@@ -345,7 +348,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
         _starting = false;
         _recording = false;
       });
-      _showError('녹화 시작 실패: ${toApiException(e).message}');
+      _showError('녹화를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }
 
@@ -369,7 +372,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       _progressController.value = 0;
       _startMorph.value = 0;
       setState(() => _recording = false);
-      _showError('녹화 정지 실패: ${toApiException(e).message}');
+      _showError('녹화를 정지하지 못했어요.');
     }
   }
 
@@ -442,6 +445,21 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
     );
   }
 
+  /// 카메라를 못 여는 이유를 한국어 한 문장으로. 플랫폼이 주는 `description` 은 영문이라
+  /// 그대로 노출하지 않고, **사용자가 취할 행동이 갈리는 권한 거부만** 따로 안내한다.
+  static String _cameraErrorMessage(Object error) {
+    if (error is! CameraException) return toApiException(error).message;
+    return switch (error.code) {
+      'CameraAccessDenied' ||
+      'CameraAccessDeniedWithoutPrompt' ||
+      'CameraAccessRestricted' =>
+        '카메라 권한이 필요해요. 설정에서 카메라 접근을 허용해 주세요.',
+      // 우리가 직접 던진 코드만 설명을 그대로 쓴다 (한국어라 안전).
+      _noCameraCode => error.description ?? '사용 가능한 카메라를 찾지 못했어요.',
+      _ => '카메라를 열지 못했어요. 잠시 후 다시 시도해 주세요.',
+    };
+  }
+
   Widget _buildBody(BuildContext context) {
     final theme = Theme.of(context);
     if (_initializing) {
@@ -451,7 +469,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
     if (_cameraError != null || controller == null) {
       final msg = _cameraError == null
           ? '카메라를 사용할 수 없어요.'
-          : '카메라 초기화 실패: ${toApiException(_cameraError!).message}';
+          : _cameraErrorMessage(_cameraError!);
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

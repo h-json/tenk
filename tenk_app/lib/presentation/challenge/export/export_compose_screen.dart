@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../data/amount/amount.dart';
+import '../../../data/api/api_error.dart';
 import '../../../data/challenge/challenge.dart';
 import '../../../data/export/result_card_capture.dart';
 import '../../../data/export/video_composer.dart';
@@ -131,11 +132,13 @@ class _ExportComposeScreenState extends State<ExportComposeScreen> {
         _phase = _Phase.error;
         _errorMessage = e.message;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.error;
-        _errorMessage = e.toString();
+        // 예외 원문(영문)은 노출하지 않는다 — 사용자가 설명을 받아야 하는 실패는
+        // 위 VideoComposeFailed 분기가 한국어 메시지로 이미 처리했다.
+        _errorMessage = unknownErrorMessage;
       });
     }
   }
