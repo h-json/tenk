@@ -35,7 +35,8 @@
 - ✅ **DB 코드성 컬럼 정리 (#9, 2026-07-30)** — 조사해보니 **두 축**이 따로 어긋나 있었다: ⓐ DB 자료형(네이티브 `ENUM` 3개 vs `VARCHAR` 5개 — 시간순 흔적) ⓑ Java 매핑(`amount.category` 만 raw String). **둘 다 정리** — ⓐ `VARCHAR` 통일(Java 변경 0), ⓑ `@Enumerated(STRING)` 전환 + 레거시 → `ETC` (DTO 는 String 유지라 **Flutter 변경 0**). 룩업 테이블은 기준상 `badge` 하나뿐이고 이미 그래서 도입 안 함. 테스트 **200개** 통과 + **에뮬 E2E 검증 완료**(유일한 실질 리스크였던 wire format 이 Jackson→Flutter 까지 그대로임을 확인). 회의록 [decisions.md](decisions.md) "DB 코드성 컬럼 정리". ✅ **prod 배포 완료 (2026-07-30)**.
 - ✅ **§0-DEPLOY 9건 prod 배포 완료 (2026-07-30)** — 밀려 있던 #5·#10·#11·#1·#14·#2·#4·#9ⓐ·#9ⓑ 를 **한 번에** 라이브 반영. 사용자가 데이터 소멸을 승인해 런북의 8단계 마이그레이션 SQL 대신 **DB 를 통째로 재생성**(볼륨 3개 삭제 → `dbinit` 재시딩 → clean init)했고, 그래서 순서 함정(레거시 값 정리·`DROP COLUMN`)이 성립하지 않았다. **서버 측 검증 전항목 통과.** 실행 기록은 [handoff-archive.md](handoff-archive.md), 재사용 가능한 절차는 [docker-deployment.md](docker-deployment.md) §5.7.
   - ⚠️ **부수 효과: 라이브 계정·챌린지·업로드 영상이 전부 소멸했다.** 다음 로그인은 전원 신규 가입(연령→동의→닉네임)이고, **TESTER role 재승격**이 필요하다(§0 잔여).
-- ⏭️ 다음 후보: **§0 잔여(앱 릴리스 + Play 콘솔 폼 3종 + 데모 계정) — 한 묶음** / **#6 로고·앱 아이콘** / #7 예외처리 전수 점검 / #8 배지 획득 효과 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **예외처리 전수 점검 (#7, 2026-07-31)** — 커버리지는 이미 좋았고, 문제는 **양쪽 다 아는 규칙을 일부가 안 지킨 것**이었다. 앱: 네트워크 오류가 **영문으로 뜨던 것**을 원인별 3분기 한국어 폴백으로 교체 + 예외 원문을 직접 찍던 5곳 정리. 백엔드: **잘못된 호출 6종이 전부 500** 이던 것을 실측으로 확인하고 400/404/405/415 로 정정. **에뮬 검증에서 갭이 하나 더 나와**(새로고침 실패가 무피드백이라 *성공한 것처럼* 보였다) `AsyncStateMixin` 한 곳으로 해결. 테스트 **207개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ⚠️ **백엔드 재배포 필요** (§0). 상세는 아래 §1-A #7.
+- ⏭️ 다음 후보: **§0 잔여(백엔드 재배포 + 앱 릴리스 + Play 콘솔 폼 3종 + 데모 계정) — 한 묶음** / **#6 로고·앱 아이콘** / #8 배지 획득 효과 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -52,7 +53,7 @@
    - 동의 항목에서 `프로필 정보(닉네임)`, `카카오계정(이메일)` 활성화
    - 앱 키의 **앱 ID(숫자)**를 `tenk-backend/src/main/resources/application.yaml`의 `tenk.auth.kakao.app-id`에 박기 (server-side `access_token_info`의 `app_id`와 매칭 검증용)
 5. 백엔드 실행: `cd tenk-backend && ./gradlew.bat bootRun` → `http://localhost:8080/swagger-ui.html`
-6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 200개 — 단위 139 + 통합 56 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블 선적용 필요** (schema.sql 참고).
+6. 백엔드 테스트: `cd tenk-backend && ./gradlew.bat test` (총 207개 — 단위 139 + 통합 63 + WebMvc 4 + ContextLoads 1. 전원 통과). ⚠️ **테스트 실행 시 로컬 `tenk` DB의 user/challenge/amount/challenge_badge/refresh_token 데이터가 비워진다** (badge·app_config 마스터는 유지). Flutter 재로그인으로 복구 가능. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback` 테이블 선적용 필요** (schema.sql 참고).
 7. **Flutter 앱 셋업** (앱 작업까지 할 거면):
    - 새 머신의 `~/.android/debug.keystore`에서 키해시 추출:
      `keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android | openssl sha1 -binary | openssl base64` (Git Bash). PowerShell `Get-FileHash` 안 됨 — [[reference-kakao-android-keyhash]] 참고.
@@ -72,7 +73,7 @@
 - ✅ **배지 자동 지급**: 이벤트(AFTER_COMMIT + REQUIRES_NEW) + 새벽 1시 배치 재평가. 유저 단위 → **챌린지 단위**로 재편(`challenge_badge`, `ChallengeResponse.badges` 인라인, 전용 화면 없음). 회수(revoke)는 `applyLadder` 단일 패스.
 - ✅ **결과 export**: `GET /api/challenges/{id}/export` 일별/카테고리별 JSON. **CORS 비활성화**(네이티브 앱 전용).
 - ✅ **amount.memo**(VARCHAR 500, 빈값 null 정규화) + **무지출/배지 정합성**(일시 서버 now 강제, 하루 1회 UNIQUE, 지출 시 같은 날 무지출 자동 삭제 + 배지 revoke, NO_SPEND=누적/STREAK=연속).
-- ✅ **테스트 현황**: `./gradlew.bat test` 총 **200개**(단위 139 + 통합 56 + WebMvc 4 + 컨텍스트 1, 2026-07-30 실측). **전원 통과**. 통합 56 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 보내기 5. 단위 139 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 엔티티 7 + 지출 카테고리 enum 5(`SpendCategoryTest` 4 + `AmountTest` wire format 1). ⚠️ **`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
+- ✅ **테스트 현황**: `./gradlew.bat test` 총 **207개**(단위 139 + 통합 63 + WebMvc 4 + 컨텍스트 1, 2026-07-31 실측). **전원 통과**. 통합 63 = 기존 40 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 보내기 5 + 잘못된 요청 상태 코드 7. 단위 139 = 기존 116 + 탈퇴 복귀 7 + 탈퇴 사유 4 + 의견 엔티티 7 + 지출 카테고리 enum 5(`SpendCategoryTest` 4 + `AmountTest` wire format 1). ⚠️ **`withdrawal_feedback`·`feedback` 테이블이 있어야 돈다** (schema.sql 참고). (2026-07-26: 닉네임 제한이 24시간 기준으로 바뀌면서 `UserServiceTest` 의 날짜 의존 테스트 2건을 상대 시간 기준으로 교체 — 자정 flaky 요인 자체가 사라짐.) `LocalDate.now()` 정적이라 종료 상태는 reflection backdate. 통합은 로컬 `tenk` 스키마 공유 → 실행 시 dev 데이터 비워짐(Flutter 재로그인 복구). 상세 패턴은 [../CLAUDE.md](../CLAUDE.md) 테스트 컨벤션 행 + 아래 "함정".
 - ✅ **카카오 키**(git 추적): 네이티브 앱 키 `589078d3c7daa590c71d9a6e77080b18` 3곳(kakao_config.dart/Android build.gradle/iOS Info.plist), 백엔드 `tenk.auth.kakao.app-id = 1459747`. Android **debug** 키해시 `Dt3/ajH81vV0Ex78dS1ACaqelWc=`(이 머신 기준, 새 머신은 [[reference-kakao-android-keyhash]]). Android **release** 키해시(`tenk-release.keystore`, alias `tenk`) `NsYpNZftCOyk4LygMWF7mdtowdg=` — **카카오 콘솔에 이 값도 추가 등록해야 릴리스 APK 에서 로그인 됨** (미등록 시 로그인만 실패). keystore 이동·재생성하면 이 값도 바뀌니 재추출: `keytool -exportcert -alias tenk -keystore tenk-release.keystore -storepass '<pw>' | openssl sha1 -binary | openssl base64`.
 
 **Flutter 앱** (구조: `lib/app`(셸) + `lib/data` + `lib/presentation` 3층, 컨벤션은 [../CLAUDE.md](../CLAUDE.md))
@@ -105,7 +106,8 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**백엔드 — ✅ LIVE, 남은 항목 없음.**
+**백엔드 — 🟠 미배포 1건 (#7 예외처리).**
+- [ ] **#7 예외처리 전수 점검 배포** — `GlobalExceptionHandler` 에 `handleMalformedRequest` 추가 + `ErrorCode` 3개(C0005/C0006/C0007) 신설. **스키마 변경 없음 → 이미지 재배포만** ([docker-deployment.md](docker-deployment.md) §5.1 코드만 변경 경로). 배포 후 확인: `curl -i https://tenk.hjson248.com/api/nope` 가 **404 + C0005** (이전엔 500 + C0001).
 - [x] ✅ **백엔드 재배포 완료 (2026-07-25)** — 연령 게이트 + 성별 + role/테스트로그인 제거를 prod 에 배포. 라이브 DB 3컬럼(`birth_date`/`gender`/`role`) `ALTER` 선적용 → `docker compose pull && up -d` → 부팅 정상 + `/api/auth/test/login` 제거 확인(401=security-first). `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). `delete-account.html`/`privacy.html` 은 이미지에 구워져 함께 반영. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) §5.5.
 - [x] ✅ **§0-DEPLOY 9건 prod 배포 완료 (2026-07-30)** — #5·#10·#11·#1·#14·#2·#4·#9ⓐ·#9ⓑ 일괄. **DB 클린 재생성** 방식(볼륨 3개 삭제 → `dbinit` 재시딩 → clean init)이라 마이그레이션 SQL 8단계를 안 탔다. **서버 측 검증 전항목 통과** — 401 envelope / 버전 게이트 `LATEST`·`UPDATE_REQUIRED` / 새 테이블 3종 / `user.email` 부재 / 코드성 8개 컬럼 전부 `varchar`(enum 0) / badge 9행. 실행 기록은 [handoff-archive.md](handoff-archive.md), **재사용 가능한 절차는 [docker-deployment.md](docker-deployment.md) §5.7**.
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
@@ -126,6 +128,7 @@
   - [ ] 내 정보 → 성별 3칸 토글 저장·되돌리기 (#4)
   - [ ] 탈퇴(사유 미선택으로도 가능) → 재로그인 시 U0007 선택 다이얼로그 → 철회/재가입 양쪽 (#1·#14)
   - [ ] 정적 문서 — privacy 수집표에 '의견 보내기' 행 / 보관 목적 "탈퇴 철회 대응" · 기간 1개월 / delete-account 에 `TenK` (#10·#1·#2)
+  - [ ] **비행기 모드 훑기 (#7)** — 에뮬에선 완료(내 정보·의견 보내기·목록 새로고침·메뉴). 실기기에선 **아직 안 본 화면만** 확인: 챌린지 상세 / 기록 저장 / 영상 업로드 중 끊김
 - [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨. `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
 - [ ] **③ 새 AAB 빌드·업로드** — `pubspec` version 증가 **필수**(현재 `1.0.0+3`) → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → 내부 테스트 트랙. **게시 후** 재배포 없이 SQL 한 줄로 최신 버전 반영: `UPDATE app_config SET latest_version='<새 version>' WHERE app_config_id=1;`
 - [ ] **④ Play Console 폼 입력**:
@@ -159,7 +162,7 @@
 - ~~#4 모달 → 화면 전환~~ → ✅ 완료 (2026-07-29). 모달 **16곳을 전수 조사**해 성격별로 갈랐다 — **확인·차단 다이얼로그는 유지**(화면으로 빼면 되돌릴 자리가 멀어짐), **'내 정보' 의 내 속성 편집은 화면**(닉네임·성별), **폼·목록 안에서 값 하나 고르기는 바텀시트**(카테고리 ×2·의견 유형·챌린지 이름·자막). 백로그가 짚은 3개 외에 **챌린지 이름 변경·의견 유형 2건을 더 찾아** 같이 처리했다([[feedback-consistency-over-pinpoint]]). 공용 위젯 4종 신설(`showSelectionSheet`/`showTextInputSheet`/`SelectionField`/`TapFieldBox`) — 특히 `SelectionField` 는 **`FormField` 로 감싸 `validator` 를 유지**해 드롭다운을 걷어내고도 기록/수정 화면의 검증 흐름이 그대로 돈다. 곁가지로 **성별 `Gender.OTHER` 제거 + 3칸 토글**(남성/입력 안 함/여성)이 같이 들어갔다. 테스트 **195개 통과** + `flutter analyze` clean + **에뮬 E2E 검증 완료** (닉네임·성별 화면 push/pop 과 '내 정보' 즉시 반영 / 성별 3칸 토글 저장·'입력 안 함' 되돌리기 / 카테고리·의견 유형 바텀시트 선택 + **미선택 저장 시 검증 에러**(FormField 배선) / 챌린지 이름·자막 바텀시트 + 키보드 인셋). 회의록은 [decisions.md](decisions.md) "모달 → 화면·바텀시트 전환", 규칙은 [../CLAUDE.md](../CLAUDE.md) "모달 사용 기준". ✅ **prod 배포 완료 (2026-07-30)**.
 - [x] ✅ **#5 앱 시작 강제/권장 업데이트 — 구현 완료 (2026-07-26)** — 판정은 **서버가 진실의 원천**(클라 semver 비교 안 함). 정책은 `app_config` **단일 행**(min/latest/스토어 URL)에 두고 **재배포 없이 SQL 로 갱신**(관리자 UI 없음 — TESTER 승격과 동일 운영 방식으로 결정, [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의"). `GET /api/app/version`(PERMIT_ALL) → [SessionGate](../tenk_app/lib/app/session_gate.dart) 가 **버전 게이트를 가장 먼저** 판정 → 강제=[ForceUpdateScreen](../tenk_app/lib/presentation/update/update_gate.dart)(back 차단)/권장=[RecommendedUpdateHost](../tenk_app/lib/presentation/update/update_gate.dart)(1회 안내). fail-open(서버·버전 이상 시 미적용). 규칙 진실의 원천은 [../CLAUDE.md](../CLAUDE.md) "앱 버전 / 강제·권장 업데이트". ✅ **로컬 DB `app_config` 적용 + 백엔드 테스트 160개 전원 통과 + 에뮬 E2E 검증 완료 (2026-07-26)**. ✅ **prod 배포 완료 (2026-07-30)** — `app_config` 시드 1행(1.0.0/1.0.0/Play URL) 적용 + 버전 게이트 응답 확인. iOS 스토어 URL 은 iOS 출시 때 SQL 로 채움. 배포 메모는 아래 "운영 고려사항" 참고.
 - [ ] **#6 로고 / 앱 아이콘 정리** — Tenk 로고 + 런처 아이콘 확정. §0 의 "(선택) 앱 아이콘 교체"(`flutter_launcher_icons`)와 동일 건 — 이쪽으로 통합.
-- [ ] **#7 예외처리 전수 점검** — 백엔드 `ErrorCode`/`BusinessException` 커버리지 + Flutter `toApiException` SnackBar 노출 누락·엣지 케이스(네트워크 끊김, 토큰 만료, 파일 IO 실패 등) 전수 정리. 범위가 넓어 착수 시 영역별로 쪼갤 것.
+- ~~#7 예외처리 전수 점검~~ → ✅ 완료 (2026-07-31). 커버리지는 이미 좋았고(백엔드 `throw` 40여 곳이 전부 `BusinessException`, Flutter 의 `catch (_) {}` 41곳도 근거 주석이 붙은 의도된 침묵), 진짜 문제는 **양쪽 다 아는 규칙을 일부가 안 지킨 것**이었다 ([[feedback-consistency-over-pinpoint]]). **앱**: 네트워크 오류가 영문(dio `message`/`toString()`)으로 뜨던 걸 **원인별 3분기 한국어 폴백**으로 교체 + 예외 원문을 직접 찍던 5곳 정리(곁가지로 카메라 권한 안내를 따로 갈라 회귀 예방). **백엔드**: 잘못된 호출 6종이 **전부 500** 이던 것을 실측으로 확인하고 `handleMalformedRequest` 로 400/404/405/415 정정. **에뮬 검증이 갭을 하나 더 잡아**(새로고침 실패 무피드백 — 성공한 것처럼 보였다) [async_state.dart](../tenk_app/lib/presentation/common/async_state.dart) 한 곳으로 해결. 테스트 **207개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — 백엔드/Flutter". ⚠️ **백엔드 재배포 필요** (§0).
 - [ ] **#8 배지 획득 효과 개선** — 현재 [badge_celebration_dialog.dart](../tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(Lottie 컨페티 + 줌·바운스) 연출을 더 풍부하게. 효과음·진동(#2 의 효과음/진동 설정 항목과 연동) + 모션 폴리시. 착수 전 레퍼런스 정하고 진행.
 - ~~#9 DB 컬럼 enum 전환 검토~~ → ✅ 완료 (2026-07-30). 목록화를 해보니 **두 개의 다른 축**이 각각 어긋나 있었고 백로그 문구는 하나만 가리키고 있었다 — ⓐ **DB 자료형**: `user.provider`·`challenge.result`·`badge.type` 만 네이티브 `ENUM`, 나머지 5개는 `VARCHAR`(설계가 아니라 시간순 흔적) ⓑ **Java 매핑**: 8개 중 7개가 이미 `@Enumerated(STRING)`, `amount.category` 만 raw String. **둘 다 실행했다.**
   - ⓐ **네이티브 `ENUM` 3개 → `VARCHAR`** (Java 코드 변경 0). 상수 목록이 코드와 DB 두 곳에 생겨 어긋나고(`AuthProvider.TEST` 가 그 상태였다) 값 변경마다 `ALTER` 가 붙는다 — `Gender.OTHER` 제거가 `UPDATE` 한 줄로 끝난 게 바로 전날 사례.
@@ -187,7 +190,7 @@
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **미배포 백엔드 변경 — ✅ 없음 (2026-07-30 §0-DEPLOY 9건 일괄 배포로 해소).** 앞으로 지켜야 할 것만 남긴다: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
+- **미배포 백엔드 변경 — 🟠 1건 (#7 예외처리, 2026-07-31).** 스키마 변경이 없어 이미지 재배포만 하면 된다 (§0). 그 외 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
 - **관리자 패널 (트리거: 콘텐츠 모더레이션·사용자 관리) — 지금 X, 백로그 O.** 현재 관리자 제어 대상은 TESTER 승격 + 앱 버전 정책 2개뿐이고 둘 다 저빈도 SQL 로 충분해 패널을 지을 근거가 없다(과설계). **출시 후 UGC(영상·닉네임·한 줄 평) 신고/모더레이션이 생기면** SQL 로 감당이 안 돼 이때 착수: ADMIN role + 인증 + (웹) 관리 화면. 그때 TESTER 승격·app_config·신고 상태가 모두 "DB 행 편집" 이라 패널이 자연스럽게 흡수. 근거는 [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의".
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.
