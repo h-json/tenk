@@ -8,10 +8,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -46,6 +52,35 @@ public class GlobalExceptionHandler {
                                                                  HttpServletRequest req) {
         log.warn("[UnreadableBody] {} {} -> {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
         ErrorCode code = ErrorCode.INVALID_INPUT;
+        return ResponseEntity.status(code.getStatus())
+                .body(ApiResponse.fail(new ApiError(code.getCode(), code.getMessage())));
+    }
+
+    /**
+     * 디스패치 단계에서 걸러지는 <b>잘못된 호출</b> 모음 — 경로 변수 타입 불일치, multipart part 누락,
+     * 필수 쿼리 파라미터 누락, 없는 경로, 안 맞는 메서드·Content-Type.
+     *
+     * <p>핸들러가 없으면 전부 {@code handleEtc} 로 떨어져 <b>클라이언트 잘못인데 500</b> 이 나가고,
+     * 진짜 서버 장애와 섞여 로그·모니터링이 오염된다 ({@code handleUnreadableBody} 와 같은 갈래).
+     * 실패 원문(필드 경로·기대 타입)은 내부 정보라 노출하지 않고 로그로만 남긴다.
+     */
+    @ExceptionHandler({
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class,
+            NoResourceFoundException.class,
+            HttpRequestMethodNotSupportedException.class,
+            HttpMediaTypeNotSupportedException.class,
+    })
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(Exception ex, HttpServletRequest req) {
+        ErrorCode code = switch (ex) {
+            case NoResourceFoundException ignored -> ErrorCode.NOT_FOUND;
+            case HttpRequestMethodNotSupportedException ignored -> ErrorCode.METHOD_NOT_ALLOWED;
+            case HttpMediaTypeNotSupportedException ignored -> ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+            default -> ErrorCode.INVALID_INPUT;
+        };
+        log.warn("[MalformedRequest] {} {} -> {} ({})",
+                req.getMethod(), req.getRequestURI(), code.getCode(), ex.getMessage());
         return ResponseEntity.status(code.getStatus())
                 .body(ApiResponse.fail(new ApiError(code.getCode(), code.getMessage())));
     }

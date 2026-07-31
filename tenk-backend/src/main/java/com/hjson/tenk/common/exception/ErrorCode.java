@@ -12,6 +12,11 @@ public enum ErrorCode {
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "C0002", "잘못된 요청입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "C0003", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "C0004", "접근 권한이 없습니다."),
+    // 아래 3개는 사용자가 마주칠 상황이 아니라 잘못된 호출(클라이언트 버그·크롤러)에 대한 응답이다.
+    // 500 으로 나가면 서버 장애와 구분되지 않아 로그·모니터링이 오염되므로 정확한 상태로 내린다.
+    NOT_FOUND(HttpStatus.NOT_FOUND, "C0005", "요청한 경로를 찾을 수 없습니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "C0006", "지원하지 않는 요청 방식입니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C0007", "지원하지 않는 형식의 요청입니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U0001", "사용자를 찾을 수 없습니다."),
     USER_ALREADY_WITHDRAWN(HttpStatus.BAD_REQUEST, "U0002", "이미 탈퇴한 사용자입니다."),
