@@ -48,10 +48,12 @@ dependencies:
   gal: ^2.3.2
   share_plus: ^13.1.0
   ffmpeg_kit_flutter_new_video: ^2.0.0
-  lottie: ^3.1.2
   audioplayers: ^6.1.0
   url_launcher: ^6.3.1
   package_info_plus: ^10.2.1
+  # 효과음·진동 on/off 저장. 토큰은 flutter_secure_storage 를 쓰지만 설정값은
+  # 민감정보가 아니고 재생 직전에 동기로 읽어야 해서 이쪽이 맞다.
+  shared_preferences: ^2.3.3
 
 dependency_overrides:
   # tenk fork: VideoCapture UseCase 를 init 시점에 eager bind 하도록 패치.
@@ -86,10 +88,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # assets_src/ 는 일부러 등록하지 않는다 — 배지 1024px 원본 보관용(번들 제외).
   assets:
     - assets/badges/
     - assets/fonts/
-    - assets/lottie/
     - assets/sounds/
 
   # To add assets to your application, add an assets section, like this:

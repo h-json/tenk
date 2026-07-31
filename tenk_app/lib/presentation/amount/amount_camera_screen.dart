@@ -5,10 +5,11 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
+import '../../data/settings/app_settings.dart';
 
 /// 2초 영상 촬영 전용 화면. 결과 path 를 [Navigator.pop] 으로 돌려준다 (취소 시 null).
 ///
@@ -72,6 +73,9 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
   final AudioPlayer _startSound = AudioPlayer()
     ..setReleaseMode(ReleaseMode.stop);
 
+  /// 효과음·진동 토글. 재생 직전에 읽는다 (구독 없음 — CLAUDE.md "설정").
+  AppSettings? _settings;
+
   List<CameraDescription> _cameras = const [];
   int _cameraIndex = 0;
   FlashMode _flashMode = FlashMode.off;
@@ -99,6 +103,13 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
     // 무시 (사운드는 보조 시그널이고 햅틱 + 시각 효과로 충분).
     unawaited(_startSound.setSource(AssetSource('sounds/record_start.mp3')));
     _initCamera();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // InheritedWidget 은 initState 밖(여기)에서 읽는다.
+    _settings ??= SettingsScope.of(context);
   }
 
   @override
@@ -330,7 +341,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
       await Future.delayed(_encoderStartLag);
       if (!mounted) return;
       // 녹화 시작 순간 촉각/시각 시그널. 효과음은 탭 즉시로 분리됨 (위 참고).
-      unawaited(HapticFeedback.heavyImpact());
+      _settings?.heavyImpact();
       setState(() {
         _starting = false;
         _recording = true;
@@ -398,6 +409,7 @@ class _AmountCameraScreenState extends State<AmountCameraScreen>
   /// 사전 로드가 어떤 이유로 실패했다면 fallback 으로 그 자리에서 play 호출.
   /// 둘 다 실패해도 정상 흐름엔 영향 없게 catch 후 무시 — 사운드는 햅틱·시각의 보조.
   Future<void> _playStartSound() async {
+    if (!(_settings?.soundEnabled ?? true)) return;
     try {
       await _startSound.seek(Duration.zero);
       await _startSound.resume();

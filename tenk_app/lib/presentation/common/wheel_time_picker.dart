@@ -11,6 +11,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app/scopes.dart';
+import '../../data/settings/app_settings.dart';
 import '../../design/tokens.dart';
 
 /// 휠 시각 선택 다이얼로그를 띄운다. 취소하면 null.
@@ -69,6 +71,15 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
   _EditTarget _editing = _EditTarget.none;
   final _editCtrl = TextEditingController();
 
+  /// 진동 토글. 스크롤마다 읽으므로 미리 받아둔다 (CLAUDE.md "설정").
+  AppSettings? _settings;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _settings ??= SettingsScope.of(context);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -109,7 +120,7 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
     final next = index == 1;
     if (next == _isPm) return;
     setState(() => _isPm = next);
-    if (!_autoFlipping) HapticFeedback.selectionClick();
+    if (!_autoFlipping) _settings?.selectionClick();
   }
 
   void _onHourChanged(int _) {
@@ -135,13 +146,13 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
             .whenComplete(() => _autoFlipping = false);
       }
     });
-    HapticFeedback.selectionClick();
+    _settings?.selectionClick();
   }
 
   void _onMinuteChanged(int raw) {
     // 분은 감싸진 인덱스로도 값이 맞다 (0~59 그대로). carry 도 안 하므로 연속성 불필요.
     setState(() => _minute = raw % 60);
-    HapticFeedback.selectionClick();
+    _settings?.selectionClick();
   }
 
   void _startEditing(_EditTarget target) {

@@ -2,6 +2,19 @@
 
 녹화·UI 효과음을 두는 곳. `audioplayers` 가 `AssetSource('sounds/<file>')` 형태로 참조.
 
+⚠️ **재생 전에 효과음 토글을 확인할 것** — 메뉴 → 설정의 '효과음' 이 꺼져 있으면 소리를
+내면 안 된다. 판정은 [AppSettings.soundEnabled](../../lib/data/settings/app_settings.dart)
+하나이고, 새 효과음을 추가할 때 이 확인을 빠뜨리면 토글이 고장 난 것으로 보인다.
+
+## badge_acquired.mp3
+
+배지 획득 모달의 임팩트 시점(진입 후 180ms)에 1회 재생. royalty-free 효과음.
+
+- 길이 ~2.1초로 모달 여운(900ms)보다 길다. 그래서 **모달을 닫으면 플레이어를 dispose 해
+  소리도 끊고**, 배지가 연속으로 뜰 때 이전 소리가 겹치지 않게 한다
+  ([badge_celebration_dialog.dart](../../lib/presentation/challenge/widgets/badge_celebration_dialog.dart)).
+- 더 짧은 것으로 바꾸면 이 처리는 그대로 두고 파일만 교체하면 된다.
+
 ## record_start.mp3
 
 녹화가 실제로 시작되는 순간 1회 재생. royalty-free 효과음 (사용자가 직접 다운로드).

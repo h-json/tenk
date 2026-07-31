@@ -7,7 +7,10 @@ import '../../design/tokens.dart';
 import '../login/login_screen.dart';
 import 'withdraw_screen.dart';
 
-/// 메뉴 → '계정 설정' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
+/// 메뉴 → '계정 정보' 하위 화면. 연동 계정 표시 + 로그아웃 + 회원 탈퇴.
+///
+/// 표시 라벨은 '계정 정보' 지만 클래스·파일명은 `AccountSettings*` 를 유지한다 —
+/// 사유는 [ProfileScreen] 문서 주석 참고.
 ///
 /// [user] 는 보통 메뉴가 이미 로드한 값을 넘겨받는다 (연동 계정 표시는 세션 중 안 바뀌므로 재fetch 불필요).
 /// **null 이면 스스로 읽는다** — 메뉴가 `/me` 를 기다리지 않고 즉시 그려지기 때문에 아직 값이 없을 수 있다.
@@ -118,7 +121,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('계정 설정')),
+      appBar: AppBar(title: const Text('계정 정보')),
       body: SafeArea(
         top: false,
         child: ListView(

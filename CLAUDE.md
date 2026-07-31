@@ -153,13 +153,14 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - 거부 문자: `\p{Cc}` (제어 문자 — null byte, 줄바꿈, 백스페이스 등) + `\p{Cf}` (형식 문자 — zero-width space/joiner, BiDi override, BOM, word joiner 등). 표시 위장·로그 인젝션·방향 뒤집기 차단. 일반 이모지/한글/특수문자는 통과
   - SQL 인젝션은 JPA prepared statement 로 자동 방어, XSS 는 Flutter Text 위젯이 raw 렌더링하므로 위험 없음
   - 클라이언트도 같은 패턴 `RegExp(r'[\p{Cc}\p{Cf}]', unicode: true)` 으로 1차 검증 (즉시 피드백 — [NicknameSetupScreen](tenk_app/lib/presentation/profile/nickname_setup_screen.dart) / [my_info_screen.dart](tenk_app/lib/presentation/profile/my_info_screen.dart) 의 `_NicknameEditDialog`). 진실의 원천은 서버
-- **메뉴 화면** ([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart)) — 챌린지 리스트 AppBar 의 `account_circle_outlined` 버튼에서 진입. **자체 콘텐츠 없이 하위 화면으로만 분기하는 순수 메뉴**: **내 정보**(→ [MyInfoScreen](tenk_app/lib/presentation/profile/my_info_screen.dart): 닉네임·성별) → **계정 설정**(→ [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart): 연동 계정·로그아웃·회원 탈퇴) → **의견 보내기**(→ [FeedbackScreen](tenk_app/lib/presentation/feedback/feedback_screen.dart)) → **법적 고지**(→ [LegalNoticeScreen](tenk_app/lib/presentation/legal/legal_notice_screen.dart): 이용약관·개인정보처리방침·문의) → 테스트 재생성(dev). **전부 별도 하위 화면으로 push**(섹션 아님). 로그아웃·회원 탈퇴 로직은 AccountSettingsScreen 소유(연동 계정 = 공급자 표시. 메뉴가 로드한 User 를 넘겨 재fetch 없음).
-  - **경계**: '내 정보' = **사용자 본인에 대한 정보**(닉네임·성별), '계정 설정' = **계정 자체**(연동·로그인·탈퇴), '의견 보내기' = **제품에 대한 의견**(익명), '법적 고지' = **고지 문서 + 문의 창구**. 새 항목은 이 기준으로 배치할 것. '의견 보내기'는 정적 문서인 법적 고지보다 **위**에 둔다 — 사용자가 능동적으로 하는 행동이라서.
+- **메뉴 화면** ([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart)) — 챌린지 리스트 AppBar 의 `account_circle_outlined` 버튼에서 진입. **자체 콘텐츠 없이 하위 화면으로만 분기하는 순수 메뉴**: **내 정보**(→ [MyInfoScreen](tenk_app/lib/presentation/profile/my_info_screen.dart): 닉네임·성별) → **계정 정보**(→ [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart): 연동 계정·로그아웃·회원 탈퇴) → **설정**(→ [SettingsScreen](tenk_app/lib/presentation/settings/settings_screen.dart): 효과음·진동) → **의견 보내기**(→ [FeedbackScreen](tenk_app/lib/presentation/feedback/feedback_screen.dart)) → **법적 고지**(→ [LegalNoticeScreen](tenk_app/lib/presentation/legal/legal_notice_screen.dart): 이용약관·개인정보처리방침·문의) → 테스트 재생성(dev). **전부 별도 하위 화면으로 push**(섹션 아님). 로그아웃·회원 탈퇴 로직은 AccountSettingsScreen 소유(연동 계정 = 공급자 표시. 메뉴가 로드한 User 를 넘겨 재fetch 없음).
+  - **경계**: '내 정보' = **사용자 본인에 대한 정보**(닉네임·성별), '계정 정보' = **계정 자체**(연동·로그인·탈퇴), '설정' = **앱 동작 환경**(효과음·진동, 추후 알림), '의견 보내기' = **제품에 대한 의견**(익명), '법적 고지' = **고지 문서 + 문의 창구**. 새 항목은 이 기준으로 배치할 것. '의견 보내기'는 정적 문서인 법적 고지보다 **위**에 둔다 — 사용자가 능동적으로 하는 행동이라서.
+  - **'계정 설정' → '계정 정보' 로 개명 (2026-08-01).** 바로 아래에 '설정' 이 생겨 그대로 뒀으면 **"설정이 두 개"** 로 읽혔다. **표시 라벨만 바꾸고 클래스·파일명(`AccountSettings*`)은 유지** — 브랜드를 TenK 로 통일할 때 내부 식별자를 안 건드린 것과 같은 논리다. 되돌리지 말 것.
   - **메뉴는 `/api/users/me` 를 기다리지 않고 즉시 렌더한다** (2026-07-26). 순수 내비게이션 허브라 user 없이도 그릴 수 있고, `user` 는 **TESTER 타일 노출 판정 + 계정 설정에 넘길 값**에만 쓰인다. 그래서 `AsyncStateMixin`/`AsyncStateView` 로 감싸지 않고 `User? _user` 를 직접 든다(컨벤션의 "두 종류 이상의 비동기 자원" 케이스 — 앱 버전 타일이 이미 두 번째 자원). **`/me` 실패해도 ErrorView 로 덮지 말 것** — 오프라인에서 법적 고지·앱 버전조차 못 여는 게 로딩보다 나쁘다. 같은 이유로 [AccountSettingsScreen](tenk_app/lib/presentation/profile/account_settings_screen.dart) 의 `user` 는 **nullable** 이고 null 이면 스스로 읽는다(메뉴가 아직 못 받았을 수 있으므로). 메뉴가 값을 갖고 있으면 그대로 넘겨 재fetch 없음.
     - **'앱 버전' 행도 네트워크를 안 탄다 (2026-07-28)** — 부팅 때 SessionGate 가 이미 판정해둔 `AppApi.lastKnownVersion` 을 첫 프레임에 동기로 읽어 그린다(아래 "앱 버전" 규칙). 확인 실패로 캐시가 비었을 때만 여기서 한 번 더 부른다.
     - **반대로 '내 정보'(MyInfoScreen) 의 진입 로딩은 정상이고 없애지 말 것 (2026-07-28 결정).** 메뉴와 달리 닉네임·성별이 **화면 콘텐츠 그 자체**라 값 없이 그릴 게 없고, 캐시를 끼우면 로그아웃·탈퇴 후 재로그인 때 이전 계정 값이 한 프레임 비친다. 닉네임 쿨다운(`nicknameChangeAvailableFrom`)도 stale 하면 잠금 안내가 틀린다. 근거는 [decisions.md](docs/decisions.md) "메뉴 앱 버전 행 회의".
   - MyInfoScreen 의 닉네임 행은 변경 불가 상태면 **`lock_outline` 아이콘만** 노출하고, 다시 가능해지는 시각은 **탭했을 때 SnackBar 로만** 알려준다 (상시 라벨 없음 — 위 닉네임 정책 참고). 메뉴로 돌아오면 `reload()` 로 갱신(닉네임 변경분이 '계정 설정'에 넘길 User 에도 반영되게).
-  - **메뉴 화면 제목 = '메뉴', 진입 아이콘 = `Icons.menu`(햄버거) 로 확정 (2026-07-25).** 이 허브는 설정(preference) 모음이 아니라 내 정보·계정·법적 고지·앱 정보 등 **이질적 항목을 모아 분기하는 메뉴**라서 '설정'이 아니다. **소리·진동 같은 설정성 항목이 생기면 최상위에 토글을 두지 말고 '알림/효과 설정' 하위 화면을 새로 추가**할 것 (설정은 최상위 이름이 아니라 필요 시 하위 화면 이름으로 들어온다).
+  - **메뉴 화면 제목 = '메뉴', 진입 아이콘 = `Icons.menu`(햄버거) 로 확정 (2026-07-25).** 이 허브는 설정(preference) 모음이 아니라 내 정보·계정·법적 고지·앱 정보 등 **이질적 항목을 모아 분기하는 메뉴**라서 '설정'이 아니다. 예고대로 **설정성 항목은 최상위 토글이 아니라 하위 '설정' 화면**으로 들어갔다(2026-08-01 신설) — 새 설정도 최상위에 토글로 붙이지 말고 그 화면에 넣을 것.
 - **회원 탈퇴 = soft delete 후 1개월 유예 → hard delete**. 탈퇴 즉시 [User.withdraw](tenk-backend/src/main/java/com/hjson/tenk/domain/user/User.java) 로 `is_deleted=true` + `deleted_dt` 기록 + 모든 RT 무효화. 이후 매일 새벽 1:30 배치 [UserRetentionScheduler](tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) 가 `deleted_dt` 로부터 **1개월(`WithdrawnUserPurgeService.RETENTION`) 지난 계정**을 물리 삭제 — challenge/amount/media_file row + **디스크 영상 파일** + refresh_token 까지 cascade ([WithdrawnUserPurgeService.purge](tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java), FK 안전 순서: 디스크→media_file→challenge_badge→amount→challenge→refresh_token→user). 유저 1명 단위 트랜잭션 — 스케줄러가 유저별로 외부 호출해 `@Transactional` 프록시를 살린다(self-invocation 금지). 보관 기간(1개월)은 개인정보처리방침 §3 과 일치시킬 것. **개인정보처리방침**은 [privacy.html](tenk-backend/src/main/resources/static/privacy.html) → `https://tenk.hjson248.com/privacy.html` 로 서빙 (SecurityConfig PERMIT_ALL 등록). Play Console 개인정보처리방침 URL·앱 내 링크가 이 주소를 가리킨다.
 
 ### 영상
@@ -247,6 +248,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 ### 결과 카드 (구현 완료)
 - **챌린지 결과를 1장 카드로** — 480x864 (9:16) 세로 PNG. 영상 export 와 무관하게 챌린지 확정 후 항상 표시. 진입점 **2개**: ① finalize 직후 자동 풀스크린 push (배지 모달 큐가 끝난 뒤) ② 챌린지 상세의 "결과 카드" 카드 (확정 후에만 노출). 영상 export 마지막에 **3초 정지 화면**으로도 포함 가능 (export 화면 체크박스, 기본 ON).
 - **모달 충돌 정책**: finalize 직후엔 **배지 모달 → 결과 카드 풀스크린** 순차. 결과 카드 안에 획득 배지 row 가 있지만 배지 모달도 그대로 진행해 페이오프 계단을 만든다.
+  - ⚠️ **finalize 응답에는 `CHALLENGE_SUCCESS` 배지가 없다.** 지급이 `AFTER_COMMIT` 리스너에서 일어나는데 응답 DTO 는 그 커밋 **전에** 이미 만들어지기 때문이다. 그래서 [_finalize](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) 는 응답으로 낙관적 반영(`replaceData`)을 하면 안 되고 **반드시 `reload()` 로 재조회**해야 한다 — 안 그러면 **트로피 축하가 통째로 누락되고 결과 카드로 직행한다**(2026-08-01 실제 발생). 리스너는 같은 요청 스레드에서 동기로 끝나므로 재조회 시점엔 이미 지급돼 있다.
 - **닉네임 노출**: "○○님의 만원 챌린지" — `/api/users/me` 로 fetch ([UserApi](tenk_app/lib/data/user/user_api.dart) / [UserScope](tenk_app/lib/app/scopes.dart)). fetch 실패하거나 미완 상태에서 캡처되면 헤더만 "만원 챌린지" 로 fallback. **영상 export 마지막 카드는 닉네임을 fetch 하지 않는다** — compose 시작 지연 회피 + 결과 카드 화면이 닉네임 표시 메인 진입점.
 - **성공/실패 색 분기 (드라마틱 대비)**: 성공 = 따뜻한 노랑 그라데이션 + 보라 accent + 🎉. 실패 = 그레이 그라데이션 + 다크 그레이 accent + 💪. 색은 **위젯에 hardcode** ([ResultCardWidget](tenk_app/lib/presentation/challenge/result_card/result_card_widget.dart) `_bgTop`/`_bgBottom`/`_accent`/`_muted`) — 캡처 시 ThemeData 변동 영향 안 받아야.
 - **콘텐츠**: 헤더(닉네임 한 줄 "○○님의 만원 챌린지" + **챌린지 이름** 크게/볼드 + 기간) / 결과 라벨 + 부제 (절약/초과 금액) / 통계 카드 (목표/사용/절약(또는 초과)/무지출 — 무지출 0일이면 라인 생략) / 배지 row (없으면 통째 생략, 최대 6 + N) / Tenk 워터마크. **카테고리 분포는 의도적으로 제외** (자리 빡빡 + 숫자/배지로 충분). 챌린지 이름은 `challenge.name` 을 그대로 쓰므로 별도 fetch 불필요.
@@ -290,6 +292,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 - **게이팅 = 계정 role.** [UserRole](tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRole.java) `{ USER, TESTER }` (`user.role` 컬럼, 기본 USER). 시딩은 `user.getRole().canUseTestTools()`(=TESTER)일 때만 허용, 아니면 `TEST_ONLY_OPERATION`(T0001). **테스터 승격은 DB 에서 직접** — 앱엔 부여 경로가 없다: `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';`. **심사자 데모 계정은 절대 승격 금지**(승격하면 '내 정보'에 시딩 버튼 노출). 전역 킬스위치(`tenk.test.enabled`) 없음 — 플래그 없는 계정 = 시딩 불가 = 그 자체가 킬스위치.
 - **데이터 시딩** (`POST /api/dev/seed`, **인증 필요**): 호출자가 TESTER 가 아니면 거부. 통과 시 그 유저 데이터를 wipe([WithdrawnUserPurgeService.purge](tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java) 와 같은 FK 순서, user/refresh_token 만 유지) 후 **5종 상태** 챌린지 시딩: 시작 전 / 진행 중(STREAK·NO_SPEND 배지) / 확정 대기(finalize→SUCCESS 페이오프 테스트용) / 완료-성공(CHALLENGE_SUCCESS 배지) / 완료-실패. **wipe 는 호출자 본인 데이터를 지운다** — 그래서 TESTER 는 소모용 계정이어야 한다(승격한 실계정의 진짜 기록도 날아감).
 - **날짜 우회 방식**: 챌린지는 `Challenge.create` 로 today 로 만든 뒤 `startDate`/`endDate` 만 **reflection(`ReflectionUtils`) 으로 backdate** — `validatePeriod` 가 미래 시작만 허용하므로 우회 필요(통합 테스트의 backdate 패턴과 동일). **금액·배지는 우회 불필요** — `Amount.spend/noSpend` 는 오늘이 아니라 *챌린지 기간* 으로 검증하고, 배지는 `BadgeGrantService.evaluateForChallenge`/`grantChallengeSuccess` 를 그대로 호출해 현실적 데이터가 나온다.
+- **수동 시드 SQL 2종** (devtools 와 별개 — 특정 기능을 손으로 볼 때만): [seed-badge-demo.sql](docs/seed-badge-demo.sql)(배지 획득 연출 6종 — 색 사다리·체인·폴백·확정 트로피를 한 번씩) / [seed-export-test.sql](docs/seed-export-test.sql)(영상 합본 export). 둘 다 **로그인된 계정을 자동으로 잡고 반복 실행 가능**하다. ⚠️ 아래 '테스트 데이터 재생성' 버튼을 누르면 이 시드가 **전부 wipe** 된다 (그쪽은 호출자 데이터를 통째로 지운다).
 - **Flutter 진입**: '내 정보'→메뉴 화면([ProfileScreen](tenk_app/lib/presentation/profile/profile_screen.dart))의 "테스트 데이터 재생성"(`user.isTester` = `role=='TESTER'` 일 때만 노출, confirm→seed→목록 reload). 시딩=`ChallengeApi.seedTestData`(ChallengeScope). `UserResponse.role` 을 Flutter `User.role` 로 파싱해 버튼 노출 판정.
 
 ## 패키지 구조 (백엔드)
@@ -352,7 +355,9 @@ lib/
 │   ├── amount/                   # 지출/무지출 기록 + multipart 영상 업로드
 │   │   ├── amount.dart, amount_api.dart
 │   ├── badge/                    # 챌린지 응답에 인라인되는 AcquiredBadge 모델만 (API 없음)
-│   │   └── badge.dart
+│   │   └── badge.dart              # + kBadgeLadder(3/7/14/30) — 사다리 상수의 클라 단일 출처
+│   ├── settings/                 # 효과음·진동 on/off (shared_preferences). 외부 통신 X
+│   │   └── app_settings.dart       # 재생 직전에 동기로 읽는다(구독 없음) + 햅틱 헬퍼
 │   ├── media/                    # 영상 다운로드 (export prefetch 용)
 │   │   └── media_api.dart
 │   ├── user/                     # 사용자 정보 — 결과 카드 헤더, '내 정보' 화면, 닉네임 변경, 회원 탈퇴
@@ -384,7 +389,9 @@ lib/
     │   │   ├── challenge_card.dart    # 목록 카드 1장 (상태 무관 동일 구조·높이, 우상단 마커에만 상태색, 배지 없음)
     │   │   ├── progress_bar.dart      # ChallengeProgressBar — 예산 진행률 바 (목록 카드·상세 요약 카드 공유, 초과=코랄)
     │   │   ├── challenge_badges.dart  # 챌린지에 귀속된 배지 아이콘만 작게 (잠금 노출 X)
-    │   │   └── badge_celebration_dialog.dart  # 신규 배지 획득 시 풀스크린 축하 모달 + 큐 헬퍼
+    │   │   ├── badge_celebration_dialog.dart  # 획득 축하 모달(3막 연출 + CustomPainter 컨페티) + 큐 헬퍼
+    │   │   ├── badge_style.dart       # 단계별 색 매핑(5개) — 글로우·파티클·광택 강도
+    │   │   └── badge_next_goal.dart   # '다음 목표' 한 줄. 도달 가능할 때만 사다리, 아니면 완주 폴백
     │   ├── export/                 # 영상 합본 export 흐름 (확정 후에만 진입)
     │   │   ├── export_plan.dart      # 세션 한정 모델 (선택 + 자막 오버라이드)
     │   │   ├── export_screen.dart    # 1단계: 클립 선택 + 자막 편집 → "다음"
@@ -406,11 +413,11 @@ lib/
     │       └── budget_hint_row.dart  # 지출 금액칸 하단 보조: 좌 입력 에코(실시간)/우 "잔액 ○원"(포커스 아웃 커밋, 초과 시 error색). record/edit 공유
     ├── profile/                      # 신규 가입 닉네임 설정 + '내 정보'
     │   ├── nickname_setup_screen.dart   # 신규 가입자 전용 (LoginScreen 이 isNewUser=true 면 분기). PopScope canPop=false 로 회피 차단. 카카오 닉네임 pre-fill. 동의 화면과 분리(닉네임만)
-    │   ├── profile_screen.dart          # AppBar 햄버거(Icons.menu) 진입점 = 순수 메뉴(제목 '메뉴' 확정). 내 정보(→) + 계정 설정(→) + 의견 보내기(→) + 법적 고지(→) + 앱 버전(+최신여부) + 테스트 재생성(dev)
+    │   ├── profile_screen.dart          # AppBar 햄버거(Icons.menu) 진입점 = 순수 메뉴(제목 '메뉴' 확정). 내 정보(→) + 계정 정보(→) + 설정(→) + 의견 보내기(→) + 법적 고지(→) + 앱 버전(+최신여부) + 테스트 재생성(dev)
     │   ├── my_info_screen.dart           # '내 정보' 하위 화면. 닉네임 · 성별 — 둘 다 **별도 화면으로 push**(다이얼로그 아님, "모달 사용 기준" 참고)
     │   ├── nickname_edit_screen.dart     # 닉네임 변경 화면. 신규 가입용 nickname_setup_screen 과 별개 (저쪽은 back 차단 온보딩)
     │   ├── gender_edit_screen.dart       # 성별 화면. SegmentedButton 3칸(남성/입력 안 함/여성) + 목적 고지. GenderChoice 로 pop(취소와 '입력 안 함' 구분)
-    │   ├── account_settings_screen.dart # '계정 설정' 하위 화면. 연동 계정 표시 / 로그아웃 / 회원 탈퇴(→ WithdrawScreen push). 메뉴가 넘긴 User 사용, null 이면 자체 로드
+    │   ├── account_settings_screen.dart # **표시명 '계정 정보'**(클래스·파일명은 유지). 연동 계정 표시 / 로그아웃 / 회원 탈퇴(→ WithdrawScreen push). 메뉴가 넘긴 User 사용, null 이면 자체 로드
     │   └── withdraw_screen.dart          # 탈퇴 사유 화면. 확인 다이얼로그를 통과한 뒤 열린다 — 사유 칩(선택, '기타'면 자유 입력) → withdraw → 로그아웃
     ├── legal/                        # 연령 확인·약관 동의·고지 (openLegalDoc 헬퍼 공유)
     │   ├── age_gate_screen.dart          # 중립적 연령 심사. 생년월일 3칸(기본값 없음), 컷오프 비노출, back 차단. 14세 미만이면 계정 파기 안내 후 로그아웃
@@ -420,21 +427,47 @@ lib/
     │   └── support_contact.dart         # openSupportEmail — 고지한 문의처 메일 앱 열기. 실패 시 주소 클립보드 복사
     ├── feedback/                     # 의견 보내기 (문의와 역할 분리 — 답변 여부는 '회신 이메일' 유무로만 갈린다)
     │   └── feedback_screen.dart         # 유형 칩(필수) + 내용(필수) + 회신 이메일(선택) → POST /api/feedback
+    ├── settings/                     # 앱 동작 환경 (푸시 알림이 생기면 여기로 들어온다)
+    │   └── settings_screen.dart         # 효과음 on/off · 진동 on/off. 값은 SettingsScope(AppSettings)
     └── update/                       # 앱 버전 게이트 UI (판정은 서버, 여기선 화면만)
         └── update_gate.dart             # ForceUpdateScreen(강제, back차단) + RecommendedUpdateHost(권장 1회 안내) + openStorePage 헬퍼
 ```
 
 자산: `tenk_app/assets/fonts/Korean.ttf` (현재 미사용 — 영상 export 자막은 Flutter `TextPainter` + 시스템 폰트 폴백으로 처리. 자막 폰트를 명시 지정하고 싶으면 [tenk_app/assets/fonts/README.md](tenk_app/assets/fonts/README.md) 참고).
 
-배지 자산: `tenk_app/assets/badges/` (pubspec.yaml `flutter.assets`에 등록). 파일명은 서버 `badge.icon_path`와 1:1 매칭 (`streak_3.png` 등 9개). 새 배지 추가 시 schema.sql · 자산 디렉토리 동시 갱신.
+배지 자산: **번들은 `tenk_app/assets/badges/` (384px, 9개)**, **1024px 원본은 번들 밖 [assets_src/badges/](tenk_app/assets_src/badges/)**. 파일명은 서버 `badge.icon_path`와 1:1 매칭 (`streak_3.png` 등). 화면 최대 표시가 180px 인데 원본이 1024px(합계 6.7MB)이라 디코딩·메모리·번들이 모두 손해였다 — **리사이즈 스크립트는 `assets_src/badges/README.md`** 에 있고, 원본을 고치면 다시 돌려 번들본을 갱신할 것. 새 배지 추가 시 schema.sql · 두 디렉토리 동시 갱신.
 
-Lottie 자산: `tenk_app/assets/lottie/` — 현재 `confetti.json` (배지 축하 모달 컨페티) 1개. 파일이 없으면 컨페티만 조용히 생략되고 배지 줌·바운스는 그대로. 추가/교체 시 라이선스 확인 ([assets/lottie/README.md](tenk_app/assets/lottie/README.md)).
+사운드 자산: `tenk_app/assets/sounds/` — `record_start.mp3`(녹화 시작) · `badge_acquired.mp3`(배지 획득). **재생 전에 반드시 효과음 토글을 확인할 것** (아래 "설정" 참고). 합성음은 3번 반려된 전례가 있어 **royalty-free 다운로드로만** 채운다 ([assets/sounds/README.md](tenk_app/assets/sounds/README.md)).
+
+> **Lottie 는 제거됐다 (2026-08-01).** 컨페티를 `CustomPainter` 로 직접 그리면서 `lottie` 의존성과 `assets/lottie/` 를 통째로 뺐다 — 되살리지 말 것. 사유는 아래 연출 규칙.
 
 배지 UI 원칙:
 - **챌린지에 귀속된 획득 배지만 노출** — 잠금 상태/미획득은 챌린지 단위 모델에서 의미 없으므로 보이지 않는다. 전용 "배지 화면"이나 진입점도 없다.
 - 챌린지 응답(`Challenge.badges`)을 카드·상세에서 그대로 [ChallengeBadgesRow](tenk_app/lib/presentation/challenge/widgets/challenge_badges.dart) 로 렌더.
 - **신규 배지 획득 알림은 [ChallengeDetailScreen](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) 의 reload diff 로만**. `_knownBadgeIds` (challengeBadgeId 기반) 와 새 응답을 비교해 신규 항목만 [showBadgeCelebrations](tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart) 로 큐잉. 첫 로드는 `_baselineSet` 으로 막아 baseline 만 채움 — 과거 배지를 다시 축하하지 않는다. 메인/홈 등 다른 진입점에서도 알리고 싶으면 global `BadgeNotifier` 로 승격 (현재 범위 밖).
 - 유저 단위 누적(=업적) 화면은 추후 추가 예정 — 그때 별도 `presentation/achievement/` + 별도 Scope/API 신설.
+
+#### 배지 획득 연출 (2026-08-01 재설계)
+> 레퍼런스는 **듀오링고 + 챌린저스**(+ 토스 리워드). 회의록은 [decisions.md](docs/decisions.md) "배지 획득 연출".
+
+- **모달 유지 — 화면으로 빼지 말 것.** 토스·챌린저스는 화면이지만 그건 *리워드 수령*이라 그렇고, 우리 배지는 기록하다 **부수적으로** 얻는 성취다. finalize 경로에선 배지 N개 + 결과 카드가 전부 풀스크린 푸시가 돼 버린다.
+- **9종 전부 동일한 최대 연출. 등급별로 연출을 갈라 30일만 화려하게 만들지 말 것** — 위계는 연출이 아니라 **자산의 색**이 만든다(브론즈 3 → 실버 7 → 골드 14 → 주얼골드 30, 성공=금 트로피).
+- **색은 타입이 아니라 단계로 갈린다** (`streak_3` 과 `no_spend_3` 이 같은 구리색) → 매핑은 9개가 아니라 **5개**. [badge_style.dart](tenk_app/lib/presentation/challenge/widgets/badge_style.dart) 가 진실의 원천이고 토큰은 `AppColors.badge*`. **자산 색을 바꾸면 여기도 같이.**
+- **타임라인 3막**(총 1400ms): 무대(radial 글로우) → **임팩트 180~520ms** → 여운(wobble·글로우 호흡·광택 sweep 1회). **임팩트는 한 점에 몰아줄 것** — 소리·햅틱·파티클·오버슈트가 흩어지면 "쿵"이 사라진다(예전엔 900ms 에 완만히 퍼져 절정이 없었다). 텍스트는 60ms 간격 순차.
+- **컨페티는 `CustomPainter`. Lottie 로 되돌리지 말 것** — 색·수량·방향이 JSON 에 박혀 있어 **배지 단계색과 연동이 안 된다.** 30·성공만 파티클을 다색(자산의 보석과 호응)으로, 반대로 **광택 sweep 은 약하게**(그 자산들은 반짝임이 이미 그려져 있어 겹치면 지저분해진다).
+- **닫기는 명시적 CTA 버튼.** "탭하여 닫기" 힌트로 되돌리지 말 것. 배지가 2개 이상이면 **`다음 (1/2)` 로 체인의 길이를 밝힌다** — 남은 개수를 알면 반복이 지루함이 아니라 수확으로 읽힌다(듀오링고 패턴). 전부 동일 연출이라 피로는 강도가 아니라 **페이싱**으로 푼다.
+- **'다음 목표' 는 사다리를 그대로 읽으면 거짓말이 된다.** 챌린지에 기간이 있어 5일짜리는 7/14/30 을 처음부터 못 따고, 남은 기간이 모자라도 마찬가지다. 판정은 **`현재값 + 남은 일수 >= 다음 칸`** ([badge_next_goal.dart](tenk_app/lib/presentation/challenge/widgets/badge_next_goal.dart)). 도달 불가면 **챌린지 완주로 폴백** — 이건 위로가 아니라 사다리가 막혀도 살아 있는 실제 다음 배지(`CHALLENGE_SUCCESS`)다. **분모 표기("3개 중 2번째")를 쓰지 말 것** — 사다리가 막히면 못 딸 배지를 딸 수 있는 것처럼 보인다.
+- 현재값은 **방금 받은 배지의 `conditionValue`** 로 본다(배지는 칸을 넘는 순간 지급되므로 동일). 연속/누적 집계를 클라에서 다시 구현하지 말 것 — 서버가 진실의 원천.
+- 사다리 상수는 **[kBadgeLadder](tenk_app/lib/data/badge/badge.dart) 하나**가 출처(무지출 성취감 카드 게이지도 공유). 사본을 만들지 말 것.
+- 모달 진입 전 **`precacheImage` 필수** — 첫 프레임 디코딩이 걸리면 임팩트가 시작부터 끊긴다.
+- **칭호(예: "꾸준함의 증명")는 도입하지 않는다** — 자산이 이미 숫자를 크게 박고 있어 이름과 숫자가 경쟁한다.
+
+### 설정 (효과음·진동)
+- **메뉴 → '설정'** ([SettingsScreen](tenk_app/lib/presentation/settings/settings_screen.dart)) 에 효과음 on/off · 진동 on/off 2개. 값은 [AppSettings](tenk_app/lib/data/settings/app_settings.dart)(`shared_preferences`)가 들고 `SettingsScope` 로 주입. **기본값은 둘 다 켜짐** — 축하 연출이 앱의 페이오프라 기본이 무음이면 대부분이 존재를 모른 채 지나간다.
+- **토글은 앱 전체에 적용한다.** 효과음 = 배지 획득 + 녹화 시작, 진동 = 배지 + 녹화 시작 + 시간 휠. "효과음 끔"인데 촬영할 때만 소리가 나면 토글이 고장 난 것으로 보인다.
+- **`HapticFeedback` 을 직접 부르지 말고 `AppSettings` 헬퍼(`selectionClick`/`mediumImpact`/`heavyImpact`)를 경유할 것.** 호출부마다 `if (enabled)` 를 복붙하면 새 호출부에서 빠진다. 새 효과음도 재생 전 `soundEnabled` 확인.
+- **화면 이름을 '알림/효과 설정' 이나 '소리 및 진동' 으로 바꾸지 말 것** — 앱에 푸시 알림이 아직 없어 전자는 헛걸음을 부르고, 후자는 나중에 알림이 들어올 자리가 없다. **푸시 알림은 별도 백로그**(handoff #17)이고 생기면 이 화면에 들어온다.
+- **구독(리스너)을 붙이지 말 것.** 값은 재생 직전에 읽고, 리빌드가 필요한 건 설정 화면 자신뿐이라 로컬 state 로 충분하다 — 그래서 이 Scope 는 "화면 간 공유 상태"(Riverpod 도입 트리거)에 해당하지 않는다. 리스너를 붙이는 순간 그 판단이 뒤집힌다.
 
 ### 디자인 시스템 (색·타이포·테마)
 - **방향: "절제된 베이스 + 리워드만 화려".** 평소 화면(목록·기록·상세)은 흰 배경 + 뉴트럴 잉크 텍스트 + 민트 accent 로 인지부하를 낮추고, **배지 획득·finalize·결과카드** 같은 페이오프 순간에만 컬러·모션을 몰아준다. 토스 공식 UX 가이드 + 카뱅 26주적금/챌린저스/뱅크샐러드 레퍼런스에서 도출 (레퍼런스 이미지·팔레트 근거는 `references/` 폴더).
@@ -613,7 +646,9 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 | 인증/필터 슬라이스 테스트 추가 | [JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java) 패턴. `@WebMvcTest(SomeController.class)` + `@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})` + `@EnableConfigurationProperties(AuthProperties.class)` + `@TestPropertySource`로 jwt secret 주입. 컨트롤러 협력자는 `@MockitoBean`. **Spring Boot 4 함정**: `WebMvcTest` import 가 `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` 로 이동했다 (구 `...test.autoconfigure.web.servlet.WebMvcTest` 아님). 만료 토큰은 TTL 기반 `JwtTokenProvider`로 못 만드니까 같은 시크릿으로 `Jwts.builder()` 직접 호출해 expiration 만 과거로 박는다 |
 | Flutter 새 도메인 추가 | ① 데이터: `lib/data/<feature>/<feature>.dart`(모델, `@immutable` + `fromJson`) + `<feature>_api.dart`(authDio 주입, `unwrapData`/`unwrapList` 사용). 여러 출처를 합쳐야 하면 `<feature>_repository.dart`도. ② DI: `lib/app/scopes.dart`에 `<Feature>Scope` 추가 + `main.dart`에서 인스턴스 생성·주입. ③ 화면: `lib/presentation/<feature>/<feature>_screen.dart`. 데이터 호출은 `<Feature>Scope.of(context)`로만 |
 | Flutter 새 자산(이미지/폰트) 추가 | `tenk_app/assets/<feature>/` 아래에 두고 `tenk_app/pubspec.yaml`의 `flutter.assets`에 디렉토리(끝에 `/`) 등록. 디렉토리 등록은 그 안의 파일이 추가될 때 자동 인식. **새 자산은 hot reload 안 됨** — `R`(hot restart)로 반영. 자산이 없을 수도 있는 개발 중에는 `Image.asset(... errorBuilder:)`로 폴백 위젯을 두면 화면이 안 깨짐 ([badge_list_screen.dart](tenk_app/lib/presentation/badge/badge_list_screen.dart) `_IconFallback` 참고) |
-| 배지 카탈로그 변경 | 서버는 `badge` 테이블의 9행(STREAK 3/7/14/30, NO_SPEND 3/7/14/30, CHALLENGE_SUCCESS 1)으로 고정. 새 단계/타입 추가 시 **네 곳을 동시에 갱신**: ① [docs/schema.sql](docs/schema.sql)의 INSERT (+ DB에 수동 적용) ② [tenk_app/lib/data/badge/badge.dart](tenk_app/lib/data/badge/badge.dart)의 `BadgeType` enum (label 매핑까지) ③ [tenk_app/assets/badges/](tenk_app/assets/badges/)에 아이콘 파일 ④ [_NoSpendTodayCard._ladder](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) 의 NO_SPEND 단계 배열 (성취감 카드 게이지가 사다리로 사용). **챌린지 단위라 클라에 카탈로그 전체를 두지 않는다** — 획득한 것만 챌린지 응답에 인라인되므로 미획득 노출 위젯이 없음 |
+| 배지 카탈로그 변경 | 서버는 `badge` 테이블의 9행(STREAK 3/7/14/30, NO_SPEND 3/7/14/30, CHALLENGE_SUCCESS 1)으로 고정. 새 단계/타입 추가 시 **네 곳을 동시에 갱신**: ① [docs/schema.sql](docs/schema.sql)의 INSERT (+ DB에 수동 적용) ② [tenk_app/lib/data/badge/badge.dart](tenk_app/lib/data/badge/badge.dart)의 `BadgeType` enum (label 매핑까지) ③ [tenk_app/assets/badges/](tenk_app/assets/badges/)에 아이콘 파일 ④ [kBadgeLadder](tenk_app/lib/data/badge/badge.dart) 의 단계 배열 (**클라 단일 출처** — 무지출 성취감 카드 게이지 + 배지 획득 모달의 '다음 목표'가 공유한다. 사본을 새로 만들지 말 것) ⑤ 단계를 늘렸다면 [badge_style.dart](tenk_app/lib/presentation/challenge/widgets/badge_style.dart) 의 단계별 색 매핑 + [assets_src/badges/](tenk_app/assets_src/badges/) 원본·리사이즈. **챌린지 단위라 클라에 카탈로그 전체를 두지 않는다** — 획득한 것만 챌린지 응답에 인라인되므로 미획득 노출 위젯이 없음 |
+| 배지 획득 연출 변경 | 위 "배지 획득 연출" 규칙이 진실의 원천. [badge_celebration_dialog.dart](tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(3막 타임라인 상수 `_totalDuration`/`_impactAt`/`_impactStart`/`_impactPeak`/`_settleEnd` + `CustomPainter` 컨페티) / [badge_style.dart](tenk_app/lib/presentation/challenge/widgets/badge_style.dart)(단계별 5색 — 타입 아님) / [badge_next_goal.dart](tenk_app/lib/presentation/challenge/widgets/badge_next_goal.dart)('다음 목표', 도달 가능할 때만 사다리·아니면 완주 폴백). **9종 전부 동일 연출 유지**(위계는 자산 색이 만든다), **Lottie 로 되돌리지 말 것**(색 연동 불가), **CTA 를 힌트 텍스트로 되돌리지 말 것**(체인이면 `다음 (1/2)`). `showBadgeCelebrations` 는 챌린지를 받아야 한다(다음 목표 판정에 종료일 필요) + 모달 진입 전 `precacheImage`. 트리거는 [ChallengeDetailScreen](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) reload diff 한 곳뿐이고, **finalize 경로는 반드시 `reload()` 재조회**(위 "결과 카드" 함정). 수동 테스트는 [docs/seed-badge-demo.sql](docs/seed-badge-demo.sql) |
+| 효과음·진동(설정) 변경 | 위 "설정" 규칙이 진실의 원천. 값은 [AppSettings](tenk_app/lib/data/settings/app_settings.dart)(`shared_preferences`) + `SettingsScope`, 화면은 [settings_screen.dart](tenk_app/lib/presentation/settings/settings_screen.dart). **`HapticFeedback` 직접 호출 금지 — `AppSettings` 헬퍼 경유**, 새 효과음은 재생 전 `soundEnabled` 확인. 자산은 royalty-free 다운로드만([assets/sounds/README.md](tenk_app/assets/sounds/README.md), 합성음 3회 반려 전례). **구독(리스너)을 붙이면** 이 Scope 가 "화면 간 공유 상태"가 되어 Riverpod 도입 트리거([decisions.md](docs/decisions.md) "Flutter 상태 관리 재검토")에 걸린다 |
 | 배지를 부여하는 로직 변경 | [BadgeGrantService](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java) 는 항상 **챌린지 단위**로 평가. `evaluateForChallenge(challengeId)` / `grantChallengeSuccess(challengeId, result)`. 유저 단위 누적이 필요하면 새 서비스(추후 achievement 시스템)로 분리할 것 — 여기에 user 파라미터를 다시 끼우지 말 것. amount 쿼리는 `findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge)` 사용. **STREAK는 연속, NO_SPEND는 누적** (서로 다른 행동에 대한 보상이라 정의가 다름). 단일 패스 `applyLadder` 가 grant/revoke 양방향을 처리 — 회수가 필요한 변경(예: 무지출 자동 삭제)에서도 별도 호출 없이 재평가만 하면 정합. |
 | 오류 응답·오류 문구 변경 | **서버는 [GlobalExceptionHandler](tenk-backend/src/main/java/com/hjson/tenk/common/exception/GlobalExceptionHandler.java) + [ErrorCode](tenk-backend/src/main/java/com/hjson/tenk/common/exception/ErrorCode.java), 앱은 [api_error.dart](tenk_app/lib/data/api/api_error.dart) 가 진실의 원천.** 새 `ErrorCode` 는 도메인 prefix 로 추가하고 메시지는 한국어. **클라이언트 잘못을 500 으로 내보내지 말 것** — 디스패치 단계 예외는 `handleMalformedRequest` 에 등록(회귀 가드 [MalformedRequestIntegrationTest](tenk-backend/src/test/java/com/hjson/tenk/common/exception/MalformedRequestIntegrationTest.java) 7건). 앱에서는 **예외 원문(`$e`)을 노출하지 말 것** — 서버 envelope 이 없으면 `toApiException` 의 원인별 폴백(연결/지연/그 외)이 한국어를 준다. 한국어 메시지를 자체적으로 든 예외(`GalException`·`VideoComposeFailed`·`CameraException` 등)는 포괄 catch 보다 **먼저** 잡을 것 |
 | Flutter 새 화면의 비동기 로딩 | `AsyncStateMixin<W, T>` + `AsyncStateView<T>` 사용 ([presentation/common/async_state.dart](tenk_app/lib/presentation/common/async_state.dart)). `FutureBuilder` 금지. `fetch()` 오버라이드 + `didChangeDependencies`에서 `ensureLoaded()`. 외부 동작 결과를 즉시 반영하려면 `replaceData(next)`, 그 외 갱신은 `reload()`. 에러는 `toApiException(e).message`로 SnackBar 노출 |

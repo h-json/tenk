@@ -6,6 +6,7 @@ import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
 import '../data/feedback/feedback_api.dart';
 import '../data/media/media_api.dart';
+import '../data/settings/app_settings.dart';
 import '../data/user/user_api.dart';
 
 /// 트리 어디서든 [AuthRepository]를 꺼내쓰기 위한 단순 InheritedWidget.
@@ -157,5 +158,30 @@ class FeedbackScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(FeedbackScope oldWidget) => api != oldWidget.api;
+}
+
+/// 트리 어디서든 [AppSettings](효과음·진동)를 꺼내쓰기 위한 단순 InheritedWidget.
+///
+/// 다른 Scope 와 달리 안에 든 값이 바뀔 수 있지만 **구독자가 없다** — 효과음·햅틱은
+/// 재생 직전에 읽고, 리빌드가 필요한 건 설정 화면 자신뿐이라 로컬 state 로 충분하다.
+/// 그래서 인스턴스는 앱 생애 내내 동일하고 updateShouldNotify 는 사실상 false 다.
+class SettingsScope extends InheritedWidget {
+  const SettingsScope({
+    super.key,
+    required this.settings,
+    required super.child,
+  });
+
+  final AppSettings settings;
+
+  static AppSettings of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<SettingsScope>();
+    assert(scope != null, 'SettingsScope not found in widget tree');
+    return scope!.settings;
+  }
+
+  @override
+  bool updateShouldNotify(SettingsScope oldWidget) =>
+      settings != oldWidget.settings;
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/scopes.dart';
 import '../../data/amount/amount.dart';
 import '../../data/api/api_error.dart';
+import '../../data/badge/badge.dart';
 import '../../data/challenge/challenge.dart';
 import '../../design/tokens.dart';
 import '../amount/amount_edit_screen.dart';
@@ -91,7 +92,12 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
       ..addAll(incomingIds);
 
     if (newBadges.isEmpty || !mounted) return;
-    await showBadgeCelebrations(context, newBadges);
+    // 챌린지를 같이 넘긴다 — 모달의 '다음 목표' 가 남은 기간으로 도달 가능성을 판정한다.
+    await showBadgeCelebrations(
+      context,
+      newBadges,
+      challenge: current.challenge,
+    );
   }
 
   @override
@@ -104,19 +110,18 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
   Future<void> _finalize() async {
     setState(() => _busy = true);
     try {
-      final next = await ChallengeScope.of(context).finalize(widget.challengeId);
+      await ChallengeScope.of(context).finalize(widget.challengeId);
       _changed = true;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('결과가 확정됐어요.')),
       );
-      final current = data;
-      if (current != null) {
-        replaceData((challenge: next, amounts: current.amounts));
-        await _syncBadgesAndMaybeCelebrate();
-      } else {
-        await reload();
-      }
+      // ⚠️ finalize **응답에는 CHALLENGE_SUCCESS 배지가 없다** — 지급이 AFTER_COMMIT
+      // 리스너에서 일어나는데 응답 DTO 는 그 커밋 전에 이미 만들어지기 때문이다. 그래서
+      // 낙관적 반영(replaceData)을 하면 트로피 축하가 통째로 누락되고 결과 카드로 직행한다.
+      // 반드시 재조회할 것 — 리스너는 같은 요청 스레드에서 동기로 끝나므로 이 시점의 GET 엔
+      // 이미 지급돼 있다. reload() 안에서 배지 큐(_syncBadgesAndMaybeCelebrate)까지 돈다.
+      await reload();
       if (!mounted) return;
       // 배지 큐가 끝난 뒤 결과 카드 풀스크린 push (자동 진입점 — finalize 경로 한정).
       final after = data;
@@ -559,20 +564,18 @@ class _NoSpendTodayCard extends StatelessWidget {
   /// 이 챌린지 안의 누적 무지출 일수. NO_SPEND 배지의 사다리(3/7/14/30) 와 동일한 정의.
   final int noSpendDays;
 
-  /// 백엔드 `BadgeType.NO_SPEND` 의 condition_value 와 일치. 사다리는 [docs/schema.sql](docs/schema.sql)
-  /// badge 마스터 시드와 1:1 매칭되며, 변경 시 양쪽을 같이 갱신할 것.
-  static const _ladder = [3, 7, 14, 30];
-
   @override
   Widget build(BuildContext context) {
-    final nextStep = _ladder.firstWhere(
+    // 사다리 상수는 [kBadgeLadder] 하나가 출처다 — 여기에 사본을 다시 만들지 말 것
+    // (배지 획득 모달의 '다음 목표' 도 같은 상수를 쓴다).
+    final nextStep = kBadgeLadder.firstWhere(
       (s) => s > noSpendDays,
-      orElse: () => _ladder.last,
+      orElse: () => kBadgeLadder.last,
     );
-    final reachedMax = noSpendDays >= _ladder.last;
-    final goal = reachedMax ? _ladder.last : nextStep;
+    final reachedMax = noSpendDays >= kBadgeLadder.last;
+    final goal = reachedMax ? kBadgeLadder.last : nextStep;
     final progress = (noSpendDays / goal).clamp(0.0, 1.0);
-    final daysToGo = (nextStep - noSpendDays).clamp(0, _ladder.last);
+    final daysToGo = (nextStep - noSpendDays).clamp(0, kBadgeLadder.last);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),

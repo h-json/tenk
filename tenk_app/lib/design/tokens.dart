@@ -56,6 +56,19 @@ class AppColors {
 
   /// 배지 획득 모달 등 어두운 배경 위 페이오프의 글로우 골드 (더 채도 높은 축하색).
   static const rewardGlow = Color(0xFFFFC94D);
+
+  // ── 배지 단계색 (획득 연출의 글로우·파티클) ──
+  // 배지 PNG 가 브론즈→실버→골드→주얼 사다리로 그려져 있어 연출 색을 자산에 맞춘다.
+  // **타입이 아니라 단계로 갈린다** — streak_3 과 no_spend_3 이 같은 구리색이다.
+  // 매핑은 presentation/challenge/widgets/badge_style.dart, 근거는 assets_src/badges/README.md.
+  static const badgeBronze = Color(0xFFE08A3C);
+  static const badgeSilver = Color(0xFF9DB4C8);
+  static const badgeGold = Color(0xFFF2B216);
+
+  /// 30단계·성공 자산에 박힌 보석 색 — 그 배지의 파티클만 다색으로 뿌린다.
+  static const badgeGemCyan = Color(0xFF5CC8F5);
+  static const badgeGemPink = Color(0xFFF58BB0);
+  static const badgeGemPurple = Color(0xFF9B7BE0);
 }
 
 /// 8pt 기반 여백 스케일.

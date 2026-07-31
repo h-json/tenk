@@ -1,5 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+/// 배지 단계(condition_value) 사다리. 서버 `badge` 테이블의 STREAK / NO_SPEND 4단계와
+/// 일치한다 (CHALLENGE_SUCCESS 만 1로 예외).
+///
+/// **여기가 클라 쪽 단일 출처다** — 무지출 성취감 카드 게이지, 배지 획득 모달의
+/// '다음 목표' 가 모두 이걸 쓴다. 사본을 새로 만들지 말 것. 카탈로그를 바꿀 땐
+/// CLAUDE.md "배지 카탈로그 변경" 의 네 곳을 같이 갱신한다.
+const List<int> kBadgeLadder = [3, 7, 14, 30];
+
 /// 챌린지 단위 배지 타입.
 ///
 /// 유저 단위 누적 "업적" 은 별도 시스템으로 추후 추가 예정.
@@ -17,9 +25,12 @@ enum BadgeType {
     };
   }
 
+  /// ⚠️ NO_SPEND 는 **누적**이지 연속이 아니다 — 끊겼다가 다시 무지출해도 합산된다
+  /// (CLAUDE.md "배지"). 한때 '무지출 연속' 으로 잘못 적혀 있어 사용자에게 규칙을
+  /// 반대로 알려주고 있었다. 되돌리지 말 것.
   String get label => switch (this) {
         BadgeType.streak => '연속 기록',
-        BadgeType.noSpend => '무지출 연속',
+        BadgeType.noSpend => '무지출 누적',
         BadgeType.challengeSuccess => '챌린지 성공',
       };
 }

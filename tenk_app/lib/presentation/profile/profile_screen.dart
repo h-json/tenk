@@ -7,6 +7,7 @@ import '../../data/user/user.dart';
 import '../../design/tokens.dart';
 import '../feedback/feedback_screen.dart';
 import '../legal/legal_notice_screen.dart';
+import '../settings/settings_screen.dart';
 import '../update/update_gate.dart';
 import 'account_settings_screen.dart';
 import 'my_info_screen.dart';
@@ -14,7 +15,8 @@ import 'my_info_screen.dart';
 /// 챌린지 목록 AppBar 의 사람 아이콘에서 진입하는 **메뉴 화면**. 자체 콘텐츠 없이 하위 화면으로만 분기한다.
 ///
 /// - 내 정보 → [MyInfoScreen] (닉네임 / 성별)
-/// - 계정 설정 → [AccountSettingsScreen] (연동 계정 / 로그아웃 / 회원 탈퇴)
+/// - 계정 정보 → [AccountSettingsScreen] (연동 계정 / 로그아웃 / 회원 탈퇴)
+/// - 설정 → [SettingsScreen] (효과음 / 진동)
 /// - 의견 보내기 → [FeedbackScreen] (익명 저장, 회신 이메일만 선택)
 /// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침 / 문의)
 /// - 테스트 데이터 재생성 (TESTER 권한 계정만)
@@ -22,7 +24,11 @@ import 'my_info_screen.dart';
 /// 화면 제목은 '메뉴'로 확정됐다 (2026-07-25). 이 허브는 설정(preference) 모음이 아니라
 /// 내 정보·계정·법적 고지·앱 정보 등 이질적 항목을 모아 분기하는 메뉴라서 '설정'이 아닌 '메뉴'다.
 /// 진입점 아이콘도 챌린지 목록 AppBar 에서 `Icons.menu`(햄버거)로 통일했다.
-/// 소리·진동 같은 설정성 항목이 생기면 최상위에 토글을 두지 말고 '알림/효과 설정' 하위 화면을 새로 추가할 것.
+/// 설정성 항목은 최상위에 토글로 두지 말고 하위 '설정' 화면에 넣을 것.
+///
+/// '계정 설정' 은 2026-08-01 에 **'계정 정보'** 로 바뀌었다 — 바로 아래에 '설정' 이 생겨
+/// 그대로 뒀으면 "설정이 두 개" 로 읽혔다. 표시 라벨만 바꾸고 클래스·파일명은 유지한다
+/// (브랜드 표기를 TenK 로 통일할 때 내부 식별자를 안 건드린 것과 같은 논리).
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -121,16 +127,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
         const Divider(height: 1),
-        // ── 계정 설정 (하위 화면) ──
+        // ── 계정 정보 (하위 화면) ──
         ListTile(
           leading: const Icon(Icons.manage_accounts_outlined),
-          title: const Text('계정 설정'),
+          title: const Text('계정 정보'),
           trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
           // user 가 아직 안 왔으면 null 을 넘긴다 — 그 화면이 스스로 읽는다 (탭을 막지 않기 위해).
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => AccountSettingsScreen(user: _user),
             ),
+          ),
+        ),
+        const Divider(height: 1),
+        // ── 설정 (하위 화면) — 효과음 / 진동 ──
+        ListTile(
+          leading: const Icon(Icons.tune_outlined),
+          title: const Text('설정'),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
           ),
         ),
         const Divider(height: 1),

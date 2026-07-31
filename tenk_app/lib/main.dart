@@ -18,6 +18,7 @@ import 'data/auth/token_storage.dart';
 import 'data/challenge/challenge_api.dart';
 import 'data/feedback/feedback_api.dart';
 import 'data/media/media_api.dart';
+import 'data/settings/app_settings.dart';
 import 'data/user/user_api.dart';
 import 'presentation/login/login_screen.dart';
 
@@ -25,9 +26,12 @@ import 'presentation/login/login_screen.dart';
 ///
 /// 모든 의존성을 여기서 한 번 만들고 InheritedWidget(Scope)으로 트리에 주입한다.
 /// 화면이나 서비스는 절대 여기서 직접 import하지 말 것 (Scope를 통해서만 접근).
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
+
+  // 효과음·햅틱은 재생 직전에 동기로 읽으므로 첫 프레임 전에 로드해 둔다.
+  final settings = await AppSettings.load();
 
   final storage = TokenStorage();
   final dioClient = DioClient(
@@ -51,6 +55,7 @@ void main() {
     userApi: userApi,
     appApi: appApi,
     feedbackApi: feedbackApi,
+    settings: settings,
   ));
 }
 
@@ -73,6 +78,7 @@ class TenkApp extends StatelessWidget {
     required this.userApi,
     required this.appApi,
     required this.feedbackApi,
+    required this.settings,
   });
 
   final AuthRepository authRepository;
@@ -82,6 +88,7 @@ class TenkApp extends StatelessWidget {
   final UserApi userApi;
   final AppApi appApi;
   final FeedbackApi feedbackApi;
+  final AppSettings settings;
 
   @override
   Widget build(BuildContext context) {
@@ -99,30 +106,35 @@ class TenkApp extends StatelessWidget {
                 api: appApi,
                 child: FeedbackScope(
                   api: feedbackApi,
-                  child: MaterialApp(
-                    title: 'TenK',
-                    navigatorKey: navigatorKey,
-                    theme: buildTenkTheme(),
-                    // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.
-                    // 시스템 로케일을 따라가게 두면 영어 기기에서 Material 기본 UI
-                    // (날짜/시간 picker, 라이선스 화면)만 영어로 튀어 섞인다.
-                    locale: const Locale('ko'),
-                    supportedLocales: const [Locale('ko')],
-                    localizationsDelegates: const [
-                      GlobalMaterialLocalizations.delegate,
-                      GlobalWidgetsLocalizations.delegate,
-                      GlobalCupertinoLocalizations.delegate,
-                    ],
-                    // 빈 곳을 탭하면 키보드를 닫는다. 화면마다 GestureDetector 를 다는 대신
-                    // 여기 한 곳에서 전 화면에 적용한다 (입력칸이 있는 화면이 계속 늘어난다).
-                    // translucent + onTap 이라 하위 위젯의 탭은 그대로 먹는다 — 제스처 아레나에서
-                    // 안쪽 recognizer 가 우선이므로 버튼·칩 동작을 가로채지 않는다.
-                    builder: (context, child) => GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-                      child: child,
+                  child: SettingsScope(
+                    settings: settings,
+                    child: MaterialApp(
+                      title: 'TenK',
+                      navigatorKey: navigatorKey,
+                      theme: buildTenkTheme(),
+                      // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.
+                      // 시스템 로케일을 따라가게 두면 영어 기기에서 Material 기본 UI
+                      // (날짜/시간 picker, 라이선스 화면)만 영어로 튀어 섞인다.
+                      locale: const Locale('ko'),
+                      supportedLocales: const [Locale('ko')],
+                      localizationsDelegates: const [
+                        GlobalMaterialLocalizations.delegate,
+                        GlobalWidgetsLocalizations.delegate,
+                        GlobalCupertinoLocalizations.delegate,
+                      ],
+                      // 빈 곳을 탭하면 키보드를 닫는다. 화면마다 GestureDetector 를 다는
+                      // 대신 여기 한 곳에서 전 화면에 적용한다 (입력칸이 있는 화면이 계속
+                      // 늘어난다). translucent + onTap 이라 하위 위젯의 탭은 그대로 먹는다
+                      // — 제스처 아레나에서 안쪽 recognizer 가 우선이므로 버튼·칩 동작을
+                      // 가로채지 않는다.
+                      builder: (context, child) => GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () =>
+                            FocusManager.instance.primaryFocus?.unfocus(),
+                        child: child,
+                      ),
+                      home: const SessionGate(),
                     ),
-                    home: const SessionGate(),
                   ),
                 ),
               ),
