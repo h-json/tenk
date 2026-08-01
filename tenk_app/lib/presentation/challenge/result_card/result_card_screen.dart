@@ -7,6 +7,8 @@ import '../../../app/scopes.dart';
 import '../../../data/amount/amount.dart';
 import '../../../data/challenge/challenge.dart';
 import '../../../data/export/result_card_capture.dart';
+import '../../../design/tokens.dart';
+import 'result_card_painters.dart';
 import 'result_card_widget.dart';
 
 /// 챌린지 결과 카드 풀스크린 화면. finalize 직후 자동 푸시 + 챌린지 상세의 진입 카드 양쪽에서 들어온다.
@@ -18,10 +20,15 @@ class ResultCardScreen extends StatefulWidget {
     super.key,
     required this.challenge,
     required this.amounts,
+    this.celebrate = false,
   });
 
   final Challenge challenge;
   final List<Amount> amounts;
+
+  /// 진입 순간 컨페티를 터뜨릴지. **확정 직후 자동 진입일 때만 true** — 상세에서 다시
+  /// 열어볼 때마다 터지면 축하가 아니라 지연으로 느껴진다. 성공한 챌린지에만 적용된다.
+  final bool celebrate;
 
   @override
   State<ResultCardScreen> createState() => _ResultCardScreenState();
@@ -168,75 +175,102 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // **풀블리드**: AppBar 를 두지 않고 카드를 화면 폭에 꽉 맞춘다. 카드 하단이 화이트라
+    // 아래 남는 여백(액션 버튼 자리)과 이어져 경계가 안 보이고, 상단 컬러 블록이 화면 위를
+    // 그대로 채운다. 카드 테두리·라운드도 없앴다 — 공유 이미지는 full-bleed 여야 하고,
+    // 화면에서도 액자처럼 보이면 카드가 작아 보인다.
+    final celebrating = widget.celebrate &&
+        widget.challenge.result == ChallengeResult.success;
+    final isSuccess = widget.challenge.result == ChallengeResult.success;
+    // 상태바 뒤를 카드 상단 블록과 같은 색으로 덮는다. 안 그러면 카드가 상태바 밑으로
+    // 파고들어 닉네임 줄이 시계와 겹친다. (카드 위젯 자체는 건드리지 않는다 — 캡처물엔
+    // 상태바가 없으므로 이 띠는 화면 전용이다.)
+    final blockColor =
+        isSuccess ? AppColors.rewardSuccessTop : AppColors.rewardFailTop;
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E10),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0E0E10),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('챌린지 결과'),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+      backgroundColor: AppColors.bg,
+      body: Stack(
+        children: [
+          Column(
             children: [
+              Container(
+                height: MediaQuery.paddingOf(context).top,
+                color: blockColor,
+              ),
               Expanded(
-                child: Center(
-                  child: AspectRatio(
-                    aspectRatio: ResultCardWidget.width / ResultCardWidget.height,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: ResultCardWidget(
-                          challenge: widget.challenge,
-                          amounts: widget.amounts,
-                          nickname: _nickname,
-                        ),
-                      ),
-                    ),
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  alignment: Alignment.topCenter,
+                  child: ResultCardWidget(
+                    challenge: widget.challenge,
+                    amounts: widget.amounts,
+                    nickname: _nickname,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      onPressed: _saving ? null : _saveToGallery,
-                      icon: Icon(_savedToGallery
-                          ? Icons.check
-                          : Icons.download_outlined),
-                      label: Text(
-                        _saving
-                            ? '저장 중…'
-                            : _savedToGallery
-                                ? '저장됨'
-                                : '갤러리 저장',
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: _saving ? null : _saveToGallery,
+                          icon: Icon(_savedToGallery
+                              ? Icons.check
+                              : Icons.download_outlined),
+                          label: Text(
+                            _saving
+                                ? '저장 중…'
+                                : _savedToGallery
+                                    ? '저장됨'
+                                    : '갤러리 저장',
+                          ),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                          ),
+                        ),
                       ),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _sharing ? null : _share,
+                          icon: const Icon(Icons.ios_share),
+                          label: Text(_sharing ? '공유 중…' : '공유하기'),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _sharing ? null : _share,
-                      icon: const Icon(Icons.ios_share),
-                      label: Text(_sharing ? '공유 중…' : '공유하기'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
+          // 닫기는 카드 위에 얹는다 (AppBar 를 없앴으므로). 헤더가 가운데 정렬이라
+          // **우상단**이 비어 있고, 카드 상단 패딩(62)이 이 버튼 자리를 비워둔 것이다.
+          // 좌상단에 두면 긴 챌린지 이름과 겹친다.
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close),
+                // 상단 블록이 진한 채움이라 아이콘은 흰색이어야 읽힌다.
+                color: AppColors.rewardOnBlock,
+                tooltip: '닫기',
+              ),
+            ),
+          ),
+          if (celebrating)
+            // 카드 안의 정적 컨페티와 같은 색 — 화면 연출과 캡처물이 한 언어로 읽히게.
+            // (화면은 캡처 대상이 아니라 토큰을 그대로 써도 된다.)
+            const Positioned.fill(
+              child: ResultCardConfettiOverlay(colors: AppColors.rewardConfetti),
+            ),
+        ],
       ),
     );
   }

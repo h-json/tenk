@@ -126,7 +126,8 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
       // 배지 큐가 끝난 뒤 결과 카드 풀스크린 push (자동 진입점 — finalize 경로 한정).
       final after = data;
       if (after != null) {
-        await _openResultCard(after.challenge, after.amounts);
+        // 확정 직후에만 축하 연출 — 상세의 진입 카드로 다시 열 땐 조용히 뜬다.
+        await _openResultCard(after.challenge, after.amounts, celebrate: true);
       }
     } catch (e) {
       if (!mounted) return;
@@ -138,13 +139,18 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
     }
   }
 
-  Future<void> _openResultCard(Challenge challenge, List<Amount> amounts) async {
+  Future<void> _openResultCard(
+    Challenge challenge,
+    List<Amount> amounts, {
+    bool celebrate = false,
+  }) async {
     if (!mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ResultCardScreen(
           challenge: challenge,
           amounts: amounts,
+          celebrate: celebrate,
         ),
       ),
     );
@@ -386,8 +392,8 @@ class _DetailBody extends StatelessWidget {
             icon: Icons.celebration_outlined,
             title: '결과 카드',
             subtitle: '챌린지 결과를 카드 한 장으로. 갤러리 저장·공유까지.',
-            tint: AppColors.rewardSuccessTop,
-            fg: const Color(0xFF8A6100),
+            tint: AppColors.rewardTint,
+            fg: AppColors.rewardTintInk,
             onTap: busy ? null : onOpenResultCard,
           ),
         ],

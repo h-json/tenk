@@ -47,12 +47,41 @@ class AppColors {
   // ── Reward (페이오프 전용 — 평소엔 안 씀) ──
   // 값은 [ResultCardWidget] 의 hardcode 색과 정합(캡처 규칙상 카드는 ThemeData 를 안 쓴다).
   // 카드 색을 바꾸면 여기도 같이 맞출 것 — 둘이 어긋나면 리워드 색 언어가 갈라진다.
-  static const rewardSuccessTop = Color(0xFFFFF6CE);
-  static const rewardSuccessBottom = Color(0xFFFFE680);
-  static const rewardPurple = Color(0xFF5B3F90);
-  static const rewardFailTop = Color(0xFFF4F4F6);
-  static const rewardFailBottom = Color(0xFFE5E5EA);
-  static const rewardFailInk = Color(0xFF4D4D4D);
+  //
+  // 2026-08-01: 노랑/보라 → (다크 시도) → 화이트+옅은 틴트 → **브랜드 민트 채움**으로 정착.
+  // 다크는 앱과 너무 따로 놀았고, 옅은 틴트(명도 94%)는 썸네일에서 그냥 흰 카드로 보였다.
+  // 지금은 **앱 브랜드색을 면적으로** 쓴다 — 앱의 FilledButton 과 같은 색이라 언어가 이어지면서
+  // 피드에서 눈에 걸린다. 근거는 docs/decisions.md "결과 카드 디자인".
+  static const rewardSuccessTop = Color(0xFF1FBE9C); // 성공 카드 상단 블록 (= primary)
+  // 실패 블록은 앱 [danger] 와 **같은 값**이다 — 리워드 전용 레드를 따로 만들면 실패를
+  // 말하는 색이 앱 안에서 둘로 갈린다. 더 어두운 딥 레드(#D94F4F)를 쓰던 안은 카드가
+  // 경고창처럼 무거워져 폐기했다. 흰 글씨 대비는 알파를 낮추지 않는 것으로 확보한다.
+  static const rewardFailTop = danger; // 실패 카드 상단 블록 (#FF6B6B)
+  static const rewardBottom = Color(0xFFFFFFFF); // 카드 하단 바탕 (화이트)
+
+  /// 컬러 블록 위 텍스트 — 채움색이 진해 흰색이 기본이다.
+  static const rewardOnBlock = Color(0xFFFFFFFF);
+
+  /// 실패 카드 그리드에서 **지출한 날**의 칸 색 (= danger). 잘한 날(무지출)은 성공/실패와
+  /// 무관하게 민트로 남는다 — 실패 카드가 온통 빨강이 되면 우울해진다.
+  static const rewardSpendMark = danger;
+
+  /// 배지 슬롯의 테두리 — 획득/미획득 **양쪽 다** 흰 원 + 이 테두리다.
+  /// 미획득만 회색으로 채우면 빈 칸이 얼룩처럼 읽힌다.
+  static const rewardSlotBorder = Color(0xFFDFE5EC);
+
+  /// 리워드 컨페티 3색 (성공 전용) — 카드 안의 정적 컨페티와 진입 연출이 공유한다.
+  /// **민트 블록 위에서 보이는 색이어야 한다** — 민트 계열은 배경에 묻힌다.
+  static const rewardConfetti = <Color>[
+    Color(0xFFFFFFFF), // 화이트
+    Color(0xFFFFC94D), // 골드
+    Color(0xFFBFEFE2), // 아주 연한 민트
+  ];
+
+  /// '리워드로 가는 입구'를 표시하는 골드 틴트 (챌린지 상세의 결과 카드 진입 카드).
+  /// 카드 표면색과는 용도가 다르다 — 이건 목록 사이에서 그 줄만 눈에 띄게 하는 색이다.
+  static const rewardTint = Color(0xFFFFF6CE);
+  static const rewardTintInk = Color(0xFF8A6100);
 
   /// 배지 획득 모달 등 어두운 배경 위 페이오프의 글로우 골드 (더 채도 높은 축하색).
   static const rewardGlow = Color(0xFFFFC94D);
