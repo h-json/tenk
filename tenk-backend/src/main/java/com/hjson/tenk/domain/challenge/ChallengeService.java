@@ -35,7 +35,8 @@ public class ChallengeService {
         Challenge challenge = Challenge.create(user, request.name(), request.startDate(), request.endDate(), request.targetAmount());
         Challenge saved = challengeRepository.save(challenge);
         // 새 챌린지엔 배지 없음 — 빈 리스트 인라인
-        return ChallengeResponse.of(saved, 0L, LocalDate.now(), List.of());
+        // 갓 만든 챌린지라 기록이 없다 — 조회 없이 0.
+        return ChallengeResponse.of(saved, 0L, LocalDate.now(), ChallengeStats.EMPTY, List.of());
     }
 
     @Transactional
@@ -103,7 +104,13 @@ public class ChallengeService {
                 .stream()
                 .map(AcquiredBadgeResponse::from)
                 .toList();
-        return ChallengeResponse.of(challenge, total, today, badges);
+        // 배지 지급과 **같은 조회 + 같은 계산기**를 쓴다 — 입력이 갈라지면 값도 갈라진다.
+        // 챌린지당 쿼리 1개가 늘지만 위의 sum·badges 도 이미 챌린지당 1개씩이라 같은 패턴이다
+        // (목록이 길어지면 페이지네이션(handoff §2)에서 함께 볼 문제).
+        ChallengeStats stats = ChallengeStatsCalculator.from(
+                amountRepository.findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge),
+                challenge.getEndDate(), today);
+        return ChallengeResponse.of(challenge, total, today, stats, badges);
     }
 
     private void finalizeInternal(Challenge challenge) {

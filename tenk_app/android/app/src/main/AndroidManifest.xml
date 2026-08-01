@@ -9,6 +9,15 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"
         tools:replace="android:maxSdkVersion"/>
+    <!-- 로컬 알림(기록 리마인더·종료 임박·확정 대기). POST_NOTIFICATIONS 는 flutter_local_notifications
+         가 자기 매니페스트에도 선언하지만, Play 콘솔 권한 목록과 대조하기 쉽게 여기에도 명시한다.
+         RECEIVE_BOOT_COMPLETED 가 없으면 재부팅 시 예약이 전부 날아가 앱을 다시 열 때까지 알림이 죽는다.
+         ⚠️ SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM 은 일부러 선언하지 않는다 — 정확한 알람은
+         알람시계·캘린더 앱 전용이라 TenK 은 자격이 없고, 분 단위가 중요한 알림도 아니다
+         (CLAUDE.md "알림", decisions.md "알림 기능" 결정 5). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
@@ -65,6 +74,20 @@
                 <data android:scheme="kakao${kakaoNativeAppKey}" android:host="oauth" />
             </intent-filter>
         </activity>
+
+        <!-- flutter_local_notifications: 예약 알림을 실제로 띄우는 리시버 + 재부팅/앱 업데이트 후
+             예약을 복원하는 리시버. 둘 다 없으면 예약은 성공하는데 알림이 안 뜬다. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"

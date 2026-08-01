@@ -54,6 +54,13 @@ dependencies:
   # 효과음·진동 on/off 저장. 토큰은 flutter_secure_storage 를 쓰지만 설정값은
   # 민감정보가 아니고 재생 직전에 동기로 읽어야 해서 이쪽이 맞다.
   shared_preferences: ^2.3.3
+  # 로컬 알림. FCM 이 아니라 로컬인 이유는 decisions.md "알림 기능" 결정 1 참고
+  # (서버 발신이 필요한 알림이 0개 + iOS 푸시는 유료 계정 필요 + Firebase 가 Play
+  # 데이터 안전 답안을 흔든다). timezone/flutter_timezone 은 zonedSchedule 이
+  # 요구하는 짝 — 기기 타임존으로 "매일 밤 9시" 를 잡으려면 둘 다 필요하다.
+  flutter_local_notifications: ^22.2.0
+  timezone: ^0.11.1
+  flutter_timezone: ^5.1.0
 
 dependency_overrides:
   # tenk fork: VideoCapture UseCase 를 init 시점에 eager bind 하도록 패치.

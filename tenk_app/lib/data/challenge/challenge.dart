@@ -37,6 +37,8 @@ class Challenge {
     required this.result,
     required this.started,
     required this.finished,
+    required this.currentStreak,
+    required this.noSpendDays,
     required this.badges,
   });
 
@@ -54,6 +56,14 @@ class Challenge {
 
   /// 종료일이 지났는지 (종료일 당일은 still 진행 중).
   final bool finished;
+
+  /// 이 챌린지 안의 연속 기록 일수 / 무지출 누적 일수.
+  ///
+  /// **서버가 배지 지급과 같은 계산기로 내려준 값이다 — 클라에서 다시 세지 말 것**
+  /// (CLAUDE.md "알림"). 알림 문구("오늘 기록하면 7일 연속 배지예요")가 이 값에 걸려 있어서,
+  /// 여기서 따로 세면 알림이 약속한 것과 실제 지급이 어긋난다.
+  final int currentStreak;
+  final int noSpendDays;
 
   /// 이 챌린지 안에서 획득한 배지 (서버 응답 인라인). 미획득은 포함되지 않음 — 빈 리스트 가능.
   final List<AcquiredBadge> badges;
@@ -76,6 +86,10 @@ class Challenge {
       result: resultRaw == null ? null : ChallengeResult.fromServer(resultRaw),
       started: json['started'] as bool,
       finished: json['finished'] as bool,
+      // 앱 릴리스와 백엔드 배포가 동시에 일어나지 않으므로 구버전 서버(필드 없음)에서도
+      // 앱이 죽지 않게 0 으로 떨어뜨린다. 0 이면 알림 문구가 평소 문구로 내려갈 뿐이다.
+      currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+      noSpendDays: (json['noSpendDays'] as num?)?.toInt() ?? 0,
       badges: badgesRaw == null
           ? const []
           : badgesRaw

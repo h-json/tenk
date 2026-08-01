@@ -5,10 +5,10 @@ import com.hjson.tenk.domain.amount.AmountRepository;
 import com.hjson.tenk.domain.challenge.Challenge;
 import com.hjson.tenk.domain.challenge.ChallengeRepository;
 import com.hjson.tenk.domain.challenge.ChallengeResult;
+import com.hjson.tenk.domain.challenge.ChallengeStats;
+import com.hjson.tenk.domain.challenge.ChallengeStatsCalculator;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,32 +54,13 @@ public class BadgeGrantService {
         List<Amount> records = amountRepository
                 .findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge);
 
-        Set<LocalDate> daysWithAnyRecord = new TreeSet<>();
-        Set<LocalDate> daysWithOnlyNoSpend = new TreeSet<>();
-        Set<LocalDate> daysWithSpend = new TreeSet<>();
+        // 계산은 ChallengeStatsCalculator 하나에만 둔다 — 응답의 currentStreak/noSpendDays 와
+        // 같은 함수를 써야 "하루만 더 기록하면 배지" 알림과 실제 지급이 어긋나지 않는다.
+        ChallengeStats stats = ChallengeStatsCalculator.from(
+                records, challenge.getEndDate(), LocalDate.now());
 
-        for (Amount a : records) {
-            LocalDate day = a.getSpentDt().toLocalDate();
-            daysWithAnyRecord.add(day);
-            if (a.isNoSpend()) {
-                daysWithOnlyNoSpend.add(day);
-            } else {
-                daysWithSpend.add(day);
-            }
-        }
-        daysWithOnlyNoSpend.removeAll(daysWithSpend);
-
-        // STREAK: 진행 중이면 today 기준, 종료됐다면 endDate 기준의 "연속" 일수.
-        LocalDate today = LocalDate.now();
-        LocalDate endingOn = today.isAfter(challenge.getEndDate())
-                ? challenge.getEndDate()
-                : today;
-        int streak = consecutiveStreakEndingOn(daysWithAnyRecord, endingOn);
-        // NO_SPEND: 연속이 아니라 누적 — 자격 있는 day 의 개수.
-        int noSpendDays = daysWithOnlyNoSpend.size();
-
-        applyLadder(challenge, BadgeType.STREAK, streak);
-        applyLadder(challenge, BadgeType.NO_SPEND, noSpendDays);
+        applyLadder(challenge, BadgeType.STREAK, stats.currentStreak());
+        applyLadder(challenge, BadgeType.NO_SPEND, stats.noSpendDays());
     }
 
     @Transactional
@@ -137,21 +118,4 @@ public class BadgeGrantService {
         }
     }
 
-    private static int consecutiveStreakEndingOn(Set<LocalDate> days, LocalDate endingOn) {
-        if (days.isEmpty()) return 0;
-        int streak = 0;
-        LocalDate cursor = endingOn;
-        while (days.contains(cursor)) {
-            streak++;
-            cursor = cursor.minusDays(1);
-        }
-        if (streak == 0 && days.contains(endingOn.minusDays(1))) {
-            cursor = endingOn.minusDays(1);
-            while (days.contains(cursor)) {
-                streak++;
-                cursor = cursor.minusDays(1);
-            }
-        }
-        return streak;
-    }
 }

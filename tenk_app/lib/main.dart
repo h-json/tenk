@@ -18,6 +18,8 @@ import 'data/auth/token_storage.dart';
 import 'data/challenge/challenge_api.dart';
 import 'data/feedback/feedback_api.dart';
 import 'data/media/media_api.dart';
+import 'data/notification/notification_scheduler.dart';
+import 'data/notification/notification_service.dart';
 import 'data/settings/app_settings.dart';
 import 'data/user/user_api.dart';
 import 'presentation/login/login_screen.dart';
@@ -46,6 +48,12 @@ Future<void> main() async {
   final userApi = UserApi(authDio: dioClient.authDio);
   final appApi = AppApi(rawDio: dioClient.rawDio);
   final feedbackApi = FeedbackApi(authDio: dioClient.authDio);
+  // 알림은 로컬 예약만 한다 (FCM 없음). 플러그인 init 은 첫 예약 시점에 lazy 로 돌아 부팅을 안 늦춘다.
+  final notificationScheduler = NotificationScheduler(
+    service: NotificationService(),
+    challengeApi: challengeApi,
+    settings: settings,
+  );
 
   runApp(TenkApp(
     authRepository: authRepository,
@@ -56,6 +64,7 @@ Future<void> main() async {
     appApi: appApi,
     feedbackApi: feedbackApi,
     settings: settings,
+    notificationScheduler: notificationScheduler,
   ));
 }
 
@@ -68,7 +77,7 @@ Future<void> _goToLogin() async {
   );
 }
 
-class TenkApp extends StatelessWidget {
+class TenkApp extends StatefulWidget {
   const TenkApp({
     super.key,
     required this.authRepository,
@@ -79,6 +88,7 @@ class TenkApp extends StatelessWidget {
     required this.appApi,
     required this.feedbackApi,
     required this.settings,
+    required this.notificationScheduler,
   });
 
   final AuthRepository authRepository;
@@ -89,9 +99,49 @@ class TenkApp extends StatelessWidget {
   final AppApi appApi;
   final FeedbackApi feedbackApi;
   final AppSettings settings;
+  final NotificationScheduler notificationScheduler;
+
+  @override
+  State<TenkApp> createState() => _TenkAppState();
+}
+
+/// 앱 셸이 **포그라운드 복귀**를 관찰해 알림을 다시 예약한다.
+///
+/// 여기에 둔 이유: 복귀 시점에 어떤 화면이 떠 있을지 모르기 때문이다. 홈 화면에만 달면
+/// 상세·설정 화면에서 앱을 나갔다 돌아온 경우를 놓친다. 목록 화면도 로드 성공 시 한 번 더
+/// 부르는데, 그건 방금 받은 응답을 재사용해 조회를 아끼기 위한 것이다.
+class _TenkAppState extends State<TenkApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 실패해도 조용히 넘어간다 (scheduler 내부에서 처리). 로그인 전이면 조회가 실패할 뿐이다.
+      widget.notificationScheduler.rescheduleAll();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final authRepository = widget.authRepository;
+    final challengeApi = widget.challengeApi;
+    final amountApi = widget.amountApi;
+    final mediaApi = widget.mediaApi;
+    final userApi = widget.userApi;
+    final appApi = widget.appApi;
+    final feedbackApi = widget.feedbackApi;
+    final settings = widget.settings;
+
     return AuthScope(
       repository: authRepository,
       child: ChallengeScope(
@@ -108,32 +158,35 @@ class TenkApp extends StatelessWidget {
                   api: feedbackApi,
                   child: SettingsScope(
                     settings: settings,
-                    child: MaterialApp(
-                      title: 'TenK',
-                      navigatorKey: navigatorKey,
-                      theme: buildTenkTheme(),
-                      // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.
-                      // 시스템 로케일을 따라가게 두면 영어 기기에서 Material 기본 UI
-                      // (날짜/시간 picker, 라이선스 화면)만 영어로 튀어 섞인다.
-                      locale: const Locale('ko'),
-                      supportedLocales: const [Locale('ko')],
-                      localizationsDelegates: const [
-                        GlobalMaterialLocalizations.delegate,
-                        GlobalWidgetsLocalizations.delegate,
-                        GlobalCupertinoLocalizations.delegate,
-                      ],
-                      // 빈 곳을 탭하면 키보드를 닫는다. 화면마다 GestureDetector 를 다는
-                      // 대신 여기 한 곳에서 전 화면에 적용한다 (입력칸이 있는 화면이 계속
-                      // 늘어난다). translucent + onTap 이라 하위 위젯의 탭은 그대로 먹는다
-                      // — 제스처 아레나에서 안쪽 recognizer 가 우선이므로 버튼·칩 동작을
-                      // 가로채지 않는다.
-                      builder: (context, child) => GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: () =>
-                            FocusManager.instance.primaryFocus?.unfocus(),
-                        child: child,
+                    child: NotificationScope(
+                      scheduler: widget.notificationScheduler,
+                      child: MaterialApp(
+                        title: 'TenK',
+                        navigatorKey: navigatorKey,
+                        theme: buildTenkTheme(),
+                        // 앱의 모든 문자열이 한국어 하드코딩이라 로케일을 ko 로 고정한다.
+                        // 시스템 로케일을 따라가게 두면 영어 기기에서 Material 기본 UI
+                        // (날짜/시간 picker, 라이선스 화면)만 영어로 튀어 섞인다.
+                        locale: const Locale('ko'),
+                        supportedLocales: const [Locale('ko')],
+                        localizationsDelegates: const [
+                          GlobalMaterialLocalizations.delegate,
+                          GlobalWidgetsLocalizations.delegate,
+                          GlobalCupertinoLocalizations.delegate,
+                        ],
+                        // 빈 곳을 탭하면 키보드를 닫는다. 화면마다 GestureDetector 를 다는
+                        // 대신 여기 한 곳에서 전 화면에 적용한다 (입력칸이 있는 화면이 계속
+                        // 늘어난다). translucent + onTap 이라 하위 위젯의 탭은 그대로 먹는다
+                        // — 제스처 아레나에서 안쪽 recognizer 가 우선이므로 버튼·칩 동작을
+                        // 가로채지 않는다.
+                        builder: (context, child) => GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          child: child,
+                        ),
+                        home: const SessionGate(),
                       ),
-                      home: const SessionGate(),
                     ),
                   ),
                 ),

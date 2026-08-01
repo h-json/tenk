@@ -397,8 +397,14 @@ lib/
 │   │   ├── amount.dart, amount_api.dart
 │   ├── badge/                    # 챌린지 응답에 인라인되는 AcquiredBadge 모델만 (API 없음)
 │   │   └── badge.dart              # + kBadgeLadder(3/7/14/30) — 사다리 상수의 클라 단일 출처
-│   ├── settings/                 # 효과음·진동 on/off (shared_preferences). 외부 통신 X
-│   │   └── app_settings.dart       # 재생 직전에 동기로 읽는다(구독 없음) + 햅틱 헬퍼
+│   ├── settings/                 # 효과음·진동·알림 설정 (shared_preferences). 외부 통신 X
+│   │   └── app_settings.dart       # 재생 직전에 동기로 읽는다(구독 없음) + 햅틱 헬퍼 + NotificationPrefs 저장
+│   ├── notification/             # 로컬 알림 (FCM 아님). 예약은 기기가 하고 서버는 관여 안 함
+│   │   ├── notification_kind.dart    # 발신 채널 3종 + Android 채널 id/이름 + ScheduledNotification
+│   │   ├── notification_prefs.dart   # 설정 스냅샷(마스터+종류별 3+리마인더 시각) + 기본값 상수
+│   │   ├── notification_plan.dart    # **순수 함수** buildNotificationPlan — 문구 우선순위·병합·건너뛰기
+│   │   ├── notification_scheduler.dart # 재예약 유일 진입점(rescheduleAll). 전량 취소 후 다시 걸기
+│   │   └── notification_service.dart   # flutter_local_notifications 래퍼(권한·채널·zonedSchedule)
 │   ├── media/                    # 영상 다운로드 (export prefetch 용)
 │   │   └── media_api.dart
 │   ├── user/                     # 사용자 정보 — 결과 카드 헤더, '내 정보' 화면, 닉네임 변경, 회원 탈퇴
@@ -468,8 +474,11 @@ lib/
     │   └── support_contact.dart         # openSupportEmail — 고지한 문의처 메일 앱 열기. 실패 시 주소 클립보드 복사
     ├── feedback/                     # 의견 보내기 (문의와 역할 분리 — 답변 여부는 '회신 이메일' 유무로만 갈린다)
     │   └── feedback_screen.dart         # 유형 칩(필수) + 내용(필수) + 회신 이메일(선택) → POST /api/feedback
-    ├── settings/                     # 앱 동작 환경 (푸시 알림이 생기면 여기로 들어온다)
-    │   └── settings_screen.dart         # 효과음 on/off · 진동 on/off. 값은 SettingsScope(AppSettings)
+    ├── settings/                     # 앱 동작 환경
+    │   └── settings_screen.dart         # 효과음·진동 + 알림(마스터 1 + 종류별 3 + 리마인더 시각).
+    │                                    # 알림 토글은 저장 후 곧바로 재예약(updatePrefs)
+    ├── notification/                 # 알림 권유 (판정·예약은 data 층, 여기선 화면만)
+    │   └── notification_priming_screen.dart  # 가입 직후 권유. **게이트 아님** — back 차단 금지, '나중에' 로 건너뜀
     └── update/                       # 앱 버전 게이트 UI (판정은 서버, 여기선 화면만)
         └── update_gate.dart             # ForceUpdateScreen(강제, back차단) + RecommendedUpdateHost(권장 1회 안내) + openStorePage 헬퍼
 ```
@@ -510,9 +519,10 @@ lib/
 - **화면 이름을 '알림/효과 설정' 이나 '소리 및 진동' 으로 바꾸지 말 것** — 앱에 푸시 알림이 아직 없어 전자는 헛걸음을 부르고, 후자는 나중에 알림이 들어올 자리가 없다. **푸시 알림은 별도 백로그**(handoff #17)이고 생기면 이 화면에 들어온다.
 - **구독(리스너)을 붙이지 말 것.** 값은 재생 직전에 읽고, 리빌드가 필요한 건 설정 화면 자신뿐이라 로컬 state 로 충분하다 — 그래서 이 Scope 는 "화면 간 공유 상태"(Riverpod 도입 트리거)에 해당하지 않는다. 리스너를 붙이는 순간 그 판단이 뒤집힌다.
 
-### 알림 (설계 확정 · **구현 미착수**)
-> 2026-08-02 회의로 설계만 확정했고 코드는 아직 없다 (백로그 #17). 착수 전까지 **이 절과 [decisions.md](docs/decisions.md) "알림 기능" 이 유일한 진실의 원천**이다.
+### 알림 (구현 완료)
+> 설계·근거는 [decisions.md](docs/decisions.md) "알림 기능"(2026-08-02 회의). 코드는 `data/notification/` + `presentation/notification/`.
 
+- **진실의 원천 3개**: 예약 계획은 [notification_plan.dart](tenk_app/lib/data/notification/notification_plan.dart) `buildNotificationPlan`(**부수효과 없는 순수 함수** — 문구·병합·건너뛰기 규칙이 전부 여기 있다), 재예약 진입점은 [notification_scheduler.dart](tenk_app/lib/data/notification/notification_scheduler.dart) `rescheduleAll` **하나뿐**, 플랫폼 호출은 [notification_service.dart](tenk_app/lib/data/notification/notification_service.dart).
 - **로컬 알림만 쓴다 (`flutter_local_notifications`). FCM/Firebase 를 도입하지 말 것.** ① 알림 후보가 전부 **기기가 이미 아는 정보**로 예약된다(소셜 기능이 없어 서버 발신이 필요한 알림이 0개) ② **iOS 푸시는 Apple Developer Program 없이 불가능**(APNs 키)이라 FCM 을 고르면 iOS 는 알림 없는 앱이 된다 ③ Firebase 를 넣으면 installation ID 때문에 [play-console-app-content.md](docs/play-console-app-content.md) §0 의 "SDK 0개 / 기기 ID 미수집" 답안을 다시 짜야 한다. 서버 발신이 필요한 알림이 실제로 생기면 그때 재검토.
 - **발신 채널은 3종** — ① 매일 기록 리마인더 ② 챌린지 종료 임박 ③ 확정 대기. **배지 근접은 별도 채널이 아니라 리마인더의 문구 승격**이다 — 둘은 같은 시각에 같은 말("오늘 기록해")을 해서 나눠 두면 근접일에 두 번 울린다.
 - **같은 시각에 겹치면 발신 1개로 합치고 문구만 가장 급한 걸로 쓴다**: `마지막 날 > 배지 근접 > 평소`. **토글 3개는 그대로** — 합치는 건 *발신*이지 *채널*이 아니다(종료 임박만 켠 사람은 마지막 날에만 받는다). 같은 종류가 여러 챌린지에 걸릴 때도 **묶어서 1개**("확정을 기다리는 챌린지 3개가 있어요").
@@ -524,7 +534,13 @@ lib/
 - **알림 탭은 앱만 연다 (v1).** 딥링크는 부팅 게이트(버전→연령→동의→닉네임) 뒤에 배선해야 해 복잡도가 붙고, 목록에 이미 앰버 '확정하기' 마커가 있어 2탭이면 닿는다.
 - **서버가 `currentStreak` 을 준다** — 배지 근접 문구에 현재 연속 일수가 필요한데 `ChallengeResponse` 에 그 값이 없다(클라가 아는 건 *획득한 배지*뿐). **연속 집계를 클라에서 재구현하지 말 것** — `consecutiveStreakEndingOn` 의 "오늘 기록이 없으면 어제 기준" 같은 규칙 때문에 서버와 어긋난다. NO_SPEND 는 DISTINCT 날짜라 예외적으로 클라가 이미 센다. **즉 이 기능은 백엔드 변경·재배포가 딸려온다.**
 - **Android 알림 채널은 종류별 3개** — 시스템 설정과 앱 설정이 1:1 로 맞는다. 하나로 뭉치면 사용자가 시스템에서 종류별로 못 끈다.
-- **설정값이 바뀌면 그 자리에서 재예약**한다. `AppSettings` 에 **구독(리스너)을 붙이지 말 것**(위 "설정" 규칙과 동일 — 붙는 순간 Riverpod 착수 트리거에 걸린다). setter 안에서 스케줄러를 호출하면 된다.
+- **설정값이 바뀌면 그 자리에서 재예약**한다(`NotificationScheduler.updatePrefs`). `AppSettings` 에 **구독(리스너)을 붙이지 말 것**(위 "설정" 규칙과 동일 — 붙는 순간 Riverpod 착수 트리거에 걸린다). `AppSettings` 는 챌린지 데이터를 모르므로 재예약은 setter 가 아니라 **스케줄러가 소유**한다.
+- **재예약은 전량 취소 후 다시 걸기**(`cancelAll` → 계획 → 예약). 부분 갱신을 하면 취소·중복의 경우의 수가 폭발한다. 트리거 3곳: **앱 포그라운드 복귀**([main.dart](tenk_app/lib/main.dart) 의 `_TenkAppState` 가 관찰 — 복귀 시 어떤 화면일지 몰라 셸에 둔다) / **챌린지 목록 로드 성공**(방금 받은 응답을 넘겨 조회를 아낀다) / **기록 저장 직후**(`onRecordSaved`).
+- **"오늘 이미 기록했는가" 는 로컬에 남긴 `lastRecordedDate` 로 판정한다** — 기록은 앱 안에서만 일어나므로 이게 곧 사실이고, 챌린지마다 상세를 다시 부르는 것보다 싸다.
+  - ⚠️ **알려진 갭 (검증에서 발견, 미수정)**: 오늘 기록을 남긴 뒤 **그 기록을 지워도 오늘 리마인더는 계속 억제된다**(플래그가 그대로라서). 재설치·기기 교체 때 플래그를 잃는 것도 같은 계열이다. 영향은 "하루치 알림 1회 누락" 이고 다음 날 자동 회복된다.
+  - **고치려면 서버 필드가 답이다** — `ChallengeStatsCalculator` 가 이미 `daysWithAnyRecord` 를 들고 있어 `recordedToday` 를 **추가 쿼리 없이** 내려줄 수 있고, 그러면 삭제·재설치·다중 기기가 한 번에 정확해진다. 로컬 플래그를 정교하게 다듬는 방향으로는 가지 말 것(경우의 수만 는다).
+- **매일 반복 알림(`DateTimeComponents.time`)을 쓰지 말 것** — 날마다 문구가 다르고(마지막 날·배지 근접) "오늘만 건너뛰기" 가 필요한데 반복 알림은 하루만 뺄 수 없다. 대신 **날짜별로 따로 걸고**(기본 14일치, `kReminderHorizonDays`) 앱을 열 때마다 전량 다시 건다. 14일인 건 **iOS 대기 알림 64건 상한** 때문.
+- **배지 근접 문구는 오늘 것만 계산한다** — 내일 이후는 오늘 기록 여부에 따라 값이 달라져 추측이 된다. 앱을 열면 어차피 다시 계산되므로 미래 날짜는 평소 문구.
 - `POST_NOTIFICATIONS` 를 매니페스트에 추가하면 [play-console-app-content.md](docs/play-console-app-content.md) **§0 권한 목록을 같은 커밋에서 갱신**할 것. **데이터 안전 폼·privacy.html 은 변경 없음** — 로컬 알림은 수집이 아니다.
 
 ### 디자인 시스템 (색·타이포·테마)
@@ -709,7 +725,7 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 | 배지 카탈로그 변경 | 서버는 `badge` 테이블의 9행(STREAK 3/7/14/30, NO_SPEND 3/7/14/30, CHALLENGE_SUCCESS 1)으로 고정. 새 단계/타입 추가 시 **네 곳을 동시에 갱신**: ① [docs/schema.sql](docs/schema.sql)의 INSERT (+ DB에 수동 적용) ② [tenk_app/lib/data/badge/badge.dart](tenk_app/lib/data/badge/badge.dart)의 `BadgeType` enum (label 매핑까지) ③ [tenk_app/assets/badges/](tenk_app/assets/badges/)에 아이콘 파일 ④ [kBadgeLadder](tenk_app/lib/data/badge/badge.dart) 의 단계 배열 (**클라 단일 출처** — 무지출 성취감 카드 게이지 + 배지 획득 모달의 '다음 목표'가 공유한다. 사본을 새로 만들지 말 것) ⑤ 단계를 늘렸다면 [badge_style.dart](tenk_app/lib/presentation/challenge/widgets/badge_style.dart) 의 단계별 색 매핑 + [assets_src/badges/](tenk_app/assets_src/badges/) 원본·리사이즈. **챌린지 단위라 클라에 카탈로그 전체를 두지 않는다** — 획득한 것만 챌린지 응답에 인라인되므로 미획득 노출 위젯이 없음 |
 | 배지 획득 연출 변경 | 위 "배지 획득 연출" 규칙이 진실의 원천. [badge_celebration_dialog.dart](tenk_app/lib/presentation/challenge/widgets/badge_celebration_dialog.dart)(3막 타임라인 상수 `_totalDuration`/`_impactAt`/`_impactStart`/`_impactPeak`/`_settleEnd` + `CustomPainter` 컨페티) / [badge_style.dart](tenk_app/lib/presentation/challenge/widgets/badge_style.dart)(단계별 5색 — 타입 아님) / [badge_next_goal.dart](tenk_app/lib/presentation/challenge/widgets/badge_next_goal.dart)('다음 목표', 도달 가능할 때만 사다리·아니면 완주 폴백). **9종 전부 동일 연출 유지**(위계는 자산 색이 만든다), **Lottie 로 되돌리지 말 것**(색 연동 불가), **CTA 를 힌트 텍스트로 되돌리지 말 것**(체인이면 `다음 (1/2)`). `showBadgeCelebrations` 는 챌린지를 받아야 한다(다음 목표 판정에 종료일 필요) + 모달 진입 전 `precacheImage`. 트리거는 [ChallengeDetailScreen](tenk_app/lib/presentation/challenge/challenge_detail_screen.dart) reload diff 한 곳뿐이고, **finalize 경로는 반드시 `reload()` 재조회**(위 "결과 카드" 함정). 수동 테스트는 [docs/seed-badge-demo.sql](docs/seed-badge-demo.sql) |
 | 효과음·진동(설정) 변경 | 위 "설정" 규칙이 진실의 원천. 값은 [AppSettings](tenk_app/lib/data/settings/app_settings.dart)(`shared_preferences`) + `SettingsScope`, 화면은 [settings_screen.dart](tenk_app/lib/presentation/settings/settings_screen.dart). **`HapticFeedback` 직접 호출 금지 — `AppSettings` 헬퍼 경유**, 새 효과음은 재생 전 `soundEnabled` 확인. 자산은 royalty-free 다운로드만([assets/sounds/README.md](tenk_app/assets/sounds/README.md), 합성음 3회 반려 전례). **구독(리스너)을 붙이면** 이 Scope 가 "화면 간 공유 상태"가 되어 Riverpod 도입 트리거([decisions.md](docs/decisions.md) "Flutter 상태 관리 재검토")에 걸린다 |
-| 알림 기능 착수·변경 | 위 **"알림"** 도메인 규칙 + [decisions.md](docs/decisions.md) "알림 기능" 이 진실의 원천 (2026-08-02 설계 확정, **코드 없음**). 착수 시 핵심 제약 6가지: ① **로컬 알림만**(FCM 금지 — iOS 는 유료 계정 없이 푸시 불가 + Play 데이터 안전 답안이 흔들린다) ② **발신 채널 3종**이고 배지 근접은 리마인더 **문구 승격**(별도 채널로 만들면 근접일에 두 번 울린다) ③ 겹치면 **발신 1개 + 문구 우선순위**(마지막 날 > 배지 근접 > 평소), 채널 토글은 유지 ④ **inexact 예약**(`USE_EXACT_ALARM` 자격 없음) ⑤ 가입 직후 프라이밍은 **게이트가 아니다**(back 차단 금지) ⑥ `ChallengeResponse.currentStreak` 신설 — **연속 집계를 클라에서 재구현하지 말 것**이라 **백엔드 변경·재배포가 딸려온다**. 예약은 앱 포그라운드 진입·목록 로드 성공 시 **전량 취소 후 재예약**(부분 갱신 금지). `POST_NOTIFICATIONS` 추가 시 [play-console-app-content.md](docs/play-console-app-content.md) §0 권한 목록 동시 갱신, **데이터 안전 폼·privacy.html 은 무변경** |
+| 알림 변경 | 위 **"알림"** 도메인 규칙 + [decisions.md](docs/decisions.md) "알림 기능" 이 진실의 원천. 규칙을 바꾸려면 대부분 [notification_plan.dart](tenk_app/lib/data/notification/notification_plan.dart) **한 파일**만 고치면 된다(순수 함수라 부수효과 없음). 넘지 말아야 할 선 6가지: ① **로컬 알림만**(FCM 금지 — iOS 는 유료 계정 없이 푸시 불가 + Play 데이터 안전 답안이 흔들린다. 도입 트리거는 decisions.md 참고) ② **발신 채널 3종**이고 배지 근접은 리마인더 **문구 승격**(별도 채널로 만들면 근접일에 두 번 울린다) ③ 겹치면 **발신 1개 + 문구 우선순위**(마지막 날 > 배지 근접 > 평소), 채널 토글은 유지 ④ **inexact 예약**(`USE_EXACT_ALARM` 자격 없음 — 매니페스트에 선언하지 말 것) ⑤ 프라이밍은 **게이트가 아니다**(back 차단 금지) ⑥ 연속·무지출 집계를 **클라에서 재구현하지 말 것** — 서버 `ChallengeResponse.currentStreak`/`noSpendDays` 가 배지 지급과 같은 계산기([ChallengeStatsCalculator](tenk-backend/src/main/java/com/hjson/tenk/domain/challenge/ChallengeStatsCalculator.java))를 쓴다. 재예약은 **전량 취소 후 다시 걸기**(부분 갱신 금지). 권한을 늘리면 [play-console-app-content.md](docs/play-console-app-content.md) §0 권한 목록 동시 갱신, **데이터 안전 폼·privacy.html 은 무변경**(로컬 알림은 수집이 아니다). 회귀 가드는 [ChallengeStatsCalculatorTest](tenk-backend/src/test/java/com/hjson/tenk/domain/challenge/ChallengeStatsCalculatorTest.java) + [ChallengeStatsIntegrationTest](tenk-backend/src/test/java/com/hjson/tenk/domain/challenge/ChallengeStatsIntegrationTest.java) |
 | 배지를 부여하는 로직 변경 | [BadgeGrantService](tenk-backend/src/main/java/com/hjson/tenk/domain/badge/BadgeGrantService.java) 는 항상 **챌린지 단위**로 평가. `evaluateForChallenge(challengeId)` / `grantChallengeSuccess(challengeId, result)`. 유저 단위 누적이 필요하면 새 서비스(추후 achievement 시스템)로 분리할 것 — 여기에 user 파라미터를 다시 끼우지 말 것. amount 쿼리는 `findByChallengeOrderBySpentDtAscCreatedDtAsc(challenge)` 사용. **STREAK는 연속, NO_SPEND는 누적** (서로 다른 행동에 대한 보상이라 정의가 다름). 단일 패스 `applyLadder` 가 grant/revoke 양방향을 처리 — 회수가 필요한 변경(예: 무지출 자동 삭제)에서도 별도 호출 없이 재평가만 하면 정합. |
 | 오류 응답·오류 문구 변경 | **서버는 [GlobalExceptionHandler](tenk-backend/src/main/java/com/hjson/tenk/common/exception/GlobalExceptionHandler.java) + [ErrorCode](tenk-backend/src/main/java/com/hjson/tenk/common/exception/ErrorCode.java), 앱은 [api_error.dart](tenk_app/lib/data/api/api_error.dart) 가 진실의 원천.** 새 `ErrorCode` 는 도메인 prefix 로 추가하고 메시지는 한국어. **클라이언트 잘못을 500 으로 내보내지 말 것** — 디스패치 단계 예외는 `handleMalformedRequest` 에 등록(회귀 가드 [MalformedRequestIntegrationTest](tenk-backend/src/test/java/com/hjson/tenk/common/exception/MalformedRequestIntegrationTest.java) 7건). 앱에서는 **예외 원문(`$e`)을 노출하지 말 것** — 서버 envelope 이 없으면 `toApiException` 의 원인별 폴백(연결/지연/그 외)이 한국어를 준다. 한국어 메시지를 자체적으로 든 예외(`GalException`·`VideoComposeFailed`·`CameraException` 등)는 포괄 catch 보다 **먼저** 잡을 것 |
 | Flutter 새 화면의 비동기 로딩 | `AsyncStateMixin<W, T>` + `AsyncStateView<T>` 사용 ([presentation/common/async_state.dart](tenk_app/lib/presentation/common/async_state.dart)). `FutureBuilder` 금지. `fetch()` 오버라이드 + `didChangeDependencies`에서 `ensureLoaded()`. 외부 동작 결과를 즉시 반영하려면 `replaceData(next)`, 그 외 갱신은 `reload()`. 에러는 `toApiException(e).message`로 SnackBar 노출 |

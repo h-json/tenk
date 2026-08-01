@@ -6,6 +6,7 @@ import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
 import '../data/feedback/feedback_api.dart';
 import '../data/media/media_api.dart';
+import '../data/notification/notification_scheduler.dart';
 import '../data/settings/app_settings.dart';
 import '../data/user/user_api.dart';
 
@@ -183,5 +184,31 @@ class SettingsScope extends InheritedWidget {
   @override
   bool updateShouldNotify(SettingsScope oldWidget) =>
       settings != oldWidget.settings;
+}
+
+/// 알림 재예약 진입점([NotificationScheduler]) 주입.
+///
+/// 9개째 Scope 다 (임계 10, CLAUDE.md "레이어 규칙"). 다른 Scope 와 마찬가지로 **값이 안 바뀌는
+/// stateless 객체**라 리빌드 비용이 없다 — 알림 설정 자체는 [SettingsScope] 의 AppSettings 가
+/// 들고 있고, 이 Scope 는 "다시 예약해" 라는 동작만 넘긴다.
+class NotificationScope extends InheritedWidget {
+  const NotificationScope({
+    super.key,
+    required this.scheduler,
+    required super.child,
+  });
+
+  final NotificationScheduler scheduler;
+
+  static NotificationScheduler of(BuildContext context) {
+    final scope =
+        context.dependOnInheritedWidgetOfExactType<NotificationScope>();
+    assert(scope != null, 'NotificationScope not found in widget tree');
+    return scope!.scheduler;
+  }
+
+  @override
+  bool updateShouldNotify(NotificationScope oldWidget) =>
+      scheduler != oldWidget.scheduler;
 }
 

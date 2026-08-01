@@ -25,6 +25,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications 요구사항 — 없으면 checkDebugAarMetadata 에서
+        // "requires core library desugaring to be enabled" 로 빌드가 깨진다.
+        // 알림 예약이 java.time API 를 쓰는데 minSdk 24 에선 그게 플랫폼에 없어서다.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -78,6 +82,12 @@ android {
             isShrinkResources = false
         }
     }
+}
+
+dependencies {
+    // 위 isCoreLibraryDesugaringEnabled 의 짝. 플래그만 켜고 이 의존성을 빠뜨리면
+    // "core library desugaring is enabled but no desugar_jdk_libs" 로 다시 깨진다.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 flutter {

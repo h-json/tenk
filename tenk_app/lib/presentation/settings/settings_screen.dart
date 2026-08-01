@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
+import '../../data/notification/notification_prefs.dart';
 import '../../data/settings/app_settings.dart';
 import '../../design/tokens.dart';
+import '../common/date_time_picker.dart';
 
-/// 메뉴 → '설정' 하위 화면. 효과음 / 진동 on/off.
+/// 메뉴 → '설정' 하위 화면. 효과음·진동 + 알림(마스터 1 + 종류별 3 + 리마인더 시각).
 ///
 /// **최상위 메뉴에 토글을 두지 않고 이 화면으로 모은다** (CLAUDE.md "메뉴 화면").
-/// 앱에 푸시 알림이 생기면 그 설정도 여기에 들어온다 — 그래서 이름이 '소리 및 진동'
-/// 이 아니라 '설정' 이다 (알림 기능 자체는 별도 백로그 #17).
+/// 이름이 '소리 및 진동' 이 아니라 '설정' 인 이유가 이것 — 알림이 들어올 자리가 필요했다.
 ///
-/// 값은 [AppSettings] 가 즉시 저장하고, 다른 화면은 **재생 직전에 읽는다** —
+/// 값은 [AppSettings] 가 즉시 저장하고, 효과음·햅틱은 **재생 직전에 읽는다** —
 /// 구독이 없어서 여기서 알림을 쏠 곳이 없다. 리빌드가 필요한 건 이 화면뿐이라
 /// 로컬 state 로 충분하다.
+///
+/// 단 **알림 설정만은 저장 후 곧바로 재예약**해야 한다([_SettingsScreenState._update]) —
+/// 예약은 값을 읽어 미리 걸어두는 것이라, 저장만 하면 다음 앱 실행까지 예전 계획이 살아 있다.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -30,9 +34,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _settings ??= SettingsScope.of(context);
   }
 
+  NotificationPrefs get _noti => _settings!.notifications;
+
+  TimeOfDay get _reminderTime =>
+      TimeOfDay(hour: _noti.reminderHour, minute: _noti.reminderMinute);
+
+  /// 값을 저장하고 **그 자리에서 재예약한다.** 저장만 하면 다음 앱 실행까지 예전 계획이 살아
+  /// 있어 토글이 고장 난 것으로 보인다. (AppSettings 에 리스너를 붙이지 않는 게 의도 —
+  /// 붙이는 순간 그 Scope 가 "화면 간 공유 상태" 가 된다. CLAUDE.md "알림".)
+  Future<void> _update(NotificationPrefs next) async {
+    await NotificationScope.of(context).updatePrefs(next);
+    if (mounted) setState(() {});
+  }
+
+  /// 마스터 토글. 켤 때만 시스템 권한을 묻는다 — 여기가 "맥락 있는 opt-in" 지점이다.
+  ///
+  /// ⚠️ Android 13+ 는 한 번 거부하면 시스템 다이얼로그가 다시 안 뜬다. 그때는 토글이
+  /// 조용히 되돌아가 사용자가 원인을 알 수 없으므로 **시스템 설정으로 가라고 알려준다.**
+  Future<void> _setMaster(bool value) async {
+    if (!value) {
+      await _update(_noti.copyWith(enabled: false));
+      return;
+    }
+    final granted = await NotificationScope.of(context).enableWithPermission();
+    if (!mounted) return;
+    setState(() {});
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('기기 설정에서 TenK 의 알림을 허용해 주세요.')),
+      );
+    }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await pickTenkTime(
+      context,
+      initial: _reminderTime,
+      helpText: '리마인더 시각',
+    );
+    if (picked == null || !mounted) return;
+    await _update(
+      _noti.copyWith(reminderHour: picked.hour, reminderMinute: picked.minute),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = _settings!;
+    final noti = _noti;
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
       body: SafeArea(
@@ -76,9 +125,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
               ),
             ),
+            const SizedBox(height: AppSpacing.xl),
+            const Divider(height: 1),
+            _sectionHeader('알림'),
+            SwitchListTile(
+              secondary: const Icon(Icons.notifications_outlined),
+              title: const Text('알림 받기'),
+              subtitle: Text(
+                noti.enabled ? '기록·마감·결과를 알려드려요' : '지금은 알림을 보내지 않아요',
+              ),
+              value: noti.enabled,
+              onChanged: _setMaster,
+            ),
+            // 마스터가 꺼져 있으면 종류별 토글은 의미가 없어 통째로 감춘다 — 꺼진 항목을
+            // 늘어놓는 것보다 "지금 알림을 안 받는 중" 이 한눈에 읽히는 게 낫다.
+            if (noti.enabled) ...[
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(Icons.edit_calendar_outlined),
+                title: const Text('매일 기록 리마인더'),
+                subtitle: Text(
+                    '${formatTimeOfDay(context, _reminderTime)}에 알려드려요'),
+                value: noti.reminderEnabled,
+                onChanged: (v) => _update(noti.copyWith(reminderEnabled: v)),
+              ),
+              if (noti.reminderEnabled)
+                ListTile(
+                  contentPadding:
+                      const EdgeInsets.only(left: 72, right: AppSpacing.lg),
+                  title: const Text('알림 시각'),
+                  trailing: Text(
+                    formatTimeOfDay(context, _reminderTime),
+                    style: AppTypo.body.copyWith(color: AppColors.inkSub),
+                  ),
+                  onTap: _pickReminderTime,
+                ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(Icons.event_busy_outlined),
+                title: const Text('챌린지 종료 임박'),
+                subtitle: const Text('마지막 날에 한 번 알려드려요'),
+                value: noti.deadlineEnabled,
+                onChanged: (v) => _update(noti.copyWith(deadlineEnabled: v)),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(Icons.emoji_events_outlined),
+                title: const Text('결과 확정 대기'),
+                subtitle: const Text('기간이 끝났는데 확정하지 않았을 때 알려드려요'),
+                value: noti.finalizeEnabled,
+                onChanged: (v) => _update(noti.copyWith(finalizeEnabled: v)),
+              ),
+            ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.xl,
+              ),
+              child: Text(
+                '알림은 기기에서 직접 예약해요. 진행 중인 챌린지가 없거나 그날 이미 기록했다면 리마인더를 보내지 않아요.',
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _sectionHeader(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.xs,
+        ),
+        child: Text(
+          text,
+          style: AppTypo.caption.copyWith(
+            color: AppColors.inkMuted,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
 }

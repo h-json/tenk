@@ -24,7 +24,8 @@
 | 서버 | 자체 서버 1대 (`https://tenk.hjson248.com`), 제3자 백엔드 없음 | [docker-deployment.md](docker-deployment.md) |
 | 전송 중 암호화 | **O** — 전 구간 HTTPS | 동일 |
 | 로그인 | 카카오 로그인 전용 (자체 ID/PW 없음) | CLAUDE.md "인증" |
-| 권한 | INTERNET, ACCESS_NETWORK_STATE, CAMERA, RECORD_AUDIO, WRITE_EXTERNAL_STORAGE(≤API 29) | [AndroidManifest.xml](../tenk_app/android/app/src/main/AndroidManifest.xml) |
+| 권한 | INTERNET, ACCESS_NETWORK_STATE, CAMERA, RECORD_AUDIO, WRITE_EXTERNAL_STORAGE(≤API 29), **POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED** | [AndroidManifest.xml](../tenk_app/android/app/src/main/AndroidManifest.xml) |
+| 알림 | **로컬 알림만** (기기에서 예약). 푸시(FCM)·Firebase 없음 → 기기 ID·토큰 수집 없음. `RECEIVE_BOOT_COMPLETED` 는 재부팅 후 예약 복원용 | CLAUDE.md "알림", [decisions.md](decisions.md) "알림 기능" |
 | 음성 | **녹음 안 함** (`CameraController(enableAudio: false)`) | CLAUDE.md "영상" |
 | 계정 삭제 | 앱 내 탈퇴 + 웹 안내 페이지 | [delete-account.html](../tenk-backend/src/main/resources/static/delete-account.html) |
 | 연령 확인 | 만 14세 미만 차단, 미만 판정 시 계정 즉시 파기 | [UserService.verifyAge](../tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserService.java) |

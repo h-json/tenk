@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
@@ -19,7 +21,16 @@ class ChallengeListScreen extends StatefulWidget {
 class _ChallengeListScreenState extends State<ChallengeListScreen>
     with AsyncStateMixin<ChallengeListScreen, List<Challenge>> {
   @override
-  Future<List<Challenge>> fetch() => ChallengeScope.of(context).list();
+  Future<List<Challenge>> fetch() async {
+    final list = await ChallengeScope.of(context).list();
+    // 방금 받은 응답으로 알림을 다시 예약한다 — 챌린지가 생기고·끝나고·확정될 때마다
+    // 계획이 달라지기 때문. 여기서 넘기면 스케줄러가 목록을 다시 조회하지 않는다.
+    // (앱 포그라운드 복귀는 main.dart 의 셸이 따로 관찰한다.)
+    if (mounted) {
+      unawaited(NotificationScope.of(context).rescheduleAll(challenges: list));
+    }
+    return list;
+  }
 
   @override
   void didChangeDependencies() {

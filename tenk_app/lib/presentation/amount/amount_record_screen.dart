@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -162,6 +163,9 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
         videoPath: _videoPath,
       );
       if (!mounted) return;
+      // 오늘 기록을 남겼다는 사실을 남긴다 — 오늘치 리마인더를 걷어내는 유일한 근거다.
+      // 서버에 묻지 않는 이유는 기록이 앱 안에서만 일어나기 때문 (CLAUDE.md "알림").
+      unawaited(NotificationScope.of(context).onRecordSaved());
       // 업로드 성공 — 서버가 파일을 가져갔으니 로컬 임시 파일은 더 이상 필요 없음.
       // _disposeLocalVideo 가 _videoPath 를 null 로 만들기 때문에 pop 전에 호출하면 안전.
       _disposeLocalVideo();
