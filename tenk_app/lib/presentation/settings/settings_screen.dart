@@ -1,3 +1,5 @@
+// 우리 [AppSettings](효과음·진동·알림 설정)와 클래스 이름이 겹쳐 별칭으로 받는다.
+import 'package:app_settings/app_settings.dart' as system_settings;
 import 'package:flutter/material.dart';
 
 import '../../app/scopes.dart';
@@ -49,8 +51,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// 마스터 토글. 켤 때만 시스템 권한을 묻는다 — 여기가 "맥락 있는 opt-in" 지점이다.
   ///
-  /// ⚠️ Android 13+ 는 한 번 거부하면 시스템 다이얼로그가 다시 안 뜬다. 그때는 토글이
-  /// 조용히 되돌아가 사용자가 원인을 알 수 없으므로 **시스템 설정으로 가라고 알려준다.**
+  /// ⚠️ **거부당하면 앱이 할 수 있는 게 없다.** Android 11+ 는 두 번 거부하면, iOS 는
+  /// 한 번 거부하면 시스템 다이얼로그가 **다시 뜨지 않는다**(요청은 즉시 false 로 돌아온다).
+  /// 그래서 재요청을 반복하는 코드를 넣지 말 것 — 아무 일도 안 일어나 고장으로 보인다.
+  /// 유일한 탈출구가 기기 설정이므로 **말만 하지 말고 그 화면으로 데려다준다.**
   Future<void> _setMaster(bool value) async {
     if (!value) {
       await _update(_noti.copyWith(enabled: false));
@@ -61,7 +65,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {});
     if (!granted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('기기 설정에서 TenK 의 알림을 허용해 주세요.')),
+        SnackBar(
+          content: const Text('기기 설정에서 TenK 의 알림을 허용해 주세요.'),
+          action: SnackBarAction(
+            label: '설정 열기',
+            // 앱의 알림 설정 페이지로 바로 꽂는다 (설정 앱 → 앱 목록 → TenK → 알림 을
+            // 직접 찾아가면 4~5단계다). Android/iOS 16+ 모두 이 타입을 지원한다.
+            onPressed: () => system_settings.AppSettings.openAppSettings(
+              type: system_settings.AppSettingsType.notification,
+            ),
+          ),
+        ),
       );
     }
   }
