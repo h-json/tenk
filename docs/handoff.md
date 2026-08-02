@@ -40,7 +40,9 @@
 - ✅ **결과 카드 디자인 재설계 (#18, 2026-08-01~02)** — 기준은 **"예뻐야 자랑하고 싶다"**. 최종안은 **2블록**(상단 컬러 블록 — 성공 **브랜드 민트** / 실패 **앱 `danger`** + 하단 화이트) + **히어로 문장**(`N일 동안 / 목표액 / 챌린지 성공`) + 예산 바 + **배지 3칸 → 일자 그리드**(카뱅 26주적금 방식) + **풀블리드 화면**(AppBar 제거). **7라운드에 걸쳐 다크·링 게이지·카테고리 분포·절약액 히어로·딥레드를 차례로 폐기**했고 그 실패들이 규칙이 됐다 — *리워드의 특별함을 표면색으로 만들지 말 것* / *도넛·링 금지(척도를 못 나른다)* / *카테고리 분포 금지(자랑거리가 아니라 정산서)* / *절약액은 성취가 아니라 부산물* / *유색 면 위의 강조는 더 눌러서가 아니라 더 밝게*. 실패 카드는 **게이지 초과분과 지출한 날**에도 빨강을 쓴다. 축하는 **카드 안 정적 컨페티 + 확정 직후 진입 연출** 두 겹. analyze clean + 에뮬 전 분기 재검증 + 저장 PNG 확인 + **영상 마지막 3초 클립 검증 완료(2026-08-02) — 미검증 항목 없이 종결**. **앱 전용이라 백엔드 재배포와 무관.** 상세는 §1-A #18.
 - ✅ **알림 기능 구현 (#17, 2026-08-02)** — 회의에서 확정한 설계를 그대로 구현. **로컬 알림만**(FCM 없음) / 발신 채널 3종 + **배지 근접은 리마인더 문구 승격** / 겹치면 발신 1개 + 문구 우선순위 / 설정 마스터 1 + 종류별 3 + 시각 / 가입 직후 프라이밍(**게이트 아님**). 구현 중 **무지출 근접 문구도 값이 필요**하다는 게 드러나 백엔드를 한 번 더 정리했다 — `BadgeGrantService` 안의 집계를 **[ChallengeStatsCalculator](../tenk-backend/src/main/java/com/hjson/tenk/domain/challenge/ChallengeStatsCalculator.java) 로 뽑아 배지 지급과 응답이 같은 함수·같은 조회**를 쓰게 하고 `currentStreak`/`noSpendDays` 를 함께 내린다. 곁가지로 **`dart format lib/` 를 통째로 돌려 62개 파일이 재포맷된 것을 되돌렸다**(이 리포는 일괄 포맷된 적이 없다 — 전체 경로에 포맷터를 돌리지 말 것). 테스트 **226개** 통과 + analyze clean + **에뮬 E2E 검증 완료**. ⚠️ **백엔드 재배포 필요**(#7 과 함께). 상세는 §1-A #17.
 - ✅ **로고 / 앱 아이콘 (#6, 2026-08-02)** — 기본 Flutter 아이콘이던 걸 **`10` 마크**(세로획+깃발=`1`, 오른쪽 링=`0`이자 예산 게이지)로 교체. 마크는 자산 PNG 가 아니라 **코드로 그린다** — 파이썬 생성기([assets_src/icon/generate_icons.py](../tenk_app/assets_src/icon/generate_icons.py))가 **41개 산출물**(Android 5밀도 × legacy·원형·adaptive 전경·themed + `anydpi-v26` XML + `colors.xml` + iOS 15장 + Play 512)을 한 번에 뽑고, 앱 안 로고는 같은 형상의 [TenkLogoPainter](../tenk_app/lib/design/tenk_logo.dart) 가 그린다. **adaptive icon 이 아예 없던 것**(원형·themed 런처 미대응)도 같이 메웠다. `flutter analyze` clean + **Dart 렌더가 파이썬 산출물과 일치함을 실측 확인**. ⚠️ **실기기 확인은 남아 있다**(§0 ①). 규칙은 [../CLAUDE.md](../CLAUDE.md) "로고 / 앱 아이콘", 근거는 [decisions.md](decisions.md) "로고·앱 아이콘".
-- ⏭️ 다음 후보: **§0 잔여(백엔드 재배포 + 앱 릴리스 + Play 콘솔 폼 3종 + 데모 계정) — 한 묶음** / **#17 알림 구현(설계 완료 — 백엔드 `currentStreak` 이 §0 재배포와 묶인다)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **백엔드 재배포 + 새 AAB 빌드 (2026-08-03)** — 밀려 있던 백엔드 2건(#7 예외처리 · #17 알림 지표)을 **이미지 교체만으로** 배포하고(스키마 변경 없음), 앱은 **`1.0.0+3` → `1.1.0+4`** 로 올려 릴리스 AAB 를 구웠다. 테스트 226개 `--rerun-tasks` 전원 통과 / `flutter analyze` 0건 / 병합 매니페스트 실측(`versionCode=4`, `SCHEDULE_EXACT_ALARM` 없음). `app_config` 는 `latest`·**`min` 둘 다 `1.1.0`**(내부 테스터 강제 통일 — 되돌리려면 UPDATE 한 줄). **검증 명령 자체가 틀렸던 게 두 번** 나와 §0 에 박아뒀다 — 맥에서 자기 도메인 curl(NAT 헤어핀) / `/api/nope` 로 #7 확인(Security 가 먼저 401). **남은 건 Play 게시 → 실기기 검증 → 콘솔 폼 3종.**
+- ✅ **Play 내부 테스트 게시 + 실기기 검증 완료 (2026-08-03)** — 설치본으로 전 항목 통과. **결함 2건 발견 → §1-B #19(하단 버튼 잘림 — 원인은 CLAUDE.md 의 틀린 SafeArea 규칙) · #20(결과 카드 진입 컨페티가 데이터를 가림, 저장 PNG 는 정상)**. 오해였던 2건(`다음 (1/2)` 미표시 · 상태바 뒤 색)은 정상 동작으로 확인.
+- ⏭️ 다음 후보: **§1-B #19·#20 버그 수정** / **§1-C #21 문구 정리 · #22 알림 온보딩 회의** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -110,8 +112,10 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**백엔드 — 🟠 미배포 1건 (#7 예외처리).**
-- [ ] **#7 예외처리 전수 점검 배포** — `GlobalExceptionHandler` 에 `handleMalformedRequest` 추가 + `ErrorCode` 3개(C0005/C0006/C0007) 신설. **스키마 변경 없음 → 이미지 재배포만** ([docker-deployment.md](docker-deployment.md) §5.1 코드만 변경 경로). 배포 후 확인: `curl -i https://tenk.hjson248.com/api/nope` 가 **404 + C0005** (이전엔 500 + C0001).
+**백엔드 — ✅ 미배포 0건.**
+- [x] ✅ **#7 예외처리 + #17 알림 지표 배포 완료 (2026-08-03)** — 스키마 변경이 없어 **이미지 교체만** ([docker-deployment.md](docker-deployment.md) §5.1). 테스트 226개 `--rerun-tasks` 전원 통과 후 push → 맥에서 `pull && up -d`. 검증 전항목 통과: `/v3/api-docs` 에 **`currentStreak`·`noSpendDays`**(#17) / **`C0005`·`C0006`·`C0007` 3종 실측**(#7) / 401 envelope `C0003` / HTTPS·HSTS 정상 / 버전 게이트 `UPDATE_REQUIRED`·`LATEST`.
+  - ⚠️ **`curl /api/nope` 로 #7 을 확인하려던 예전 메모는 틀린 값이었다** — `PERMIT_ALL` 이 **와일드카드가 아니라 정확 경로 목록**이라 인증 없는 미등록 경로는 Security 가 먼저 **401 C0003** 으로 자른다(디스패치까지 안 간다). `handleMalformedRequest` 를 인증 없이 찌르려면 **PERMIT_ALL 안에서** 골라야 한다: `GET /swagger-ui/nope.html`→404 C0005 / `GET /api/auth/refresh`(POST 전용)→405 C0006 / `POST /api/auth/refresh` + `Content-Type: text/plain`→415 C0007.
+  - ⚠️ **맥에서 자기 도메인으로 curl 하면 연결 자체가 안 된다**(공유기 NAT 헤어핀 미지원 — [docker-deployment.md](docker-deployment.md) §8.2). 맥 로컬 검증은 `http://localhost:8080` 직결 또는 `--resolve tenk.hjson248.com:443:127.0.0.1`.
 - [x] ✅ **백엔드 재배포 완료 (2026-07-25)** — 연령 게이트 + 성별 + role/테스트로그인 제거를 prod 에 배포. 라이브 DB 3컬럼(`birth_date`/`gender`/`role`) `ALTER` 선적용 → `docker compose pull && up -d` → 부팅 정상 + `/api/auth/test/login` 제거 확인(401=security-first). `tenk_dbinit` 볼륨 `01-schema.sql` 도 갱신(클린 재구축 대비). `delete-account.html`/`privacy.html` 은 이미지에 구워져 함께 반영. 배포 순서·함정은 [docker-deployment.md](docker-deployment.md) §5.5.
 - [x] ✅ **§0-DEPLOY 9건 prod 배포 완료 (2026-07-30)** — #5·#10·#11·#1·#14·#2·#4·#9ⓐ·#9ⓑ 일괄. **DB 클린 재생성** 방식(볼륨 3개 삭제 → `dbinit` 재시딩 → clean init)이라 마이그레이션 SQL 8단계를 안 탔다. **서버 측 검증 전항목 통과** — 401 envelope / 버전 게이트 `LATEST`·`UPDATE_REQUIRED` / 새 테이블 3종 / `user.email` 부재 / 코드성 8개 컬럼 전부 `varchar`(enum 0) / badge 9행. 실행 기록은 [handoff-archive.md](handoff-archive.md), **재사용 가능한 절차는 [docker-deployment.md](docker-deployment.md) §5.7**.
 - [x] **연령 확인 게이트 에뮬 E2E — ✅ 완료 (2026-07-21)** — 신규 가입(연령→동의→닉네임), 기존 미확인 계정(앱 시작 시 연령 게이트), 만 14세 미만 입력 시 안내→로그아웃→계정 파기 확인. (실기기 재확인은 새 화면 추가 시 상시 체크 항목)
@@ -121,9 +125,13 @@
 
 **🟠 앱 릴리스 + Play 콘솔 폼 — 한 묶음으로 처리 (다음 착수 후보).** 답안은 [play-console-app-content.md](play-console-app-content.md) 에 전부 준비됨.
 
-> **왜 묶는가**: 백엔드는 LIVE 지만 **앱에는 그동안의 변경이 안 실려 있다** — Play 에 게시된 마지막 빌드는 2026-07-08 분이고 그 뒤 #11·#13·#3·#1·#14·#2·#4 등 앱 측 변경이 계속 쌓였다. 어차피 새 AAB 를 올려야 하니 **실기기 검증 → 빌드·업로드 → 콘솔 폼**을 한 번에 도는 게 왕복이 적다.
+> **왜 묶는가**: 백엔드는 LIVE 지만 **앱에는 그동안의 변경이 안 실려 있었다** — Play 에 게시된 마지막 빌드가 2026-07-08 분이고 그 뒤 #11·#13·#3·#1·#14·#2·#4·#8·#17·#18·#6 이 계속 쌓였다.
+>
+> **실제 순서는 빌드·업로드가 먼저였다** (아래 ③ 완료). 실기기 검증을 앞에 두면 APK 를 따로 굽고 AAB 를 또 굽게 되는데, **내부 테스트 트랙에 올려 그 설치본으로 검증하면 한 번만 구우면 되고 심사자·테스터가 받는 것과 같은 바이너리를 보게 된다**(Play App Signing 재서명본이라 카카오 키해시 경로까지 실물로 확인됨).
 
-- [ ] **① 실기기 검증** (`--dart-define=API_BASE_URL=https://tenk.hjson248.com`). ⚠️ **클린 재생성으로 라이브 계정이 전부 사라져 전원 신규 가입으로 잡힌다.**
+- [x] ✅ **① 실기기 검증 완료 (2026-08-03)** — Play 내부 테스트 설치본(Play App Signing 재서명본)으로 전 항목 통과. 로고·런처 아이콘(원형/스퀘어클/테마) · 온보딩 3단 · **알림 프라이밍이 '나중에' 로 넘어감(게이트 아님 확인)** · TESTER 승격·시딩 · 확정→배지 모달→결과 카드 · 갤러리 저장 PNG · 영상 export 마지막 클립 · 카테고리 9종 · 알림 설정 토글·시각 · 성별 3칸 · 닉네임 쿨다운 안내 · 의견 보내기(익명 저장) · 비행기 모드 · 정적 문서 · **탈퇴 → U0007 → 철회/재가입 양쪽**.
+  - **오해였던 것 2건(정상 동작)**: ⓐ 확정 시 **`다음 (1/2)` 이 안 뜬 건 정상** — 체인 표기는 *신규* 배지가 2개 이상일 때만이고, 시딩된 확정 대기 챌린지는 STREAK·NO_SPEND 를 이미 받은 상태라 새로 지급된 건 트로피 하나뿐이었다. ⓑ "상태바 뒤 블록색" 은 실제로 칠해져 있었다.
+  - 🐞 **결함 2건 발견 → 백로그 #19·#20 으로 등록** (아래 §1-A).
   - [ ] 카카오 로그인 → 온보딩 전체(연령 → 동의 → 닉네임) 통과
   - [ ] 메뉴 → 앱 버전 행 "최신 버전이에요" (#5)
   - [ ] **지출 기록 → 카테고리 9종 선택 → 상세에 아이콘·라벨 정상** ← #9-ⓑ 의 유일한 실질 리스크(wire format 이 Jackson→Flutter 까지 이어지는지)
@@ -139,7 +147,10 @@
     - [ ] 로그인 화면 로고 lockup(마크 88 + 워드마크 40) — 작은 화면에서 카카오 버튼을 밀어내지 않는지
     - [ ] 결과 카드 워터마크 — 캡처 PNG·영상 마지막 클립 **양쪽**에서 마크가 나오는지
 - [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨. `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
-- [ ] **③ 새 AAB 빌드·업로드** — `pubspec` version 증가 **필수**(현재 `1.0.0+3`) → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → 내부 테스트 트랙. **게시 후** 재배포 없이 SQL 한 줄로 최신 버전 반영: `UPDATE app_config SET latest_version='<새 version>' WHERE app_config_id=1;`
+- [x] ✅ **③ 새 AAB 빌드 완료 (2026-08-03)** — `pubspec` **`1.0.0+3` → `1.1.0+4`**(기능 추가라 minor) → `flutter analyze` 0건 → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/bundle/release/app-release.aab` (100.4MB). 병합 매니페스트 실측: `versionCode=4`/`versionName=1.1.0`, **`SCHEDULE_EXACT_ALARM` 없음**(inexact 방침대로), 알림 권한 4종 반영.
+  - ✅ **`app_config` 갱신 완료** — `latest_version='1.1.0'` + **`min_supported_version='1.1.0'`(강제)**. 내부 테스터를 최신 빌드로 통일하려는 의도적 선택이라, **1.1.0 미만은 전원 ForceUpdateScreen 에 갇힌다.** 되돌리려면 `min_supported_version='1.0.0'` 으로 UPDATE 한 줄(재배포 불필요). 검증: 구버전→`UPDATE_REQUIRED` / 신버전→`LATEST`.
+  - ✅ **Play 내부 테스트 게시 + 실기기 다운로드 확인 (2026-08-03)** — `min` 을 올려둔 상태였으므로 게시 전까지 구버전이 잠겨 있었고, 게시로 그 구간이 닫혔다. ⚠️ **다음에도 이 UPDATE 는 게시 반영 뒤에** — 스토어에 구버전뿐인 상태에서 min 을 올리면 업데이트 버튼을 눌러도 나갈 길이 없다.
+  - **Play 업로드 시 "난독화 파일 없음" 경고는 정상** — R8 을 의도적으로 꺼둬서(카카오 Pigeon 제거 회귀) 매핑 파일이 애초에 없다. 난독화가 없으니 크래시 스택트레이스도 이미 읽을 수 있다.
 - [ ] **④ Play Console 폼 입력**:
   - [x] 개인정보처리방침 URL / 광고 / 콘텐츠 등급 설문 — ✅ 완료 (2026-07-21)
   - [ ] **앱 액세스 권한(로그인 세부정보)** — 답안 확정(**데모 카카오 계정**, [play-console-app-content.md](play-console-app-content.md) §2). 남은 실행: **데모 카카오 계정 생성** + 콘솔 폼에 아이디/비번 입력 + **새 기기 로그인 재현**(추가 인증 안 뜨는지)
@@ -213,6 +224,27 @@
   - **잔여 갈래 2건은 삭제 (2026-07-28)** — "잃는 것을 숫자로"·"탈퇴 전 영상 내보내기". 사유 화면 문구 규칙과 충돌하고 결국 탈퇴를 어렵게 만드는 방향이라 백로그에서 뺐다 ([decisions.md](decisions.md) "메뉴 앱 버전 행" 곁가지).
 - ~~#15 Flutter 상태 관리 재검토 (Scope 7개)~~ → ✅ 완료 (2026-07-29). **현행 유지 — 임계를 5→10 으로 올리고 진짜 트리거를 따로 명문화. 코드 변경은 주석 2곳뿐.** 진단이 결론을 갈랐다: Scope 에 든 건 전부 **값이 안 바뀌는 stateless API 객체**라 `updateShouldNotify` 가 사실상 영원히 false — **지금 있는 건 상태 관리가 아니라 DI** 이고, Riverpod 은 둘을 한 몸으로 파는 물건이라 상태 관리 수요가 0 인 지금 도입하면 전 화면 이관 비용만 치른다. 5 라는 숫자엔 근거가 없었고(감으로 잡은 값), **숫자만 올리면 8개째에서 같은 고민이 반복되므로** "개수는 보조 지표, 착수 트리거는 **화면 간 공유 상태가 생길 때**"를 규칙에 같이 박았다 — 구체적 예는 배지 알림의 global `BadgeNotifier` 승격. 중첩 평탄화도 지금은 보류(임계 10 도달 시 1순위 후보). 회의록은 [decisions.md](decisions.md) "Flutter 상태 관리 재검토", 규칙은 [../CLAUDE.md](../CLAUDE.md) "레이어 규칙".
 - ~~#16 성별 회의~~ → ✅ 완료 (2026-07-29). **현행 유지 — 코드·스키마·문서(privacy.html) 변경 0.** 우려는 *수정할 수 있게 두면 무의미한 데이터가 쌓인다* 였으나, **노이즈는 편집이 아니라 최초 입력에서 들어오고** 편집을 막으면 오탭이 영구 고착돼 오히려 나빠진다(우리가 여는 건 '성별 변경'이 아니라 **'입력값 정정'**). 법상 정정·삭제·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. 곁가지로 **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 진짜 위험은 편집이 아니라 **자기선택 편향**인데 그건 항목 존폐로만 답할 문제라 함께 다뤘고, **수집 항목도 현행 유지**(제거 트리거 없음)로 결론. 회의록은 [decisions.md](decisions.md) "성별 수집·변경", 규칙은 [../CLAUDE.md](../CLAUDE.md) "성별 (선택 수집)".
+#### 1-B. 실기기 검증에서 나온 결함 (2026-08-03, 미착수)
+
+- [ ] **#19 하단 액션 버튼이 제스처 바에 잘림 — `bottomNavigationBar` + `SafeArea` 전수 점검** 🔴
+  - **증상**: '의견 보내기'의 `보내기`, '회원 탈퇴'의 `탈퇴하기` 버튼이 시스템 내비게이션 바에 가려 글자가 반쯤 잘린다(삼성 실기기 실측, 스크린샷 있음).
+  - **원인은 코드가 아니라 규칙이었다** — [../CLAUDE.md](../CLAUDE.md) 에 *"bottomNavigationBar 슬롯은 Flutter 가 inset 자동 처리하므로 별도 SafeArea 불필요, export_screen 패턴은 historical"* 이라고 **틀린 내용**이 박혀 있었고, 그걸 보고 만든 화면 2개가 그대로 깨졌다. Scaffold 는 이 슬롯에 inset 을 넣지 않는다 — `BottomNavigationBar`/`NavigationBar` **위젯**이 자체 SafeArea 를 가져서 자동처럼 보였을 뿐이다. **규칙은 이미 정정했다(2026-08-03).**
+  - **현황**: 이 슬롯을 쓰는 화면 **4개** 중 `export_screen`·`export_settings_screen` 은 `SafeArea` 로 감쌌고(정답이었다), **[feedback_screen](../tenk_app/lib/presentation/feedback/feedback_screen.dart):196 · [withdraw_screen](../tenk_app/lib/presentation/profile/withdraw_screen.dart):134 두 곳이 누락**.
+  - **작업**: 두 곳을 `SafeArea` 로 감싸고, [[feedback-consistency-over-pinpoint]] 대로 **하단에 액션이 붙는 화면 전수**를 다시 훑을 것(bottom sheet 4종 · 다이얼로그 · `Positioned` 로 띄운 하단 바 포함 — `bottomNavigationBar` 만 보면 놓친다). 회귀는 **제스처 내비 + 3버튼 내비 양쪽**에서 확인.
+- [ ] **#20 결과 카드 — 진입 컨페티가 카드 콘텐츠를 가리고 카드와 좌표계가 어긋난다** 🟠
+  - **증상**: 화면에서 컨페티 조각이 **일자 그리드 칸 안과 범례 글자 위**에 떨어져 데이터를 가린다. **갤러리 저장 PNG 는 정상** — 거기 담기는 건 카드 내부 정적 컨페티뿐이라서.
+  - **원인(추정)**: [ResultCardConfettiOverlay](../tenk_app/lib/presentation/challenge/result_card/result_card_painters.dart) 가 [result_card_screen](../tenk_app/lib/presentation/challenge/result_card/result_card_screen.dart) 의 `Positioned.fill` 로 **화면 전체 좌표계**에 뿌려지는데, 카드는 `FittedBox(BoxFit.contain)` 로 축소돼 들어간다. 두 좌표계가 달라 "콘텐츠 열을 침범하지 않는다" 는 정적 컨페티의 규칙이 오버레이엔 적용되지 않는다.
+  - **작업**: 오버레이를 **카드와 같은 박스에 정렬**하거나(카드 rect 기준 좌표), 정적 컨페티처럼 **콘텐츠 열 회피 규칙을 오버레이에도** 적용. ⚠️ **캡처 결과물은 지금이 정상이므로 [ResultCardWidget](../tenk_app/lib/presentation/challenge/result_card/result_card_widget.dart) 쪽을 건드리지 말 것** — 손대면 저장 PNG·영상 마지막 클립까지 같이 바뀐다.
+
+#### 1-C. 설정 화면 문구 정리 · 알림 온보딩 (2026-08-03 등록, 미착수)
+
+- [ ] **#21 '설정' 화면에서 군더더기 문구 삭제** 🟢 — 기준: **너무 당연한 말과 구현 디테일을 사용자에게 늘어놓지 않는다.** [settings_screen.dart](../tenk_app/lib/presentation/settings/settings_screen.dart)
+  - [ ] **효과음·진동 subtitle 삭제** — `'배지 획득·영상 녹화 시작에 소리를 재생해요'` / `'배지 획득·녹화 시작·시간 선택에 진동을 울려요'`. 토글 이름이 이미 다 말한다.
+  - [ ] **`'기기가 무음·방해 금지 모드면 설정과 상관없이 소리가 나지 않을 수 있어요.'` 삭제** — 무음 모드면 소리가 안 나는 건 앱이 알려줄 일이 아니다.
+  - [ ] **`'알림은 기기에서 직접 예약해요.'` 삭제** — 로컬 알림이라는 건 **개발자만 알면 되는 구현 디테일**이다.
+    - ⚠️ **뒤 문장(`진행 중인 챌린지가 없거나 그날 이미 기록했다면 리마인더를 보내지 않아요`)은 성격이 다르다** — 이건 "왜 알림이 안 왔지?" 에 답하는 **동작 설명**이라 지우면 조용한 미발신이 고장으로 읽힌다. 앞 문장만 걷어내고 뒤는 남기는 쪽을 기본안으로 하되, 착수 시 한 번 판단할 것.
+- [ ] **#22 [회의] 첫 가입 때 알림 권유 화면** 🟠 — [NotificationPrimingScreen](../tenk_app/lib/presentation/notification/notification_priming_screen.dart) 을 지금 형태로 둘지 재검토. 안건: 온보딩(연령→동의→닉네임) **직후에 또 한 화면을 세우는 게 맞나** / 화면 대신 첫 챌린지 생성 같은 **맥락 있는 순간으로 미룰지** / 문구·선택지. ⚠️ **제약은 고정**: 권한 요청 기회는 **Android 2회·iOS 1회뿐이고 소진되면 시스템 다이얼로그가 다시 안 뜬다** — 프라이밍 화면이 존재하는 이유가 그 기회를 맥락 없이 태우지 않으려는 것이라, "그냥 없애고 바로 요청" 은 답이 아니다. 게이트가 아니라는 것도 유지([../CLAUDE.md](../CLAUDE.md) "알림").
+
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
 > **업적(achievement) 시스템**은 우선순위를 최후로 내렸다 → 맨 아래 §5.
@@ -224,7 +256,7 @@
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **미배포 백엔드 변경 — 🟠 1건 (#7 예외처리, 2026-07-31).** 스키마 변경이 없어 이미지 재배포만 하면 된다 (§0). 그 외 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;`. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
+- **미배포 백엔드 변경 — ✅ 0건 (2026-08-03 기준).** 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;` — 맥에서는 DB 포트 퍼블리시가 없어 `docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "..."` 로 친다(`set -a; . ./.env; set +a` 로 비번을 셸에 올린 뒤). **`min` 을 올릴 땐 Play 게시 반영을 먼저 확인할 것** — 스토어에 새 버전이 없는 상태에서 올리면 강제 업데이트 화면에서 나갈 길이 없다. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
 - **관리자 패널 (트리거: 콘텐츠 모더레이션·사용자 관리) — 지금 X, 백로그 O.** 현재 관리자 제어 대상은 TESTER 승격 + 앱 버전 정책 2개뿐이고 둘 다 저빈도 SQL 로 충분해 패널을 지을 근거가 없다(과설계). **출시 후 UGC(영상·닉네임·한 줄 평) 신고/모더레이션이 생기면** SQL 로 감당이 안 돼 이때 착수: ADMIN role + 인증 + (웹) 관리 화면. 그때 TESTER 승격·app_config·신고 상태가 모두 "DB 행 편집" 이라 패널이 자연스럽게 흡수. 근거는 [decisions.md](decisions.md) "앱 버전·업데이트 게이트 회의".
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.

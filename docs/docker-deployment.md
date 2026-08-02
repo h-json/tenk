@@ -214,6 +214,7 @@ docker compose logs -f backend                  # "Started TenkApplication" = va
 | `/v3/api-docs` 500 (`NoSuchMethodError: ControllerAdviceBean.<init>`) | springdoc 2.6.0은 Spring Boot 3용. Spring Boot 4=Spring Framework 7엔 **springdoc 3.0.x**. → `build.gradle` `3.0.3`로 올림(완료). |
 | 로그 `Using generated security password` 경고 | stateless JWT + 커스텀 SecurityConfig라 그 기본 유저는 안 쓰임. **무해**(로컬과 동일). |
 | Traefik 로그 `client version 1.24 is too old` / 라우팅 안 잡힘 | **엣지(리버스 프록시) 소관** — Docker 29 API 버전 문제. `reverse-proxy` 리포 README §5 참고(요약: Traefik `v3.6.1`+ 로 해결). |
+| 윈도우 Docker Desktop 경고 `image may have poor performance, or fail, if run via emulation` | 배포 이미지는 맥용 **arm64** 라 amd64 윈도우가 pull 하면 항상 뜬다 — **정상이고 고칠 것 없음**. 여기서 재빌드하면 배포 태그가 amd64 로 덮여 **맥이 QEMU 로 느려지니 절대 재푸시하지 말 것**. 윈도우는 빌드·푸시 전용이고(로컬 백엔드는 `gradlew bootRun`) 받아진 이미지는 안 쓰므로 `docker rmi hjson248/tenk:latest` 로 지우면 경고도 사라진다. 태그의 실제 아키텍처 확인은 `docker buildx imagetools inspect hjson248/tenk:latest`. |
 | 컨테이너가 `Created` 에서 멈추고 `error while creating mount source path ... mkdir /Users/…/Documents: operation not permitted` | **macOS TCC(프라이버시)가 `~/Documents`·Desktop·Downloads 를 보호**해 Colima VM(virtiofs)이 그 하위 경로를 bind mount 못 함(홈 루트 `~/` 밑은 됨). compose 파일 자체는 호스트가 읽어 어디 둬도 되지만 **compose 안 상대경로 bind mount 가 전부 막힌다**. → 런타임 파일을 **named volume** 으로 전환(폴더 위치 무관). 시딩은 §5.4, 전말은 §9.6. |
 
 ---
