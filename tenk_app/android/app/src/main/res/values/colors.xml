@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- adaptive icon 바탕. 마크가 민트라 바탕은 흰색이다. -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

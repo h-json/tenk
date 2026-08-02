@@ -51,3 +51,6 @@ devtools_options.yaml
 # 라이센스(OFL 등) 동봉 부담을 피하려고 git 추적은 README 만 유지.
 assets/fonts/*.ttf
 assets/fonts/*.otf
+
+# 아이콘 생성기(assets_src/icon/generate_icons.py) 실행 부산물.
+__pycache__/

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../data/amount/amount.dart';
 import '../../../data/badge/badge.dart';
 import '../../../data/challenge/challenge.dart';
+import '../../../design/tenk_logo.dart';
 import '../_formatters.dart';
 import 'result_card_painters.dart';
 
@@ -121,15 +122,29 @@ class ResultCardWidget extends StatelessWidget {
             const Spacer(),
             const Padding(
               padding: EdgeInsets.only(bottom: 20),
-              child: Text(
-                'TenK',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: _inkMuted,
-                  letterSpacing: 3,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 마크는 `CustomPainter` 라 캡처 전에 precache 할 게 없다 (배지 PNG 와
+                  // 다른 점). 색은 글자와 같은 뮤트 톤이되 **트랙은 반드시 남긴다** —
+                  // 빼면 갭이 열려 `0` 이 `C` 로 읽힌다(런처 아이콘에서 트랙을 완전한
+                  // 원으로 둔 것과 같은 이유).
+                  TenkLogoMark(
+                    size: 17,
+                    color: _inkMuted,
+                    trackColor: _slotBorder,
+                  ),
+                  SizedBox(width: 7),
+                  Text(
+                    'TenK',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: _inkMuted,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

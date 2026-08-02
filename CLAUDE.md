@@ -381,7 +381,8 @@ lib/
 ├── config/                     # 컴파일 타임 상수 (API base URL, 카카오 키)
 ├── design/                     # 디자인 시스템 (색·타이포·여백·라운드·테마) — 아래 "디자인 시스템" 참고
 │   ├── tokens.dart               # AppColors / AppSpacing / AppRadius / AppTypo (단일 진실)
-│   └── app_theme.dart            # buildTenkTheme(): 토큰 → ThemeData (main.dart 에서 배선)
+│   ├── app_theme.dart            # buildTenkTheme(): 토큰 → ThemeData (main.dart 에서 배선)
+│   └── tenk_logo.dart            # 로고 마크(CustomPainter) + 워드마크 조합 — 런처 아이콘과 같은 형상
 ├── data/                       # 모든 외부 통신·영속성. 화면에서 직접 import 금지 — Scope를 거쳐서만
 │   ├── api/                      # 전송 계층 공용
 │   │   ├── dio_client.dart         # rawDio(인증X) + authDio(401 회전 인터셉터 부착)
@@ -483,6 +484,8 @@ lib/
         └── update_gate.dart             # ForceUpdateScreen(강제, back차단) + RecommendedUpdateHost(권장 1회 안내) + openStorePage 헬퍼
 ```
 
+로고·아이콘 자산: **번들 자산이 없다** — 마크는 코드로 그리고([design/tenk_logo.dart](tenk_app/lib/design/tenk_logo.dart)), 런처 아이콘 PNG 는 Android `res/`·iOS `Assets.xcassets` 로 직접 생성된다. 생성기·원본은 [tenk_app/assets_src/icon/](tenk_app/assets_src/icon/) (번들 제외). 위 "로고 / 앱 아이콘" 참고.
+
 자산: `tenk_app/assets/fonts/Korean.ttf` (현재 미사용 — 영상 export 자막은 Flutter `TextPainter` + 시스템 폰트 폴백으로 처리. 자막 폰트를 명시 지정하고 싶으면 [tenk_app/assets/fonts/README.md](tenk_app/assets/fonts/README.md) 참고).
 
 배지 자산: **번들은 `tenk_app/assets/badges/` (384px, 9개)**, **1024px 원본은 번들 밖 [assets_src/badges/](tenk_app/assets_src/badges/)**. 파일명은 서버 `badge.icon_path`와 1:1 매칭 (`streak_3.png` 등). 화면 최대 표시가 180px 인데 원본이 1024px(합계 6.7MB)이라 디코딩·메모리·번들이 모두 손해였다 — **리사이즈 스크립트는 `assets_src/badges/README.md`** 에 있고, 원본을 고치면 다시 돌려 번들본을 갱신할 것. 새 배지 추가 시 schema.sql · 두 디렉토리 동시 갱신.
@@ -558,6 +561,21 @@ lib/
 - **하이브리드 롤아웃 (Wave 0~5 완료)**: 토큰/테마(Wave 0)를 먼저 깔고, 화면 폴리시를 우선순위 웨이브로 적용. **Wave 0(토큰·테마) → 1(목록) → 2(상세) → 3(폼·필수 별표) → 4(리워드: 배지 모달 골드 글로우 + 리워드 토큰↔결과카드 정합) → 5(통계: 상세에 카테고리별 지출 카드).** 기능은 안 건드리고 보이는 층만.
   - **Wave 5 통계**: 챌린지 상세에 `_CategoryBreakdown`(뱅크샐러드식 가로 바 — 카테고리 아이콘/라벨/금액/% + 민트 진행바). `amounts` 에서 **클라 계산**(백엔드 무관), 지출>0 일 때만 노출, 금액 큰 순. 카테고리는 코드로 그룹핑하므로 검증 이전 자유텍스트 데이터는 '기타'로 폴백되어 합쳐 보일 수 있음(정상 — 9종 셀렉박스로 재저장하면 구분됨). 상세는 목록과 같은 언어(상태 pill + 남은 금액 히어로 + `ChallengeProgressBar`)의 요약 카드로 정합화했고, 확정 대기는 앰버 틴트 카드 + 전폭 확정 버튼, 진입 카드(결과카드/영상)는 공용 `_EntryCard` 로 통일.
 - **리모델 (2026-07-15, Wave 0~5 이후)**: ① 카드 **좌측 상태색 스트라이프 제거** — 탭+섹션이 이미 상태로 분류하므로 중복. 상태색은 우상단 마커/칩에만 남김. ② **목록 카드 높이 통일** — 상태 무관 동일 구조(이름+마커 / 남은금액(또는 목표) / 진행바 / 캡션 한 줄), 배지는 카드에서 제외(상세에만 노출)해 높이 변동 제거. ③ **베이스 크림→화이트** + 쿨 그레이 뉴트럴(위 팔레트).
+### 로고 / 앱 아이콘
+> 2026-08-02 확정 (#6). 형상의 진실의 원천은 **[assets_src/icon/generate_icons.py](tenk_app/assets_src/icon/generate_icons.py)**, 사용법·함정은 같은 폴더의 [README.md](tenk_app/assets_src/icon/README.md), 후보 비교·탈락 사유는 [decisions.md](docs/decisions.md) "로고·앱 아이콘".
+
+- **마크 = `10`.** 세로획+깃발이 `1`, 오른쪽 링이 `0` 이면서 **예산 게이지**다. 흰 바탕 + 민트 마크(`AppColors.primary`) + 옅은 트랙(`AppColors.logoTrack`).
+  - **워드마크가 `TenK` 를 담당하므로 마크는 `10` 만 진다** — 세 글자를 두 글자로 줄여 48px(mdpi 런처)에서 형태가 남는다. 아이콘은 "예쁜가" 가 아니라 **"48px 에서 형태가 남는가"** 로 고른 것이라, 되돌릴 땐 이 기준을 먼저 확인할 것.
+  - ⚠️ **트랙은 '완전한 원' 이어야 한다.** 갭만 열어둔 안은 작은 크기에서 `0` 이 **`C` 로 읽혔다**(`1C`). 트랙이 갭을 메워야 `10` 으로 읽힌다 — **트랙을 지우거나 `primaryTint` 처럼 더 옅은 색으로 바꾸지 말 것.** 결과 카드 워터마크가 뮤트 톤이면서도 트랙을 남기는 이유가 이것이다.
+  - 함께 검토한 안: `T`(가로획을 게이지로 — 워드마크 `TenK` 의 첫 글자와 겹쳐 `T TenK` 로 읽힘), `10K`/`KK`(세 글자라 48px 에서 획이 가늘어짐), `K`(`10` 을 변형 — 잘 읽히나 숫자 의미가 사라짐), 링 게이지 단독으로 K 만들기(**닫힌 곡선은 K 의 '팔' 로 안 읽힌다** — 실측 확인).
+- **마크는 자산 PNG 가 아니라 코드로 그린다 — 양쪽에 하나씩.** 파이썬(런처 아이콘 PNG 생성) + Dart [design/tenk_logo.dart](tenk_app/lib/design/tenk_logo.dart) `TenkLogoPainter`(앱 안 렌더). ⚠️ **비율 상수를 바꾸면 두 파일을 같이 고칠 것** — 한쪽만 고치면 런처 아이콘과 앱 안 로고가 갈라진다. Dart 가 쓰는 잉크 bbox 는 `python generate_icons.py --ink` 로 다시 뽑는다.
+  - Dart 쪽을 `Image.asset` 으로 되돌리지 말 것 — 색을 호출부가 정해야 민트/흰색/뮤트 반전을 자산 여러 벌 없이 처리하고, **결과 카드 캡처 경로에서 `precacheImage` 가 필요 없다**(배지 PNG 와 다른 점).
+- **`flutter_launcher_icons` 를 도입하지 말 것.** 그 도구도 원본 PNG 는 손으로 만들어야 해서 얻는 게 없고, 생성기가 둘이 되면 산출물이 갈라진다. 밀도·플랫폼 전부 위 스크립트 한 번(`python generate_icons.py`, 41개)으로 나온다.
+- **산출물을 손으로 갈아끼우지 말 것.** Android legacy·원형·adaptive 전경·themed 모노크롬 5밀도 + `mipmap-anydpi-v26/*.xml` + `values/colors.xml`(`ic_launcher_background`) + iOS `AppIcon.appiconset` 전 크기 + Play 업로드용 512 가 전부 스크립트 산출물이다.
+  - ⚠️ **iOS 아이콘에 알파 채널이 있으면 App Store 업로드가 거부된다**(스크립트가 RGB 로 평탄화하는 이유). ⚠️ **adaptive 는 108dp 중 가운데 72dp 만 보인다** — 전경 배율(`ADAPTIVE_SAFE`)을 빼면 원형 런처에서 획이 잘린다. ⚠️ `Contents.json` 은 스크립트가 **읽기만** 한다(슬롯을 늘리려면 Xcode 로 먼저 갱신).
+- **로고 노출 지점 3곳**: ① 로그인 화면 [TenkLogoLockup](tenk_app/lib/design/tenk_logo.dart)(마크 + `TenK` + '만원 챌린지') ② 결과 카드 워터마크(마크 + `TenK` 가로 조합, 뮤트 톤 + 트랙 유지) ③ 런처 아이콘. **워드마크 표기는 항상 `TenK`** (아래 "릴리스 빌드 / 배포" 의 브랜드 규칙).
+- **스플래시(`launch_background.xml`)에는 로고를 넣지 않았다 (의도).** 스플래시·로그인 화면이 둘 다 흰 배경이라 지금은 이음매가 안 보이는데, 스플래시에만 로고를 넣으면 로그인 화면 로고와 위치·크기가 어긋나며 점프가 생긴다. 넣으려면 두 화면의 좌표를 함께 맞출 것.
+
 ### 모달 사용 기준 (다이얼로그 / 바텀시트 / 화면)
 > 2026-07-29 확정. **새 UI 를 만들 때 이 표로 형태를 먼저 정할 것** — 같은 성격의 상호작용이 화면마다 다른 형태로 뜨면 앱이 산만해진다.
 
@@ -736,6 +754,7 @@ flutter run    # 연결된 디바이스/에뮬레이터에서 실행 (기본 bas
 | Flutter 새 공용 위젯 | 두 화면 이상이 같은 위젯을 쓰면 즉시 추출. 도메인 전용은 `presentation/<domain>/widgets/`, 도메인 무관은 `presentation/common/` |
 | 날짜·시간 선택 / 시각 표기 추가·변경 | 진실의 원천은 [common/date_time_picker.dart](tenk_app/lib/presentation/common/date_time_picker.dart) — `pickTenkDate`/`pickTenkTime`(선택) + `formatTimeOfDay`/`formatDateWithTime`(표기). **화면에서 `showDatePicker`/`showTimePicker` 를 직접 부르거나 24시간제 고정 포맷을 새로 만들지 말 것** (위 "코딩 컨벤션 — Flutter" 참고). 한국어 라벨은 [main.dart](tenk_app/lib/main.dart) 의 `locale: Locale('ko')` 고정에서 오므로 **로케일을 시스템 추종으로 바꾸면 picker 만 영어로 튄다**. 시각 picker 본체는 자체 휠 위젯 [wheel_time_picker.dart](tenk_app/lib/presentation/common/wheel_time_picker.dart) — 무한 순환·직접 입력·**오전/오후 자동 전환 경계는 11↔12**(12↔1 아님)가 모두 UX 결정이라 유지. 폼의 `날짜 \| 시간` 2칸은 [DateTimeFields](tenk_app/lib/presentation/amount/widgets/date_time_fields.dart) 공유 (수정 화면은 날짜 읽기 전용) |
 | 색·타이포·여백·컴포넌트 기본 스타일 변경 | 진실의 원천은 [design/tokens.dart](tenk_app/lib/design/tokens.dart)(`AppColors`/`AppTypo`/`AppSpacing`/`AppRadius`) + [design/app_theme.dart](tenk_app/lib/design/app_theme.dart)(`buildTenkTheme`). **화면에 hex·매직넘버 직접 박지 말 것** — 토큰을 가져다 쓰거나 토큰을 고쳐라. 컴포넌트(버튼/카드/입력 등) 기본 룩은 개별 화면이 아니라 app_theme 에서. 방향("절제+리워드")·팔레트(민트+화이트) 근거는 위 "디자인 시스템" + `references/`. **예외**: 오프스크린 캡처되는 결과 카드는 색 hardcode 유지 |
+| 로고 · 앱(런처) 아이콘 변경 | 위 "로고 / 앱 아이콘" 규칙이 진실의 원천. 형상은 **[assets_src/icon/generate_icons.py](tenk_app/assets_src/icon/generate_icons.py)**(런처 PNG 생성) 와 **[design/tenk_logo.dart](tenk_app/lib/design/tenk_logo.dart)** `TenkLogoPainter`(앱 안 렌더) **두 곳에 같은 비율 상수**가 있다 — 한쪽만 고치면 갈라진다(Dart 가 쓰는 잉크 bbox 는 `--ink` 로 재추출). 산출물은 **손으로 갈아끼우지 말고** `python generate_icons.py` 로 전 밀도·전 플랫폼 41개를 한 번에 갱신하고, 함정 4종(iOS 알파 금지 · adaptive 가운데 72dp · `Contents.json` 은 읽기만 · themed 는 단색이라 두 톤 소멸)은 [README](tenk_app/assets_src/icon/README.md) 참고. **`flutter_launcher_icons` 를 도입하지 말 것**(생성기가 둘이 된다). **게이지 트랙을 지우지 말 것** — 갭이 열리면 `0` 이 `C` 로 읽힌다. Play Console 아이콘은 `assets_src/icon/play_store_512.png` 를 콘솔에 직접 업로드. 노출 3지점(로그인 lockup · 결과 카드 워터마크 · 런처)을 같이 확인할 것 |
 | 챌린지 목록 화면/상태 표시 변경 | [challenge_list_screen.dart](tenk_app/lib/presentation/challenge/challenge_list_screen.dart)(상태 탭·그룹핑·정렬) + [challenge_card.dart](tenk_app/lib/presentation/challenge/widgets/challenge_card.dart)(카드) + [challenge_status.dart](tenk_app/lib/presentation/challenge/widgets/challenge_status.dart)(`ChallengeStatusStyle` = 라벨·색·틴트 단일 매핑). 정렬/필터는 클라이언트 처리(백엔드 무변경). 위 "챌린지 목록 IA" 가 규칙의 진실의 원천 |
 | camera 패키지 fork 갱신 | [tenk_app/vendor/camera_patched/camera_android_camerax](tenk_app/vendor/camera_patched/camera_android_camerax) 가 업스트림 `camera_android_camerax` 의 fork. `pubspec.yaml` `dependency_overrides` 로 주입. **패치 두 군데**: `initializeCamera` 의 `bindToLifecycle` 리스트 (`imageAnalysis` 자리에 `videoCapture` 를 넣음) + `stopVideoRecording` 의 `_unbindUseCaseFromLifecycle(videoCapture!)` 제거. 둘 다 `[tenk fork patch]` 주석으로 표시. **사유**: 업스트림은 VideoCapture 를 lazy bind 라 매 녹화 시작마다 Camera2 capture session 이 재구성돼 preview freeze. eager bind 로 전환해 freeze 자체 제거. Tenk 가 image stream 을 안 써서 ImageAnalysis 를 lazy 로 미뤄도 무해. **업스트림 버전 올릴 때**: pub cache 에서 신버전 디렉토리 통째로 vendor 에 덮어쓰고 두 지점 재적용. CameraX UseCase 조합 표 ([공식 문서](https://developer.android.com/media/camera/camerax/architecture#combine-use-cases)) 기준 P+IC+VC 는 LIMITED 이상 지원 — 4-way 는 LEVEL_3 한정이므로 ImageAnalysis 를 같이 추가하지 말 것 |
 | 영상 export 합성 파이프라인 변경 | [VideoComposer](tenk_app/lib/data/export/video_composer.dart) 에서 ffmpeg 명령 구성. **인코더는 sw `mpeg4` 고정 — 바꾸지 말 것**. `h264_mediacodec`(hw silent fail) / `libx264`(GPL · 빌드 미포함) / `libkvazaar`(native crash) 모두 실격됐고 경로는 `_videoEncoder` 주석 + [decisions.md "함정 — H.264/HEVC sw 인코더 다 막힘"](docs/decisions.md) 에 박혀 있다. **자막은 ffmpeg drawtext 대신 Flutter `TextPainter` 로 PNG 그려 `overlay` 필터로 합성 — drawtext 로 회귀하지 말 것** (ffmpeg 8.0 의 multi-codepoint 한글 silent drop 회귀, [decisions.md "함정 — drawtext 한글 회귀"](docs/decisions.md) 참고). 자막 좌표/폰트크기/박스 스타일은 `_drawTextBlock` 안에서 조절. **자막 위치(중단/하단)·배경(박스 vs 외곽선)은 사용자가 export 설정 화면([ExportSettingsScreen](tenk_app/lib/presentation/challenge/export/export_settings_screen.dart))에서 영상 전체 단위로 고름** — `SubtitlePosition` enum + `compose(subtitlePosition, subtitleBackground)` → `_renderTextOverlayPng` → `_drawTextBlock(withBox/withOutline, centerY)`. 상단은 대시보드와 겹쳐 제외했고 대시보드 자체는 항상 `withBox:true` 유지(자막만 영향). 흐름은 `includeResultCard` 와 동일하게 ExportSettingsScreen state → ExportComposeScreen 생성자 → compose 로 thread. 합성 파라미터(해상도/비트레이트/xfade 길이 등)는 모두 클래스 상단 상수. **결과 카드 마지막 클립**은 `resultCardPngPath` 옵션으로 합성 — `_normalizeStaticImageClip` 가 `-loop 1 -t 3.0` 으로 3초 정지 클립 만들고 `_concatWithXfade` 가 가변 duration 으로 xfade offset 누적 |

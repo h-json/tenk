@@ -5,6 +5,7 @@ import '../../app/scopes.dart';
 import '../../config/legal_config.dart';
 import '../../data/api/api_error.dart';
 import '../../data/auth/auth_repository.dart';
+import '../../design/tenk_logo.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
 import '../legal/age_gate_screen.dart';
@@ -190,15 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  'TenK',
-                  style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '만원 챌린지',
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                ),
+                const TenkLogoLockup(),
                 const SizedBox(height: 64),
                 SizedBox(
                   width: double.infinity,

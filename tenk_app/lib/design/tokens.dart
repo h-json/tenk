@@ -24,6 +24,11 @@ class AppColors {
   static const primaryTint = Color(0xFFE3F6F0); // 활성 알약 · 진행률 트랙
   static const onPrimary = Color(0xFFFFFFFF);
 
+  /// 로고 마크의 게이지 트랙(옅은 원). `primaryTint` 보다 진한 건 **흰 바탕에서
+  /// 사라지지 않아야 하기 때문**이다 — 진행률 바 트랙과 용도가 다르니 섞어 쓰지 말 것.
+  /// ⚠️ [assets_src/icon/generate_icons.py] 의 `TRACK` 과 같은 값이어야 한다.
+  static const logoTrack = Color(0xFFC6EEE4);
+
   // ── Semantic (뜻이 있을 때만) ──
   static const success = Color(0xFF12B886); // 절약 · 무지출 · 성공
   static const successTint = Color(0xFFE3F6F0);
