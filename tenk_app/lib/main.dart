@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 // 카카오 SDK에도 `AuthApi`/`UserApi`가 있어 우리 쪽과 충돌하므로 가린다.
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart'
@@ -30,6 +31,16 @@ import 'presentation/login/login_screen.dart';
 /// 화면이나 서비스는 절대 여기서 직접 import하지 말 것 (Scope를 통해서만 접근).
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // **세로 고정.** TenK 은 구조적으로 세로 전용이다 — 2초 영상을 세로로 찍고, 결과 카드가
+  // 9:16 고정이며, 모든 화면이 단일 컬럼이다. 그런데 막아두지 않아서 가로로 돌리면 앱 영역이
+  // 387dp(세로의 42%)로 줄어 **키보드가 없어도** 시각 picker 휠이 눌리고 게이트 화면들이
+  // 짜부라졌다 (2026-08-04 실기 확인). 화면마다 대응하는 대신 방향을 잠가 한 번에 닫는다.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
 
   // 효과음·햅틱은 재생 직전에 동기로 읽으므로 첫 프레임 전에 로드해 둔다.

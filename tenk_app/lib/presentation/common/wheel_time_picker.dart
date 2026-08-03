@@ -40,6 +40,10 @@ const double _wheelHeight = _itemExtent * 5;
 /// 거의 0 으로(`perspective`) 주면 곡률이 사라져 **모든 항목이 같은 크기**로 보인다.
 /// 확대경(`useMagnifier`)·압축(`squeeze`)·축 이탈(`offAxisFraction`)도 다 끈다.
 /// 3D 느낌을 원하지 않는다는 결정이므로 기본값으로 되돌리지 말 것.
+/// 다이얼로그 바깥 여백. Material 기본값과 같은 값을 **명시**해 둔다 — 공간 계산에서
+/// 같은 수를 써야 해서, 기본값에 기대면 프레임워크가 바뀔 때 계산만 조용히 어긋난다.
+const EdgeInsets _dialogInset = EdgeInsets.symmetric(horizontal: 40, vertical: 24);
+
 const double _flatDiameterRatio = 100;
 const double _flatPerspective = 0.0001; // 0 은 assert 로 막혀 있어 최소값에 가깝게.
 
@@ -199,9 +203,31 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
     Navigator.of(context).pop(TimeOfDay(hour: hour, minute: _minute));
   }
 
+  /// 휠(220)을 뺀 나머지가 세로로 먹는 양 — 제목 + 버튼 + 안팎 여백의 실측 근사값.
+  /// 정확히는 프레임을 그려봐야 알 수 있어 근사로 두되, **모자랄 때만** 쓰이는 값이라
+  /// 조금 넉넉하게 잡아 경계에서 눌리는 쪽으로 넘어가지 않게 한다.
+  static const double _dialogChrome = 140;
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    final editing = _editing != _EditTarget.none;
+
+    // **평소엔 그냥 둔다** — `Dialog` 가 키보드만큼 안쪽 여백을 잡아 다이얼로그를 위로
+    // 밀어 올려주는 게 기본 동작이고, 공간만 있으면 그게 제일 자연스럽다.
+    // 공간이 모자랄 때만 개입한다: 그대로 두면 `AlertDialog` 가 content 를 `Flexible` 로
+    // **눌러버려** 휠 항목이 반쪽씩 걸치며 숫자가 겹쳐 보이기 때문 (2026-08-03 실기기).
+    final media = MediaQuery.of(context);
+    final aboveKeyboard = media.size.height -
+        media.viewInsets.bottom -
+        media.padding.vertical -
+        _dialogInset.vertical;
+    final squeezed = aboveKeyboard < _wheelHeight + _dialogChrome;
+
+    final dialog = AlertDialog(
+      insetPadding: _dialogInset,
+      // 눌릴 상황에서만 위로 붙인다. 아래는 키보드가 덮어도 되지만 **입력칸까지 덮이면
+      // 안 되기 때문** — 가운데 정렬인 채로 키보드를 무시하면 입력칸이 키보드 밑에 깔린다.
+      alignment: (editing && squeezed) ? Alignment.topCenter : null,
       title: Text(widget.helpText ?? '시각 선택', style: AppTypo.title),
       titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
       contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -251,6 +277,15 @@ class _WheelTimePickerDialogState extends State<_WheelTimePickerDialog> {
         ),
         TextButton(onPressed: _confirm, child: const Text('확인')),
       ],
+    );
+    if (!editing || !squeezed) return dialog;
+    // 여기까지 왔다면 키보드 위로는 다이얼로그가 안 들어간다. 아래쪽 `viewInsets` 를 지워
+    // **원래 크기를 유지**시키고, 모자란 만큼은 키보드가 덮게 둔다 — 휠을 줄이는 것보다
+    // 이게 낫다는 결정 (2026-08-04).
+    return MediaQuery.removeViewInsets(
+      context: context,
+      removeBottom: true,
+      child: dialog,
     );
   }
 
