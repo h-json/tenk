@@ -42,7 +42,9 @@
 - ✅ **로고 / 앱 아이콘 (#6, 2026-08-02)** — 기본 Flutter 아이콘이던 걸 **`10` 마크**(세로획+깃발=`1`, 오른쪽 링=`0`이자 예산 게이지)로 교체. 마크는 자산 PNG 가 아니라 **코드로 그린다** — 파이썬 생성기([assets_src/icon/generate_icons.py](../tenk_app/assets_src/icon/generate_icons.py))가 **41개 산출물**(Android 5밀도 × legacy·원형·adaptive 전경·themed + `anydpi-v26` XML + `colors.xml` + iOS 15장 + Play 512)을 한 번에 뽑고, 앱 안 로고는 같은 형상의 [TenkLogoPainter](../tenk_app/lib/design/tenk_logo.dart) 가 그린다. **adaptive icon 이 아예 없던 것**(원형·themed 런처 미대응)도 같이 메웠다. `flutter analyze` clean + **Dart 렌더가 파이썬 산출물과 일치함을 실측 확인**. ⚠️ **실기기 확인은 남아 있다**(§0 ①). 규칙은 [../CLAUDE.md](../CLAUDE.md) "로고 / 앱 아이콘", 근거는 [decisions.md](decisions.md) "로고·앱 아이콘".
 - ✅ **백엔드 재배포 + 새 AAB 빌드 (2026-08-03)** — 밀려 있던 백엔드 2건(#7 예외처리 · #17 알림 지표)을 **이미지 교체만으로** 배포하고(스키마 변경 없음), 앱은 **`1.0.0+3` → `1.1.0+4`** 로 올려 릴리스 AAB 를 구웠다. 테스트 226개 `--rerun-tasks` 전원 통과 / `flutter analyze` 0건 / 병합 매니페스트 실측(`versionCode=4`, `SCHEDULE_EXACT_ALARM` 없음). `app_config` 는 `latest`·**`min` 둘 다 `1.1.0`**(내부 테스터 강제 통일 — 되돌리려면 UPDATE 한 줄). **검증 명령 자체가 틀렸던 게 두 번** 나와 §0 에 박아뒀다 — 맥에서 자기 도메인 curl(NAT 헤어핀) / `/api/nope` 로 #7 확인(Security 가 먼저 401). **남은 건 Play 게시 → 실기기 검증 → 콘솔 폼 3종.**
 - ✅ **Play 내부 테스트 게시 + 실기기 검증 완료 (2026-08-03)** — 설치본으로 전 항목 통과. **결함 2건 발견 → §1-B #19(하단 버튼 잘림 — 원인은 CLAUDE.md 의 틀린 SafeArea 규칙) · #20(결과 카드 진입 컨페티가 데이터를 가림, 저장 PNG 는 정상)**. 오해였던 2건(`다음 (1/2)` 미표시 · 상태바 뒤 색)은 정상 동작으로 확인.
-- ⏭️ 다음 후보: **§1-B #19·#20 버그 수정** / **§1-C #21 문구 정리 · #22 알림 온보딩 회의 · #23 문의 창구 회의** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **#19 하단 액션 잘림 수정 (2026-08-03)** — 백로그가 짚은 SafeArea 2곳 외에 **바텀시트 1곳**과 **키보드가 입력칸을 자르는 별개 원인**(사용자 지적)이 더 나왔다. 공용 위젯 [BottomActionScrollView](../tenk_app/lib/presentation/common/bottom_action_scroll_view.dart) 로 게이트 3화면을 통일하고, **위젯 테스트 회귀 가드 11건**을 신설해 규칙 대신 테스트가 지키게 했다(이 자리는 *틀린 규칙 때문에* 깨진 곳이다). `flutter analyze` clean + 테스트 12개 통과 + **에뮬 제스처/3버튼 양쪽 검증**. 상세는 §1-B.
+- ✅ **#24 휠 시각 picker + 세로 고정 (2026-08-04)** — 시각 picker 는 **접지 않는다**: 공간이 되면 `Dialog` 기본대로 키보드 위로 올라가고, 모자랄 때만 크기를 유지한 채 키보드가 덮게 한다(사용자 결정). 가용 높이를 `LayoutBuilder` 로 재려다 **다이얼로그가 통째로 렌더 실패**한 함정 포함 — 위젯 테스트는 그걸 통과시켰다. 곁가지로 **앱에 방향 고정이 없어 가로에선 키보드 없이도 눌리던 것**을 발견해 세로로 잠갔다. 가드 5건, 테스트 17개 통과.
+- ⏭️ 다음 후보: **§1-B #20 결과 카드 컨페티**  / **§1-C #21 문구 정리 · #22 알림 온보딩 회의 · #23 문의 창구 회의** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 
 ---
 
@@ -224,13 +226,14 @@
   - **잔여 갈래 2건은 삭제 (2026-07-28)** — "잃는 것을 숫자로"·"탈퇴 전 영상 내보내기". 사유 화면 문구 규칙과 충돌하고 결국 탈퇴를 어렵게 만드는 방향이라 백로그에서 뺐다 ([decisions.md](decisions.md) "메뉴 앱 버전 행" 곁가지).
 - ~~#15 Flutter 상태 관리 재검토 (Scope 7개)~~ → ✅ 완료 (2026-07-29). **현행 유지 — 임계를 5→10 으로 올리고 진짜 트리거를 따로 명문화. 코드 변경은 주석 2곳뿐.** 진단이 결론을 갈랐다: Scope 에 든 건 전부 **값이 안 바뀌는 stateless API 객체**라 `updateShouldNotify` 가 사실상 영원히 false — **지금 있는 건 상태 관리가 아니라 DI** 이고, Riverpod 은 둘을 한 몸으로 파는 물건이라 상태 관리 수요가 0 인 지금 도입하면 전 화면 이관 비용만 치른다. 5 라는 숫자엔 근거가 없었고(감으로 잡은 값), **숫자만 올리면 8개째에서 같은 고민이 반복되므로** "개수는 보조 지표, 착수 트리거는 **화면 간 공유 상태가 생길 때**"를 규칙에 같이 박았다 — 구체적 예는 배지 알림의 global `BadgeNotifier` 승격. 중첩 평탄화도 지금은 보류(임계 10 도달 시 1순위 후보). 회의록은 [decisions.md](decisions.md) "Flutter 상태 관리 재검토", 규칙은 [../CLAUDE.md](../CLAUDE.md) "레이어 규칙".
 - ~~#16 성별 회의~~ → ✅ 완료 (2026-07-29). **현행 유지 — 코드·스키마·문서(privacy.html) 변경 0.** 우려는 *수정할 수 있게 두면 무의미한 데이터가 쌓인다* 였으나, **노이즈는 편집이 아니라 최초 입력에서 들어오고** 편집을 막으면 오탭이 영구 고착돼 오히려 나빠진다(우리가 여는 건 '성별 변경'이 아니라 **'입력값 정정'**). 법상 정정·삭제·철회권 + privacy.html 의 공개 약속 때문에 막을 수도 없다. 곁가지로 **변경 이력 저장 금지**를 규칙으로 신설(아웃팅 위험). 진짜 위험은 편집이 아니라 **자기선택 편향**인데 그건 항목 존폐로만 답할 문제라 함께 다뤘고, **수집 항목도 현행 유지**(제거 트리거 없음)로 결론. 회의록은 [decisions.md](decisions.md) "성별 수집·변경", 규칙은 [../CLAUDE.md](../CLAUDE.md) "성별 (선택 수집)".
-#### 1-B. 실기기 검증에서 나온 결함 (2026-08-03, 미착수)
+#### 1-B. 실기기 검증에서 나온 결함 (2026-08-03 등록)
 
-- [ ] **#19 하단 액션 버튼이 제스처 바에 잘림 — `bottomNavigationBar` + `SafeArea` 전수 점검** 🔴
-  - **증상**: '의견 보내기'의 `보내기`, '회원 탈퇴'의 `탈퇴하기` 버튼이 시스템 내비게이션 바에 가려 글자가 반쯤 잘린다(삼성 실기기 실측, 스크린샷 있음).
-  - **원인은 코드가 아니라 규칙이었다** — [../CLAUDE.md](../CLAUDE.md) 에 *"bottomNavigationBar 슬롯은 Flutter 가 inset 자동 처리하므로 별도 SafeArea 불필요, export_screen 패턴은 historical"* 이라고 **틀린 내용**이 박혀 있었고, 그걸 보고 만든 화면 2개가 그대로 깨졌다. Scaffold 는 이 슬롯에 inset 을 넣지 않는다 — `BottomNavigationBar`/`NavigationBar` **위젯**이 자체 SafeArea 를 가져서 자동처럼 보였을 뿐이다. **규칙은 이미 정정했다(2026-08-03).**
-  - **현황**: 이 슬롯을 쓰는 화면 **4개** 중 `export_screen`·`export_settings_screen` 은 `SafeArea` 로 감쌌고(정답이었다), **[feedback_screen](../tenk_app/lib/presentation/feedback/feedback_screen.dart):196 · [withdraw_screen](../tenk_app/lib/presentation/profile/withdraw_screen.dart):134 두 곳이 누락**.
-  - **작업**: 두 곳을 `SafeArea` 로 감싸고, [[feedback-consistency-over-pinpoint]] 대로 **하단에 액션이 붙는 화면 전수**를 다시 훑을 것(bottom sheet 4종 · 다이얼로그 · `Positioned` 로 띄운 하단 바 포함 — `bottomNavigationBar` 만 보면 놓친다). 회귀는 **제스처 내비 + 3버튼 내비 양쪽**에서 확인.
+> 완료분(#19 하단 액션 잘림 · #24 휠 picker 찌그러짐 · 세로 고정)의 상세는 [handoff-archive.md](handoff-archive.md) 2026-08-03·08-04 항목으로 이관. 규칙은 [../CLAUDE.md](../CLAUDE.md) "코딩 컨벤션 — Flutter".
+
+- ~~#19 하단 액션 버튼이 제스처 바에 잘림~~ → ✅ 완료 (2026-08-03). 백로그가 짚은 2곳 외에 **바텀시트 1곳**과 **키보드가 입력칸을 자르는 별개 원인**이 더 나와 총 6건을 고쳤다. 공용 위젯 [BottomActionScrollView](../tenk_app/lib/presentation/common/bottom_action_scroll_view.dart) 로 게이트·온보딩 4화면 통일 + 회귀 가드 11건.
+- ~~#24 휠 시각 picker — 직접 입력 키보드가 뜨면 찌그러진다~~ → ✅ 완료 (2026-08-04). **접지 않고**, 공간이 되면 키보드 위로 올라가고 모자랄 때만 안 줄이고 덮게 했다. 가드 5건.
+- ~~세로 고정 없음~~ → ✅ 완료 (2026-08-04). 가로에선 앱 영역이 387dp 로 줄어 키보드 없이도 눌렸다 — [main.dart](../tenk_app/lib/main.dart) 에서 잠갔다.
+
 - [ ] **#20 결과 카드 — 진입 컨페티가 카드 콘텐츠를 가리고 카드와 좌표계가 어긋난다** 🟠
   - **증상**: 화면에서 컨페티 조각이 **일자 그리드 칸 안과 범례 글자 위**에 떨어져 데이터를 가린다. **갤러리 저장 PNG 는 정상** — 거기 담기는 건 카드 내부 정적 컨페티뿐이라서.
   - **원인(추정)**: [ResultCardConfettiOverlay](../tenk_app/lib/presentation/challenge/result_card/result_card_painters.dart) 가 [result_card_screen](../tenk_app/lib/presentation/challenge/result_card/result_card_screen.dart) 의 `Positioned.fill` 로 **화면 전체 좌표계**에 뿌려지는데, 카드는 `FittedBox(BoxFit.contain)` 로 축소돼 들어간다. 두 좌표계가 달라 "콘텐츠 열을 침범하지 않는다" 는 정적 컨페티의 규칙이 오버레이엔 적용되지 않는다.
