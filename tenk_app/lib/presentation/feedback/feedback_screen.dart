@@ -193,27 +193,31 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _canSubmit ? _submit : null,
-            child: _busy
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('보내기'),
+      // ⚠️ Scaffold 는 이 슬롯에 시스템 내비 inset 을 넣어주지 않는다 — SafeArea 를 빼면
+      // 제스처 바에 버튼이 잘린다 (CLAUDE.md "코딩 컨벤션 — Flutter").
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _canSubmit ? _submit : null,
+              child: _busy
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('보내기'),
+            ),
           ),
         ),
       ),

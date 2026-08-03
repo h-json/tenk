@@ -5,6 +5,7 @@ import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../common/bottom_action_scroll_view.dart';
 import '../login/login_screen.dart';
 
 /// 연령 확인 화면. 생년월일을 입력해야 [next] 로 진입할 수 있고, 거부하면 로그아웃만 가능하다(back/swipe 차단).
@@ -136,113 +137,102 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
         ),
         body: SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        const Text(
-                          '생년월일을\n알려주세요.',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '서비스 이용 가능 연령을 확인하기 위해 필요해요.',
-                          style: AppTypo.body.copyWith(color: AppColors.inkSub),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 4,
-                              child: _BirthField(
-                                controller: _year,
-                                focusNode: _yearFocus,
-                                label: '년',
-                                maxLength: 4,
-                                enabled: !_saving,
-                                autofocus: true,
-                                onChanged: _clearError,
-                                next: _monthFocus,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 3,
-                              child: _BirthField(
-                                controller: _month,
-                                focusNode: _monthFocus,
-                                label: '월',
-                                maxLength: 2,
-                                enabled: !_saving,
-                                onChanged: _clearError,
-                                previous: _yearFocus,
-                                next: _dayFocus,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 3,
-                              child: _BirthField(
-                                controller: _day,
-                                focusNode: _dayFocus,
-                                label: '일',
-                                maxLength: 2,
-                                enabled: !_saving,
-                                onChanged: _clearError,
-                                previous: _monthFocus,
-                                onSubmitted: (_) => _submit(),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
-                            style: AppTypo.caption.copyWith(color: AppColors.danger),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        Text(
-                          '입력한 생년월일은 연령 확인 목적으로만 보관돼요.',
-                          style: AppTypo.caption.copyWith(color: AppColors.inkMuted),
-                        ),
-                      ],
+          child: BottomActionScrollView(
+            body: [
+              const SizedBox(height: 8),
+              const Text(
+                '생년월일을\n알려주세요.',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '서비스 이용 가능 연령을 확인하기 위해 필요해요.',
+                style: AppTypo.body.copyWith(color: AppColors.inkSub),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: _BirthField(
+                      controller: _year,
+                      focusNode: _yearFocus,
+                      label: '년',
+                      maxLength: 4,
+                      enabled: !_saving,
+                      autofocus: true,
+                      onChanged: _clearError,
+                      next: _monthFocus,
                     ),
                   ),
-                ),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _submit,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text(
-                            '확인',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: _BirthField(
+                      controller: _month,
+                      focusNode: _monthFocus,
+                      label: '월',
+                      maxLength: 2,
+                      enabled: !_saving,
+                      onChanged: _clearError,
+                      previous: _yearFocus,
+                      next: _dayFocus,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: _saving ? null : _logout,
-                  style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
-                  child: const Text('로그아웃'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: _BirthField(
+                      controller: _day,
+                      focusNode: _dayFocus,
+                      label: '일',
+                      maxLength: 2,
+                      enabled: !_saving,
+                      onChanged: _clearError,
+                      previous: _monthFocus,
+                      onSubmitted: (_) => _submit(),
+                    ),
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: AppTypo.caption.copyWith(color: AppColors.danger),
                 ),
               ],
-            ),
+              const SizedBox(height: 16),
+              Text(
+                '입력한 생년월일은 연령 확인 목적으로만 보관돼요.',
+                style: AppTypo.caption.copyWith(color: AppColors.inkMuted),
+              ),
+            ],
+            actions: [
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _submit,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          '확인',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: _saving ? null : _logout,
+                style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
+                child: const Text('로그아웃'),
+              ),
+            ],
           ),
         ),
       ),

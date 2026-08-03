@@ -4,6 +4,7 @@ import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../common/bottom_action_scroll_view.dart';
 import '../login/login_screen.dart';
 import 'consent_section.dart';
 
@@ -65,58 +66,47 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
         ),
         body: SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        const Text(
-                          '서비스 이용을 위해\n약관 동의가 필요해요.',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+          child: BottomActionScrollView(
+            body: [
+              const SizedBox(height: 8),
+              const Text(
+                '서비스 이용을 위해\n약관 동의가 필요해요.',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '아래 필수 항목에 동의하면 TenK 를 시작할 수 있어요.',
+                style: AppTypo.body.copyWith(color: AppColors.inkSub),
+              ),
+              const SizedBox(height: 24),
+              ConsentSection(
+                onChanged: (ok) => setState(() => _consentOk = ok),
+              ),
+            ],
+            actions: [
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: (_consentOk && !_saving) ? _agree : null,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          '동의하고 시작하기',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '아래 필수 항목에 동의하면 TenK 를 시작할 수 있어요.',
-                          style: AppTypo.body.copyWith(color: AppColors.inkSub),
-                        ),
-                        const SizedBox(height: 24),
-                        ConsentSection(
-                          onChanged: (ok) => setState(() => _consentOk = ok),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: (_consentOk && !_saving) ? _agree : null,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text(
-                            '동의하고 시작하기',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: _saving ? null : _logout,
-                  style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
-                  child: const Text('동의하지 않고 로그아웃'),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: _saving ? null : _logout,
+                style: TextButton.styleFrom(foregroundColor: AppColors.inkMuted),
+                child: const Text('동의하지 않고 로그아웃'),
+              ),
+            ],
           ),
         ),
       ),

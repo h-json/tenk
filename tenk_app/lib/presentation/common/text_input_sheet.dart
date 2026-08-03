@@ -94,60 +94,71 @@ class _TextInputSheetState extends State<_TextInputSheet> {
     // 키보드가 올라오면 시트가 그만큼 밀려 올라가야 입력칸이 안 가린다.
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        0,
-        AppSpacing.xl,
-        AppSpacing.xl + bottomInset,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.title, style: AppTypo.title),
-          if (widget.description != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(widget.description!, style: AppTypo.caption),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          Form(
-            key: _formKey,
-            child: TextFormField(
-              controller: _controller,
-              autofocus: true,
-              maxLength: widget.maxLength,
-              maxLines: widget.maxLines,
-              minLines: 1,
-              // 입력칸 룩은 app_theme 의 inputDecorationTheme 을 상속받는다 (border 를 박지 말 것).
-              decoration: InputDecoration(hintText: widget.hintText),
-              textInputAction: singleLine ? TextInputAction.done : null,
-              onFieldSubmitted: singleLine ? (_) => _submit() : null,
-              validator: widget.validator == null
-                  ? null
-                  : (raw) => widget.validator!(raw ?? ''),
-            ),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      // ⚠️ 바텀시트는 화면 바닥에 붙으므로 SafeArea 가 없으면 버튼이 제스처 바에 잘린다
+      // (selection_sheet 와 동일 규칙). 키보드가 뜨면 padding.bottom 이 0 이 되므로
+      // 위 viewInsets 와 이중 가산되지 않는다.
+      child: SafeArea(
+        top: false,
+        // 스크롤이 없으면 남은 높이(화면 - 키보드)보다 내용이 길 때 그대로 터진다 —
+        // 실측: 자막 편집(3줄 + 설명) · 560dp · 키보드 300 에서 RenderFlex overflow.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            0,
+            AppSpacing.xl,
+            AppSpacing.xl,
           ),
-          Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.resetValue != null)
-                TextButton.icon(
-                  onPressed: () => _controller.text = widget.resetValue!,
-                  icon: const Icon(Icons.restore),
-                  label: const Text('기본값'),
+              Text(widget.title, style: AppTypo.title),
+              if (widget.description != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(widget.description!, style: AppTypo.caption),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              Form(
+                key: _formKey,
+                child: TextFormField(
+                  controller: _controller,
+                  autofocus: true,
+                  maxLength: widget.maxLength,
+                  maxLines: widget.maxLines,
+                  minLines: 1,
+                  // 입력칸 룩은 app_theme 의 inputDecorationTheme 을 상속받는다 (border 를 박지 말 것).
+                  decoration: InputDecoration(hintText: widget.hintText),
+                  textInputAction: singleLine ? TextInputAction.done : null,
+                  onFieldSubmitted: singleLine ? (_) => _submit() : null,
+                  validator: widget.validator == null
+                      ? null
+                      : (raw) => widget.validator!(raw ?? ''),
                 ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('취소'),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              FilledButton(
-                onPressed: _submit,
-                child: Text(widget.confirmLabel),
+              Row(
+                children: [
+                  if (widget.resetValue != null)
+                    TextButton.icon(
+                      onPressed: () => _controller.text = widget.resetValue!,
+                      icon: const Icon(Icons.restore),
+                      label: const Text('기본값'),
+                    ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('취소'),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton(
+                    onPressed: _submit,
+                    child: Text(widget.confirmLabel),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import '../../app/scopes.dart';
 import '../../data/api/api_error.dart';
 import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
+import '../common/bottom_action_scroll_view.dart';
 import '../common/field_label.dart';
 import '../notification/notification_priming_screen.dart';
 
@@ -149,80 +150,77 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
         ),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 16),
-          const Text(
-            '환영합니다!',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+    return BottomActionScrollView(
+      body: [
+        const SizedBox(height: 16),
+        const Text(
+          '환영합니다!',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'TenK 에서 사용할 닉네임을 정해주세요.\n카카오 프로필 이름이 자동으로 채워져 있어요.',
+          style: AppTypo.body.copyWith(color: AppColors.inkSub),
+        ),
+        const SizedBox(height: 28),
+        const FieldLabel('닉네임', required: true),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _controller,
+          enabled: !_saving,
+          maxLength: _maxLength,
+          decoration: InputDecoration(
+            hintText: '닉네임을 입력해주세요',
+            errorText: _validationError,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'TenK 에서 사용할 닉네임을 정해주세요.\n카카오 프로필 이름이 자동으로 채워져 있어요.',
-            style: AppTypo.body.copyWith(color: AppColors.inkSub),
+          onChanged: (_) {
+            if (_validationError != null) {
+              setState(() => _validationError = null);
+            }
+          },
+          onSubmitted: (_) => _confirm(),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.warnTint,
+            borderRadius: BorderRadius.circular(AppRadius.chip),
           ),
-          const SizedBox(height: 28),
-          const FieldLabel('닉네임', required: true),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _controller,
-            enabled: !_saving,
-            maxLength: _maxLength,
-            decoration: InputDecoration(
-              hintText: '닉네임을 입력해주세요',
-              errorText: _validationError,
-            ),
-            onChanged: (_) {
-              if (_validationError != null) {
-                setState(() => _validationError = null);
-              }
-            },
-            onSubmitted: (_) => _confirm(),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.warnTint,
-              borderRadius: BorderRadius.circular(AppRadius.chip),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, size: 18, color: AppColors.warn),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '확정 후 24시간 동안은 닉네임을 다시 변경할 수 없어요.',
-                    style: TextStyle(
-                        fontSize: 13, height: 1.4, color: Color(0xFF8A5A00)),
-                  ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, size: 18, color: AppColors.warn),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '확정 후 24시간 동안은 닉네임을 다시 변경할 수 없어요.',
+                  style: TextStyle(
+                      fontSize: 13, height: 1.4, color: Color(0xFF8A5A00)),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const Spacer(),
-          SizedBox(
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _confirm,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(
-                      '시작하기',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-            ),
+        ),
+      ],
+      actions: [
+        SizedBox(
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _saving ? null : _confirm,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    '시작하기',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
