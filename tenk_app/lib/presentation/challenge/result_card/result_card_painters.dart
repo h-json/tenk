@@ -63,6 +63,11 @@ class ResultBlockConfettiPainter extends CustomPainter {
 /// 캡처되는 카드 위젯과는 무관하다 — 화면 위에 얹히는 오버레이라 저장·공유 PNG 에는
 /// 들어가지 않는다. 확정 직후 자동 진입일 때만 재생한다(상세에서 다시 열어볼 때마다
 /// 터지면 축하가 아니라 지연처럼 느껴진다).
+///
+/// ⚠️ **끝나면 흔적을 남기지 않는다.** 화면 위 오버레이라 조각이 하나라도 멈춰 서면 그 자리의
+/// 카드 콘텐츠(일자 그리드·범례)를 영구히 가린다 — 낙하 중에 스쳐 지나가는 건 연출이지만
+/// 멈춰 있는 건 결함이다. 잔존을 막는 장치가 두 겹(`fallSpan` 클램프 + 완료 시 트리에서 제거)
+/// 이고, 회귀 가드는 `test/result_card_confetti_test.dart`.
 class ResultCardConfettiOverlay extends StatefulWidget {
   const ResultCardConfettiOverlay({super.key, required this.colors});
 
@@ -78,19 +83,35 @@ class _ResultCardConfettiOverlayState extends State<ResultCardConfettiOverlay>
   static const _duration = Duration(milliseconds: 2400);
 
   late final AnimationController _controller =
-      AnimationController(vsync: this, duration: _duration)..forward();
+      AnimationController(vsync: this, duration: _duration)
+        ..addStatusListener(_onStatus)
+        ..forward();
+
+  /// 연출이 끝났는지. true 면 아무것도 그리지 않는다 — 위 `fallSpan` 클램프가 이미 조각을
+  /// 전부 사라지게 하지만, 상수가 나중에 흔들려도 **잔상이 카드 위에 남지 않도록** 한 겹 더 둔다.
+  bool _done = false;
 
   /// 시드 고정 — 연출은 매번 같은 그림이어도 무방하고, 재빌드마다 흩어지면 안 된다.
   late final List<_ConfettiPiece> _pieces = _buildPieces();
 
+  void _onStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || _done) return;
+    setState(() => _done = true);
+  }
+
   List<_ConfettiPiece> _buildPieces() {
     final rnd = math.Random(20260801);
     return List.generate(_pieceCount, (i) {
+      final delay = rnd.nextDouble() * 0.28;
       return _ConfettiPiece(
         startX: rnd.nextDouble(),
         drift: (rnd.nextDouble() - 0.5) * 0.42,
-        delay: rnd.nextDouble() * 0.28,
-        fallSpan: 0.72 + rnd.nextDouble() * 0.28,
+        delay: delay,
+        // ⚠️ `delay + fallSpan` 이 1 을 넘으면 그 조각은 컨트롤러가 멈추는 순간 **낙하 도중에
+        // 얼어붙어 화면에 영구히 남는다** — 마지막 프레임이 그대로 유지되기 때문. 실제로 48개 중
+        // 15개가 화면 높이 62~94% 지점(=일자 그리드·범례 자리)에 남아 데이터를 가렸다.
+        // 1 로 클램프해 모든 조각이 연출이 끝나기 전에 낙하를 마치고 fade 0 이 되게 한다.
+        fallSpan: math.min(0.72 + rnd.nextDouble() * 0.28, 1.0 - delay),
         length: 10 + rnd.nextDouble() * 10,
         thickness: 4 + rnd.nextDouble() * 3,
         spin: (rnd.nextDouble() - 0.5) * 10,
@@ -107,6 +128,7 @@ class _ResultCardConfettiOverlayState extends State<ResultCardConfettiOverlay>
 
   @override
   Widget build(BuildContext context) {
+    if (_done) return const SizedBox.shrink();
     return IgnorePointer(
       child: AnimatedBuilder(
         animation: _controller,
