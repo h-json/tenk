@@ -210,7 +210,9 @@ class _HeaderBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '자막은 기록을 탭해서 편집할 수 있어요. (저장된 한 줄 평은 안 바뀌어요.)',
+            // 괄호 안내("저장된 한 줄 평은 안 바뀌어요")는 자막 편집 시트가 열릴 때 같은 말을
+            // 다시 하므로 여기선 뺀다 — 고칠 때 읽는 자리가 정본이다.
+            '자막은 기록을 탭해서 편집할 수 있어요.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 12),

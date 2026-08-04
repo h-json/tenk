@@ -201,7 +201,7 @@ class _AmountRecordScreenState extends State<AmountRecordScreen> {
                 Text('오늘 무지출', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(
-                  '오늘 하루 지출이 없었다면 무지출로 기록할 수 있어요. 일시는 지금으로 자동 저장됩니다.',
+                  '오늘 하루 지출이 없었다면 무지출로 기록할 수 있어요. 일시는 지금으로 자동 저장돼요.',
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 24),

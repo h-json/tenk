@@ -191,7 +191,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('챌린지 삭제'),
-        content: const Text('이 챌린지와 관련 기록이 삭제돼요. 되돌릴 수 없습니다.'),
+        content: const Text('이 챌린지와 관련 기록이 삭제돼요. 되돌릴 수 없어요.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

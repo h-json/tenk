@@ -270,7 +270,9 @@ class _ErrorView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '하나라도 빠지면 전체가 중단돼요. 잠시 후 다시 시도해주세요.',
+          // "하나라도 빠지면 전체가 중단돼요" 는 우리 쪽 사정이라 뺐다 —
+          // 여기서 사용자가 할 수 있는 건 재시도뿐이다.
+          '잠시 후 다시 시도해주세요.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
