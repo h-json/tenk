@@ -38,7 +38,9 @@ RING_CX, RING_R = 0.60, 0.40
 GAP_AT, GAP_HALF = 0, 55  # 게이지 갭: 오른쪽 중심, 폭 110°
 
 # 마크가 아이콘 캔버스에서 차지하는 비율 (긴 변 기준).
-MARK_EXTENT = 0.56
+# 이 값은 **아이콘 캔버스 안의 여백**만 정한다 — 형상 비율이 아니라서 Dart 쪽
+# `TenkLogoPainter` 에는 대응 상수가 없다(그쪽은 주어진 박스를 꽉 채운다).
+MARK_EXTENT = 0.70
 # adaptive icon 은 108dp 캔버스 중 **가운데 72dp** 만 보인다.
 ADAPTIVE_SAFE = 72 / 108
 # API 25 이하엔 시스템 마스크가 없어 legacy PNG 에 라운드를 구워 넣는다.
