@@ -106,7 +106,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SwitchListTile(
               secondary: const Icon(Icons.volume_up_outlined),
               title: const Text('효과음'),
-              subtitle: const Text('배지 획득·영상 녹화 시작에 소리를 재생해요'),
               value: settings.soundEnabled,
               onChanged: (v) async {
                 await settings.setSoundEnabled(v);
@@ -117,7 +116,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SwitchListTile(
               secondary: const Icon(Icons.vibration_outlined),
               title: const Text('진동'),
-              subtitle: const Text('배지 획득·녹화 시작·시간 선택에 진동을 울려요'),
               value: settings.hapticsEnabled,
               onChanged: (v) async {
                 await settings.setHapticsEnabled(v);
@@ -127,27 +125,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const Divider(height: 1),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                0,
-              ),
-              child: Text(
-                '기기가 무음·방해 금지 모드면 설정과 상관없이 소리가 나지 않을 수 있어요.',
-                style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
-              ),
-            ),
             const SizedBox(height: AppSpacing.xl),
             const Divider(height: 1),
             _sectionHeader('알림'),
             SwitchListTile(
               secondary: const Icon(Icons.notifications_outlined),
               title: const Text('알림 받기'),
-              subtitle: Text(
-                noti.enabled ? '기록·마감·결과를 알려드려요' : '지금은 알림을 보내지 않아요',
-              ),
+              // 꺼짐 상태는 스위치가 이미 말하므로 설명을 붙이지 않는다.
+              subtitle:
+                  noti.enabled ? const Text('기록·마감·결과를 알려드려요') : null,
               value: noti.enabled,
               onChanged: _setMaster,
             ),
@@ -191,18 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => _update(noti.copyWith(finalizeEnabled: v)),
               ),
             ],
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Text(
-                '알림은 기기에서 직접 예약해요. 진행 중인 챌린지가 없거나 그날 이미 기록했다면 리마인더를 보내지 않아요.',
-                style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
-              ),
-            ),
+            const SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
