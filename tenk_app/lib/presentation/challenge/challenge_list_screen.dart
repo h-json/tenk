@@ -6,6 +6,7 @@ import '../../app/scopes.dart';
 import '../../data/challenge/challenge.dart';
 import '../../design/tokens.dart';
 import '../common/async_state.dart';
+import '../notification/notification_priming_sheet.dart';
 import '../profile/profile_screen.dart';
 import 'challenge_create_screen.dart';
 import 'challenge_detail_screen.dart';
@@ -42,7 +43,8 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
     // 기본 이름 "챌린지 N" — N = 삭제분 제외 현재 챌린지 수 + 1. 서버 목록이 이미
     // 삭제분을 제외하므로 data.length 가 곧 N-1. (삭제 후 재생성 시 중복 가능하나
     // 사용자가 자유 편집하는 기본값이라 허용 — handoff/CLAUDE.md "챌린지 이름" 참고)
-    final defaultName = '챌린지 ${(data?.length ?? 0) + 1}';
+    final before = data?.length ?? 0;
+    final defaultName = '챌린지 ${before + 1}';
     // Navigator generic 추론 문제로 pop result가 누락되는 경우가 있어,
     // result 의존 없이 push 종료 시점에 무조건 새로고침. (handoff.md "함정 — Flutter" 참고)
     await Navigator.of(context).push<Challenge>(
@@ -52,6 +54,27 @@ class _ChallengeListScreenState extends State<ChallengeListScreen>
     );
     if (!mounted) return;
     await reload();
+    if (!mounted) return;
+    await _maybePrimeNotifications(before: before);
+  }
+
+  /// 첫 챌린지를 만든 직후 딱 한 번 알림을 권한다.
+  ///
+  /// **온보딩이 아니라 여기인 이유**: 챌린지가 0개면 [buildNotificationPlan] 이 아무것도
+  /// 예약하지 않아 승인해도 알림이 안 온다. 챌린지가 생긴 지금이 승인이 곧 실제 예약으로
+  /// 이어지는 첫 순간이다 (CLAUDE.md "알림").
+  ///
+  /// 생성 여부는 **목록 길이 증가**로 본다 — 위 주석대로 pop result 는 못 믿는다.
+  Future<void> _maybePrimeNotifications({required int before}) async {
+    if ((data?.length ?? 0) <= before) return; // 취소하고 나온 경우
+    final settings = SettingsScope.of(context);
+    if (settings.notificationPrimingShown) return; // 한 번 물었으면 끝
+    if (NotificationScope.of(context).prefs.enabled) return; // 이미 켜 둔 사람
+
+    // 어떻게 닫히든(승인·나중에·back) 기회는 한 번 쓴 것으로 본다.
+    await settings.markNotificationPrimingShown();
+    if (!mounted) return;
+    await showNotificationPriming(context);
   }
 
   Future<void> _openDetail(Challenge challenge) async {

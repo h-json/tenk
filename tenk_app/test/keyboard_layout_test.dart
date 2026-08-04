@@ -15,7 +15,7 @@ import 'package:tenk_app/presentation/common/text_input_sheet.dart';
 import 'package:tenk_app/presentation/feedback/feedback_screen.dart';
 import 'package:tenk_app/presentation/legal/age_gate_screen.dart';
 import 'package:tenk_app/presentation/legal/consent_gate_screen.dart';
-import 'package:tenk_app/presentation/notification/notification_priming_screen.dart';
+import 'package:tenk_app/presentation/notification/notification_priming_sheet.dart';
 import 'package:tenk_app/presentation/profile/withdraw_screen.dart';
 
 /// 제스처 내비 바 높이(삼성 실기기 기준 근사값).
@@ -49,6 +49,24 @@ Future<void> _pump(
   await tester.pumpWidget(_host(child, size: size, keyboard: keyboard));
   await tester.pumpAndSettle();
 }
+
+/// 시트를 띄우는 최소 호스트 — 첫 프레임 직후에 [open] 을 부른다.
+/// (`_pump` 이 이어서 `pumpAndSettle` 하므로 별도 대기가 필요 없다.)
+Widget _sheetHost(void Function(BuildContext) open) {
+  return Scaffold(
+    body: Builder(
+      builder: (c) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => open(c));
+        return const SizedBox();
+      },
+    ),
+  );
+}
+
+/// 알림 권유 시트의 **최하단 요소** 위치. 시트에서 제스처 바에 잘리는 건 버튼이 아니라
+/// 그 아래 푸터라, 여기를 재야 `SafeArea` 누락이 잡힌다.
+double _footerBottom(WidgetTester tester) =>
+    tester.getRect(find.text('알림은 언제든 메뉴 → 설정에서 켜고 끌 수 있어요.')).bottom;
 
 void main() {
   group('하단 고정 액션 — 제스처 바에 잘리지 않는다', () {
@@ -110,14 +128,32 @@ void main() {
       expect(button.top - notice.bottom, greaterThanOrEqualTo(AppSpacing.xxl));
     });
 
-    testWidgets('알림 권유 — 560dp 화면에서 터지지 않는다', (tester) async {
+    // 알림 권유는 화면이 아니라 **첫 챌린지 생성 직후에 뜨는 시트**다. 내용이 길어(불릿 3개)
+    // 작은 화면에선 시트가 상한(화면의 90%)에 걸리므로, 안 터지는 것만으로는 부족하고
+    // **스크롤해서 버튼까지 닿는지**까지 봐야 한다.
+    // ⚠️ 측정 대상은 **최하단 요소(푸터)** 다. 버튼으로 재면 아래에 '나중에'·푸터가 더 있어
+    // SafeArea 를 통째로 빼도 통과한다 (실제로 그렇게 짰다가 되돌려 확인함).
+    testWidgets('알림 권유 시트 — 640dp 에서 스크롤 없이 푸터가 제스처 바 위에 있다', (tester) async {
+      await _pump(tester, _sheetHost(showNotificationPriming));
+      expect(tester.takeException(), isNull);
+      expect(_footerBottom(tester), lessThanOrEqualTo(640 - _navBar));
+    });
+
+    testWidgets('알림 권유 시트 — 560dp 에서 터지지 않고 스크롤하면 끝까지 닿는다', (tester) async {
       await _pump(
         tester,
-        const NotificationPrimingScreen(next: SizedBox()),
+        _sheetHost(showNotificationPriming),
         size: const Size(360, 560),
       );
       expect(tester.takeException(), isNull);
       expect(find.text('나중에'), findsOneWidget);
+      // 상한(화면의 90%)에 걸려 스크롤되는 크기다 — 끝까지 내려야 푸터가 보인다.
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      expect(_footerBottom(tester), lessThanOrEqualTo(560 - _navBar));
     });
 
     testWidgets('연령 확인 — 키보드가 없으면 버튼은 바닥에 그대로 붙는다', (tester) async {

@@ -6,7 +6,6 @@ import '../../design/tokens.dart';
 import '../challenge/challenge_list_screen.dart';
 import '../common/bottom_action_scroll_view.dart';
 import '../common/field_label.dart';
-import '../notification/notification_priming_screen.dart';
 
 /// 신규 가입자 전용 닉네임 확정 화면.
 ///
@@ -88,13 +87,11 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
     try {
       await UserScope.of(context).updateNickname(raw.trim());
       if (!mounted) return;
-      // 온보딩의 마지막은 알림 권유다. ⚠️ 이건 **게이트가 아니라 권유**라서 back 을 막지 않고
-      // '나중에' 로 건너뛸 수 있다 (연령·동의·닉네임과 성격이 다르다 — CLAUDE.md "알림").
+      // 온보딩은 여기서 끝이고 곧바로 홈이다. ⚠️ 알림 권유를 여기 붙이지 말 것 —
+      // 이 시점엔 챌린지가 0개라 승인해도 예약되는 알림이 없다. 권유는 **첫 챌린지를
+      // 만든 직후**로 옮겼다 (CLAUDE.md "알림", decisions.md "알림 권유 화면").
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              const NotificationPrimingScreen(next: ChallengeListScreen()),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const ChallengeListScreen()),
         (_) => false,
       );
     } catch (e) {

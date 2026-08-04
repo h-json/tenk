@@ -24,6 +24,7 @@ class AppSettings {
   static const _notiFinalizeKey = 'settings.notifications.finalize';
   static const _notiHourKey = 'settings.notifications.reminderHour';
   static const _notiMinuteKey = 'settings.notifications.reminderMinute';
+  static const _notiPrimingShownKey = 'settings.notifications.primingShown';
   static const _lastRecordedKey = 'settings.lastRecordedDate';
 
   /// 최초 실행 기본값은 효과음·진동 둘 다 켜짐 — 축하 연출이 앱의 페이오프라 기본이 무음이면
@@ -68,6 +69,17 @@ class AppSettings {
     final raw = _prefs.getString(_lastRecordedKey);
     return raw == null ? null : DateTime.tryParse(raw);
   }
+
+  /// 알림 권유 시트를 **한 번이라도 띄웠는지**. 첫 챌린지를 만든 직후 딱 한 번만 권하고,
+  /// 이후에는 챌린지를 몇 개 더 만들어도 다시 묻지 않는다.
+  ///
+  /// 승인/거절이 아니라 **띄웠는지**를 기록하는 게 핵심이다 — 시스템 권한 다이얼로그를 띄울
+  /// 기회가 Android 2회·iOS 1회뿐이라, 어떻게 닫혔든 그 기회는 한 번 쓴 것으로 본다.
+  bool get notificationPrimingShown =>
+      _prefs.getBool(_notiPrimingShownKey) ?? false;
+
+  Future<void> markNotificationPrimingShown() =>
+      _prefs.setBool(_notiPrimingShownKey, true);
 
   Future<void> markRecordedNow() async {
     final now = DateTime.now();
