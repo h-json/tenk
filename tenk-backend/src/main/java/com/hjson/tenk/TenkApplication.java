@@ -6,8 +6,12 @@ import java.util.TimeZone;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+// @EnableAsync 는 AdminNotifier(문의·의견 도착 알림) 전용이다. SMTP·텔레그램 외부 호출이
+// 사용자 응답 시간에 붙지 않게 하려는 것 — 알림이 늦는 건 괜찮지만 저장이 느려지면 안 된다.
+@EnableAsync
 @EnableScheduling
 @ConfigurationPropertiesScan(basePackageClasses = {StorageProperties.class, AuthProperties.class})
 @SpringBootApplication

@@ -60,6 +60,11 @@ public enum ErrorCode {
     FEEDBACK_TYPE_INVALID(HttpStatus.BAD_REQUEST, "F0002", "의견 유형을 골라주세요."),
     FEEDBACK_REPLY_EMAIL_INVALID(HttpStatus.BAD_REQUEST, "F0003", "이메일 형식이 올바르지 않아요."),
 
+    // 문의하기. 의견(F....)과 달리 계정과 연결해 저장하고 답변이 전제되므로 회신 이메일이 필수다.
+    INQUIRY_CONTENT_INVALID(HttpStatus.BAD_REQUEST, "IQ0001", "문의 내용은 1~1000자로 써주세요."),
+    INQUIRY_TYPE_INVALID(HttpStatus.BAD_REQUEST, "IQ0002", "문의 유형을 골라주세요."),
+    INQUIRY_REPLY_EMAIL_INVALID(HttpStatus.BAD_REQUEST, "IQ0003", "답변받을 이메일을 정확히 입력해주세요."),
+
     TEST_ONLY_OPERATION(HttpStatus.FORBIDDEN, "T0001", "테스트 데이터 기능을 사용할 권한이 없는 계정입니다.");
 
     private final HttpStatus status;

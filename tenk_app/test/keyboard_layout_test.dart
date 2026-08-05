@@ -13,6 +13,7 @@ import 'package:tenk_app/design/tokens.dart';
 import 'package:tenk_app/presentation/common/bottom_action_scroll_view.dart';
 import 'package:tenk_app/presentation/common/text_input_sheet.dart';
 import 'package:tenk_app/presentation/feedback/feedback_screen.dart';
+import 'package:tenk_app/presentation/inquiry/inquiry_screen.dart';
 import 'package:tenk_app/presentation/legal/age_gate_screen.dart';
 import 'package:tenk_app/presentation/legal/consent_gate_screen.dart';
 import 'package:tenk_app/presentation/notification/notification_priming_sheet.dart';
@@ -73,6 +74,12 @@ void main() {
     testWidgets('의견 보내기의 보내기 버튼', (tester) async {
       await _pump(tester, const FeedbackScreen());
       final button = tester.getRect(find.widgetWithText(FilledButton, '보내기'));
+      expect(button.bottom, lessThanOrEqualTo(640 - _navBar));
+    });
+
+    testWidgets('개인정보 문의의 문의하기 버튼', (tester) async {
+      await _pump(tester, const InquiryScreen());
+      final button = tester.getRect(find.widgetWithText(FilledButton, '문의하기'));
       expect(button.bottom, lessThanOrEqualTo(640 - _navBar));
     });
 

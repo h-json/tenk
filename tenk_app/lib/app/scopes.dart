@@ -5,6 +5,7 @@ import '../data/app/app_api.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/challenge/challenge_api.dart';
 import '../data/feedback/feedback_api.dart';
+import '../data/inquiry/inquiry_api.dart';
 import '../data/media/media_api.dart';
 import '../data/notification/notification_scheduler.dart';
 import '../data/settings/app_settings.dart';
@@ -159,6 +160,30 @@ class FeedbackScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(FeedbackScope oldWidget) => api != oldWidget.api;
+}
+
+/// 트리 어디서든 [InquiryApi]를 꺼내쓰기 위한 단순 InheritedWidget.
+/// '법적 고지' → '개인정보 문의' 화면이 사용.
+///
+/// [FeedbackScope] 와 나란히 있지만 **다른 창구다** — 저쪽은 익명 의견, 이쪽은 계정과 연결되는
+/// 권리 행사 요구다. 하나로 합치면 privacy.html 이 공개 약속한 의견의 익명성이 흐려진다.
+class InquiryScope extends InheritedWidget {
+  const InquiryScope({
+    super.key,
+    required this.api,
+    required super.child,
+  });
+
+  final InquiryApi api;
+
+  static InquiryApi of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<InquiryScope>();
+    assert(scope != null, 'InquiryScope not found in widget tree');
+    return scope!.api;
+  }
+
+  @override
+  bool updateShouldNotify(InquiryScope oldWidget) => api != oldWidget.api;
 }
 
 /// 트리 어디서든 [AppSettings](효과음·진동)를 꺼내쓰기 위한 단순 InheritedWidget.

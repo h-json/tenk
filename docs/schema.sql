@@ -222,6 +222,31 @@ CREATE TABLE `feedback` (
     PRIMARY KEY (`feedback_id`)
 );
 
+-- 문의 (메뉴 → 고객센터 → '문의하기'). **feedback 과 계약이 정반대다.**
+--   * user_id 를 저장한다 — 답변하려면 누구의 문의인지 특정돼야 하고, 열람·삭제 요구는 더더욱 그렇다.
+--     그래서 이 테이블은 익명정보가 아니라 개인정보이고, 개인정보처리방침 수집표·보관 기간의 대상이며
+--     계정 파기 배치(WithdrawnUserPurgeService)가 user 삭제 직전에 함께 지운다.
+--   * reply_email 이 NOT NULL 이다 — 답변이 전제된 창구라 회신 경로 없이는 성립하지 않는다.
+-- 처리 표시는 관리자 UI 없이 SQL 로 한다 (TESTER 승격·app_config 와 동일한 운영 방식):
+--   UPDATE `inquiry` SET `status`='DONE', `handled_dt`=NOW() WHERE `inquiry_id`=?;
+-- status 를 안 바꾸면 매일 오전 9시 리마인드가 계속 온다(InquiryScheduler).
+-- ⚠️ status 는 **리마인드를 멈추는 용도일 뿐 파기 기준이 아니다** — 문의는 답변 여부와 무관하게
+-- 회원 탈퇴 시까지 보관하고 계정 파기 때 함께 지워진다. 답변 기준 파기 배치를 다시 만들지 말 것.
+-- 라이브 DB 는 이 테이블을 CREATE 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩).
+CREATE TABLE `inquiry` (
+    `inquiry_id`  BIGINT AUTO_INCREMENT NOT NULL,
+    `user_id`     BIGINT                NOT NULL,
+    `type`        VARCHAR(30)           NOT NULL,  -- InquiryType enum name
+    `content`     VARCHAR(1000)         NOT NULL,
+    `reply_email` VARCHAR(100)          NOT NULL,  -- 필수 (feedback 과 다른 점)
+    `status`      VARCHAR(20)           NOT NULL,  -- InquiryStatus enum name (PENDING/DONE)
+    `created_dt`  DATETIME              NOT NULL,
+    `handled_dt`  DATETIME              NULL,      -- 답변 완료 시각 = 파기 기준점
+    PRIMARY KEY (`inquiry_id`),
+    KEY `idx_inquiry_status` (`status`),
+    CONSTRAINT `fk_inquiry_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
+);
+
 -- 앱 버전 정책 (단일 행). 강제/권장 업데이트 게이트가 이 값을 읽어 클라 버전과 비교한다.
 --   min_supported_version : 이 버전 미만은 강제 업데이트(앱 사용 차단)
 --   latest_version        : 이 버전 미만은 권장 업데이트(안내만, 계속 사용 가능)

@@ -40,6 +40,8 @@ public abstract class IntegrationTestBase {
             em.createNativeQuery("DELETE FROM amount").executeUpdate();
             em.createNativeQuery("DELETE FROM challenge").executeUpdate();
             em.createNativeQuery("DELETE FROM refresh_token").executeUpdate();
+            // user 의 자식이라 반드시 user 보다 먼저 (feedback 과 달리 user_id 를 들고 있다).
+            em.createNativeQuery("DELETE FROM inquiry").executeUpdate();
             em.createNativeQuery("DELETE FROM `user`").executeUpdate();
             // 계정과 무관한 익명 테이블이라 파기 배치는 안 건드리지만, 테스트 간에는 쌓이면 안 된다.
             em.createNativeQuery("DELETE FROM withdrawal_feedback").executeUpdate();

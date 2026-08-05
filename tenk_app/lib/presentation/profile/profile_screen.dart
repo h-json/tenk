@@ -8,6 +8,7 @@ import '../../design/tokens.dart';
 import '../feedback/feedback_screen.dart';
 import '../legal/legal_notice_screen.dart';
 import '../settings/settings_screen.dart';
+import '../support/customer_support_screen.dart';
 import '../update/update_gate.dart';
 import 'account_settings_screen.dart';
 import 'my_info_screen.dart';
@@ -18,7 +19,8 @@ import 'my_info_screen.dart';
 /// - 계정 정보 → [AccountSettingsScreen] (연동 계정 / 로그아웃 / 회원 탈퇴)
 /// - 설정 → [SettingsScreen] (효과음 / 진동)
 /// - 의견 보내기 → [FeedbackScreen] (익명 저장, 회신 이메일만 선택)
-/// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침 / 문의)
+/// - 고객센터 → [CustomerSupportScreen] (문의하기 — 계정과 연결, 답변 전제)
+/// - 법적 고지 → [LegalNoticeScreen] (이용약관 / 개인정보처리방침 / 오픈소스 라이선스)
 /// - 테스트 데이터 재생성 (TESTER 권한 계정만)
 ///
 /// 화면 제목은 '메뉴'로 확정됐다 (2026-07-25). 이 허브는 설정(preference) 모음이 아니라
@@ -140,7 +142,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const Divider(height: 1),
-        // ── 설정 (하위 화면) — 효과음 / 진동 ──
+        // ── 의견 보내기 (하위 화면) ──
+        // **최상위에 둔다** — 익명으로 가볍게 남기는 창구라 고객센터 안에 넣으면 "문의할 일이
+        // 있어야 여는 곳" 으로 읽혀 문턱이 올라간다. 설정보다 위에 둬서 눈에 먼저 걸리게 한다.
+        ListTile(
+          leading: const Icon(Icons.chat_bubble_outline),
+          title: const Text('의견 보내기'),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const FeedbackScreen()),
+          ),
+        ),
+        const Divider(height: 1),
+        // ── 설정 (하위 화면) — 효과음 / 진동 / 알림 ──
         ListTile(
           leading: const Icon(Icons.tune_outlined),
           title: const Text('설정'),
@@ -150,14 +164,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const Divider(height: 1),
-        // ── 의견 보내기 (하위 화면) ──
+        // ── 고객센터 (하위 화면) ──
         // 정적 문서(법적 고지)보다 위에 둔다 — 사용자가 능동적으로 하는 행동이라서.
+        // 지금은 '문의하기' 하나뿐이지만 FAQ·공지사항이 들어올 자리라 허브로 유지한다.
         ListTile(
-          leading: const Icon(Icons.chat_bubble_outline),
-          title: const Text('의견 보내기'),
+          leading: const Icon(Icons.headset_mic_outlined),
+          title: const Text('고객센터'),
           trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const FeedbackScreen()),
+            MaterialPageRoute<void>(
+                builder: (_) => const CustomerSupportScreen()),
           ),
         ),
         const Divider(height: 1),

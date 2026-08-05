@@ -1,5 +1,6 @@
 package com.hjson.tenk.domain.feedback;
 
+import com.hjson.tenk.common.notify.AdminNotifier;
 import java.time.LocalDateTime;
 import java.time.Period;
 import lombok.RequiredArgsConstructor;
@@ -18,17 +19,39 @@ public class FeedbackService {
     public static final Period REPLY_EMAIL_RETENTION = Period.ofYears(1);
 
     private final FeedbackRepository feedbackRepository;
+    private final AdminNotifier adminNotifier;
 
     /**
      * 의견 1건 저장. 검증은 {@link Feedback} 이 진실의 원천이다.
      *
      * <p><b>호출자(userId)를 받지 않는 게 의도다.</b> 엔드포인트는 인증을 요구하지만(토큰 없이
      * 아무나 밀어 넣지 못하게) 누가 썼는지는 저장하지 않는다 — 익명이라야 개인정보가 아니다.
+     *
+     * <p>저장 후 개발자에게 알린다. 의견은 즉시 처리해야 하는 큐가 아니라 모아서 보는 데이터지만,
+     * <b>도착 사실조차 모르면 모아서 볼 계기가 없다</b>. 미처리 리마인드는 문의에만 있고 의견에는
+     * 없는 것도 같은 이유다 — 의견에는 "처리 완료"라는 상태가 없다.
      */
     @Transactional
     public void submit(FeedbackType type, String content, String replyEmail,
                        String appVersion, String platform, String osVersion) {
-        feedbackRepository.save(Feedback.of(type, content, replyEmail, appVersion, platform, osVersion));
+        Feedback saved = feedbackRepository.save(
+                Feedback.of(type, content, replyEmail, appVersion, platform, osVersion));
+
+        adminNotifier.notifyAdmin(
+                "[TenK] 새 의견 (%s)".formatted(saved.getType()),
+                """
+                유형: %s
+                회신: %s
+                환경: %s / %s / %s
+
+                %s
+                """.formatted(
+                        saved.getType(),
+                        saved.getReplyEmail() == null ? "(답변 불필요)" : saved.getReplyEmail(),
+                        saved.getPlatform(),
+                        saved.getAppVersion(),
+                        saved.getOsVersion(),
+                        saved.getContent()));
     }
 
     /**

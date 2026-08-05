@@ -6,7 +6,16 @@
 const String termsUrl = 'https://tenk.hjson248.com/terms.html';
 const String privacyPolicyUrl = 'https://tenk.hjson248.com/privacy.html';
 
-/// 문의처 이메일. **[privacy.html] 개인정보 보호책임자 항목 / [terms.html] 문의처 조항에 적힌
-/// 주소와 반드시 같은 값**이어야 한다 — 고지한 창구와 앱이 여는 창구가 다르면 안 된다.
-/// (일반적인 의견은 앱 안의 '의견 보내기'로 받는다. 여기는 답변이 필요한 문의·개인정보 요구용.)
-const String supportEmail = 'h.json248@gmail.com';
+/// 문의처 이메일 = **받는 주소**. [privacy.html] 보호책임자 항목 / [terms.html] 문의처 조항 /
+/// [delete-account.html] 에 적힌 값과 반드시 같아야 한다 — 고지한 창구와 앱이 여는 창구가
+/// 다르면 안 된다. 서비스 전용 계정이며 개발자 개인 메일이 아니다.
+///
+/// ⚠️ **보내는 주소와 다르다.** 서버가 문의·의견 도착 알림을 쏠 때 쓰는 SMTP 발신 계정은
+/// `system.tenk@`(`spring.mail.username`)이고, 그 알림이 도착하는 곳이자 사용자가 메일을 보낼
+/// 곳이 이 `support.tenk@`(`tenk.notify.mail.to`)다. 둘을 같은 값으로 합치지 말 것.
+///
+/// 앱 안에는 두 창구가 있고 **이 주소는 어느 쪽도 아닌 세 번째 경로**다:
+/// '고객센터 → 문의하기'(계정 연결)와 '고객센터 → 의견 보내기'(익명) 폼이 앱 안을 담당하고,
+/// 이 주소는 **앱에 들어올 수 없는 사람**(탈퇴 후·로그인 불가·설치 전)을 위해 문서에 고지된
+/// 창구다. 그래서 폼이 생겼다고 지우면 안 된다.
+const String supportEmail = 'support.tenk@gmail.com';

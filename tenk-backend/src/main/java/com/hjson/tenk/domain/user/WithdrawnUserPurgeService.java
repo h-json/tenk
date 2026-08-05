@@ -4,6 +4,7 @@ import com.hjson.tenk.domain.amount.AmountRepository;
 import com.hjson.tenk.domain.auth.RefreshTokenRepository;
 import com.hjson.tenk.domain.badge.ChallengeBadgeRepository;
 import com.hjson.tenk.domain.challenge.ChallengeRepository;
+import com.hjson.tenk.domain.inquiry.InquiryRepository;
 import com.hjson.tenk.domain.media.LocalFileStorage;
 import com.hjson.tenk.domain.media.MediaFileRepository;
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * row 와 <b>디스크에 저장된 영상 파일</b>, 그리고 refresh_token. soft delete 된 challenge 도 함께 파기.
  *
  * <p>삭제 순서는 FK 제약을 지켜 자식 → 부모로: 디스크 영상 → media_file → challenge_badge →
- * amount → challenge → refresh_token → user. 유저 1명 단위로 트랜잭션을 끊어 한 계정 실패가
+ * amount → challenge → refresh_token → inquiry → user. 유저 1명 단위로 트랜잭션을 끊어 한 계정 실패가
  * 다른 계정 파기를 막지 않는다 (스케줄러가 유저별로 {@link #purge(Long)} 를 외부 호출).
  */
 @Service
@@ -45,6 +46,7 @@ public class WithdrawnUserPurgeService {
     private final MediaFileRepository mediaFileRepository;
     private final ChallengeBadgeRepository challengeBadgeRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final InquiryRepository inquiryRepository;
     private final LocalFileStorage storage;
 
     /** 보관 기간이 지난(=deletedDt 가 기준 시점보다 이른) 탈퇴 계정 id 목록. */
@@ -96,6 +98,9 @@ public class WithdrawnUserPurgeService {
         amountRepository.deleteByUserId(userId);
         challengeRepository.deleteByUserId(userId);
         refreshTokenRepository.deleteByUserId(userId);
+        // 문의는 계정과 연결해 저장하는 개인정보라 함께 파기한다 — 익명으로 저장하는
+        // feedback/withdrawal_feedback 과 정반대다(그 둘은 여기서 지우면 안 된다).
+        inquiryRepository.deleteByUserId(userId);
         userRepository.deleteById(userId);
     }
 }

@@ -13,6 +13,9 @@ import com.hjson.tenk.domain.badge.ChallengeBadge;
 import com.hjson.tenk.domain.badge.ChallengeBadgeRepository;
 import com.hjson.tenk.domain.challenge.Challenge;
 import com.hjson.tenk.domain.challenge.ChallengeRepository;
+import com.hjson.tenk.domain.inquiry.Inquiry;
+import com.hjson.tenk.domain.inquiry.InquiryRepository;
+import com.hjson.tenk.domain.inquiry.InquiryType;
 import com.hjson.tenk.domain.media.LocalFileStorage;
 import com.hjson.tenk.domain.media.MediaFile;
 import com.hjson.tenk.domain.media.MediaFileRepository;
@@ -54,6 +57,7 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
     @Autowired MediaFileRepository mediaFileRepository;
     @Autowired ChallengeBadgeRepository challengeBadgeRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
+    @Autowired InquiryRepository inquiryRepository;
     @Autowired BadgeRepository badgeRepository;
     @Autowired LocalFileStorage storage;
 
@@ -94,7 +98,7 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
         purgeService.purge(userId);
 
         assertThat(userRepository.findById(userId)).isEmpty();
-        assertThat(countFor(userId)).isEqualTo(new Counts(0, 0, 0, 0, 0));
+        assertThat(countFor(userId)).isEqualTo(new Counts(0, 0, 0, 0, 0, 0));
         assertThat(Files.exists(videoFile))
                 .as("디스크 영상 파일이 남으면 DB 만 지워진 반쪽 파기가 된다")
                 .isFalse();
@@ -109,12 +113,12 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
         purgeService.purge(victim);
 
         assertThat(userRepository.findById(bystander)).isPresent();
-        assertThat(countFor(bystander)).isEqualTo(new Counts(1, 1, 1, 1, 1));
+        assertThat(countFor(bystander)).isEqualTo(new Counts(1, 1, 1, 1, 1, 1));
     }
 
     // --- seeding -------------------------------------------------------------
 
-    /** 파기 대상이 되는 모든 자식 데이터(챌린지·지출·영상·배지·RT) + 실제 디스크 파일까지 만든다. */
+    /** 파기 대상이 되는 모든 자식 데이터(챌린지·지출·영상·배지·RT·문의) + 실제 디스크 파일까지 만든다. */
     private Long seedUserWithData(String providerUserId) {
         return tx.execute(status -> {
             User user = userRepository.save(User.create(
@@ -135,6 +139,10 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
 
             refreshTokenRepository.save(RefreshToken.issue(
                     user, "hash-" + providerUserId, LocalDateTime.now().plusDays(14)));
+
+            // 문의는 계정과 연결해 저장하는 개인정보라 파기 대상이다 (익명인 feedback 과 정반대).
+            inquiryRepository.save(Inquiry.of(
+                    user, InquiryType.PRIVACY, "내 기록을 보여주세요", "me@example.com"));
             return user.getId();
         });
     }
@@ -175,7 +183,8 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
                         + " join challenge c on a.challenge_id = c.challenge_id where c.user_id = ?", userId),
                 count("select count(*) from challenge_badge cb"
                         + " join challenge c on cb.challenge_id = c.challenge_id where c.user_id = ?", userId),
-                count("select count(*) from refresh_token where user_id = ?", userId)));
+                count("select count(*) from refresh_token where user_id = ?", userId),
+                count("select count(*) from inquiry where user_id = ?", userId)));
     }
 
     private int count(String sql, Long userId) {
@@ -183,5 +192,6 @@ class WithdrawnUserPurgeIntegrationTest extends IntegrationTestBase {
         return ((Number) result).intValue();
     }
 
-    private record Counts(int challenges, int amounts, int mediaFiles, int challengeBadges, int refreshTokens) {}
+    private record Counts(int challenges, int amounts, int mediaFiles, int challengeBadges,
+                          int refreshTokens, int inquiries) {}
 }
