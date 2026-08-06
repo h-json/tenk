@@ -74,10 +74,12 @@ class FeedbackIntegrationTest extends IntegrationTestBase {
 
         assertThat(feedbackRepository.findAll().getFirst().getReplyEmail()).isEqualTo("me@example.com");
 
-        // 익명성 가드: 어떤 컬럼도 user 를 가리키지 않아야 한다
+        // 익명성 가드: 어떤 컬럼도 user 를 가리키지 않아야 한다.
+        // handler_note 는 관리자 패널의 처리 메모다 — 운영자가 스스로 쓰는 칸이라 신원이 안 들어가는
+        // 게 전제이고, 화면에도 그 취지를 안내한다. 여기에 user 참조 컬럼이 늘면 이 단언이 먼저 깨진다.
         assertThat(columnNamesOfFeedbackTable()).containsExactlyInAnyOrder(
                 "feedback_id", "type", "content", "reply_email",
-                "app_version", "platform", "os_version", "created_dt");
+                "app_version", "platform", "os_version", "handler_note", "created_dt");
     }
 
     @Test

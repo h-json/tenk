@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -42,7 +43,16 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 앱(Flutter) 전용 체인. <b>관리자 패널({@code /admin/**})은 여기로 오지 않는다</b> —
+     * {@code AdminSecurityConfig} 가 {@code @Order(1)} + {@code securityMatcher} 로 먼저 받는다.
+     *
+     * <p>이 체인의 계약(STATELESS · CSRF 비활성 · JSON 오류 응답)은 <b>브라우저가 호출하지 않는다</b>는
+     * 전제 위에 서 있다. 패널을 위해 세션·CSRF·폼 로그인이 필요해졌을 때 여기를 고치지 않고 체인을
+     * 따로 만든 이유가 그것이다 — 전역으로 켰다면 앱의 인증 계약이 통째로 바뀐다.
+     */
     @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())

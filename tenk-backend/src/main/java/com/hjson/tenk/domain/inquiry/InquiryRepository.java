@@ -2,21 +2,36 @@ package com.hjson.tenk.domain.inquiry;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * 문의 저장소. <b>조회 화면은 없다</b> — 의견과 마찬가지로 DB 에서 직접 훑고
- * ({@code SELECT * FROM inquiry WHERE status='PENDING' ORDER BY created_dt;}),
- * 처리 표시도 {@code UPDATE} 한 줄로 한다.
+ * 문의 저장소. 조회·처리는 <b>관리자 패널</b>({@code /admin/inquiries})이 담당한다 —
+ * 2026-08-06 까지는 {@code SELECT}/{@code UPDATE} 를 직접 쳤고 그때의 흔적이 여러 주석에 남아 있다.
  *
  * <p>의견 테이블과 달리 <b>계정 파기 배치의 삭제 대상</b>이다 ({@code user_id} 를 들고 있으므로).
  */
 public interface InquiryRepository extends JpaRepository<Inquiry, Long> {
 
     long countByStatus(InquiryStatus status);
+
+    /// 패널 목록. **{@code user} 를 JOIN FETCH 한다** — 목록에 닉네임을 찍는데 {@code Inquiry.user} 가
+    /// LAZY 라 화면 렌더 중에 초기화하면 N+1 이 나고, {@code open-in-view=false} 라 아예 터진다.
+    @Query(value = "select i from Inquiry i join fetch i.user",
+            countQuery = "select count(i) from Inquiry i")
+    Page<Inquiry> findAllForAdmin(Pageable pageable);
+
+    @Query(value = "select i from Inquiry i join fetch i.user where i.status = :status",
+            countQuery = "select count(i) from Inquiry i where i.status = :status")
+    Page<Inquiry> findAllForAdminByStatus(@Param("status") InquiryStatus status, Pageable pageable);
+
+    /** 상세 화면용. 목록과 같은 이유로 user 를 함께 끌어온다. */
+    @Query("select i from Inquiry i join fetch i.user where i.id = :id")
+    Optional<Inquiry> findByIdForAdmin(@Param("id") Long id);
 
     /** 미처리 중 가장 오래된 것의 접수 시각 — 리마인드 문구의 "N일 경과" 계산에 쓴다. */
     @Query("select min(i.createdDt) from Inquiry i where i.status = :status")

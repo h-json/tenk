@@ -171,4 +171,17 @@ public class User {
     public void changeGender(Gender gender) {
         this.gender = gender;
     }
+
+    /**
+     * 계정 권한 변경. <b>관리자 패널에서만 호출된다</b> — 앱에는 권한을 올리는 경로가 없다
+     * (2026-08-06 이전에는 {@code UPDATE user SET role=...} 을 직접 쳤다).
+     *
+     * <p>⚠️ {@code TESTER} 로 올리면 그 계정은 <b>테스트 데이터 시딩</b>을 쓸 수 있게 되고,
+     * 시딩은 <b>호출자 본인 데이터를 통째로 지운다</b>. 실제로 쓰는 계정을 승격하면 그 사람의
+     * 기록이 날아갈 수 있으므로 소모용 계정에만 줄 것. 심사자 데모 계정은 절대 승격 금지
+     * (승격하면 '내 정보'에 시딩 버튼이 노출된다).
+     */
+    public void changeRole(UserRole role) {
+        this.role = role;
+    }
 }

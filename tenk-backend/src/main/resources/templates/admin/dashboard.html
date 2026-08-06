@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>대시보드 · TenK 관리자</title></head>
+<body>
+<main th:fragment="content">
+    <h1>대시보드</h1>
+    <p class="sub">미처리 문의가 0인지 아닌지가 이 패널의 유일한 "할 일" 신호예요.</p>
+
+    <div class="cards">
+        <!-- 미처리만 강조한다. 총계는 참고용이라 같은 무게로 두면 무엇을 봐야 할지 흐려진다. -->
+        <div class="card" th:classappend="${summary.pendingInquiries() > 0} ? 'alert'">
+            <div class="label">미처리 문의</div>
+            <div class="value" th:text="${summary.pendingInquiries()}">0</div>
+        </div>
+        <div class="card">
+            <div class="label">전체 문의</div>
+            <div class="value" th:text="${summary.totalInquiries()}">0</div>
+        </div>
+        <div class="card">
+            <div class="label">전체 의견</div>
+            <div class="value" th:text="${summary.totalFeedbacks()}">0</div>
+        </div>
+    </div>
+
+    <div th:if="${summary.pendingInquiries() > 0}" class="note-box">
+        미처리 문의가 남아 있으면 <strong>매일 오전 9시</strong>에 메일·텔레그램으로 다시 알려요.
+        처리 완료로 표시하면 멈춥니다. <a th:href="@{/admin/inquiries}">문의 보러 가기 →</a>
+    </div>
+    <div th:unless="${summary.pendingInquiries() > 0}" class="note-box">
+        미처리 문의가 없어요. 리마인드도 나가지 않습니다.
+    </div>
+</main>
+</body>
+</html>

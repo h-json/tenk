@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>문의 · TenK 관리자</title></head>
+<body>
+<!--
+  기본 필터가 '미처리'인 게 의도다 — 이 화면을 여는 이유의 대부분이 미처리 확인이라,
+  전체 목록을 먼저 보여주면 매번 필터를 눌러야 한다.
+-->
+<main th:fragment="content">
+    <h1>문의</h1>
+    <p class="sub">답변이 전제된 창구예요. 처리 완료로 표시해야 매일 09시 리마인드가 멈춥니다.</p>
+
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <div class="filters">
+        <a th:href="@{/admin/inquiries(status='PENDING')}" th:classappend="${status == 'PENDING'} ? 'on'">미처리</a>
+        <a th:href="@{/admin/inquiries(status='DONE')}" th:classappend="${status == 'DONE'} ? 'on'">처리 완료</a>
+        <a th:href="@{/admin/inquiries(status='ALL')}" th:classappend="${status == 'ALL'} ? 'on'">전체</a>
+    </div>
+
+    <div th:if="${page.isEmpty()}" class="empty">
+        <span th:if="${status == 'PENDING'}">미처리 문의가 없어요.</span>
+        <span th:unless="${status == 'PENDING'}">문의가 없어요.</span>
+    </div>
+
+    <table th:unless="${page.isEmpty()}">
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>상태</th>
+            <th>유형</th>
+            <th>내용</th>
+            <th>계정</th>
+            <th>접수</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="i : ${page.content}">
+            <td class="num">
+                <a th:href="@{/admin/inquiries/{id}(id=${i.id})}" th:text="'#' + ${i.id}">#1</a>
+            </td>
+            <td>
+                <span class="pill" th:classappend="${i.status.name() == 'PENDING'} ? 'pending' : 'done'"
+                      th:text="${i.status.name() == 'PENDING'} ? '미처리' : '완료'">미처리</span>
+            </td>
+            <td th:text="${i.type}">SERVICE</td>
+            <!-- 목록에선 앞부분만 — 본문 전체는 상세에서 본다 -->
+            <td>
+                <a th:href="@{/admin/inquiries/{id}(id=${i.id})}"
+                   th:text="${#strings.abbreviate(i.content, 60)}">내용</a>
+            </td>
+            <td th:text="${i.user.nickname}">닉네임</td>
+            <td class="num" th:text="${#temporals.format(i.createdDt, 'yyyy-MM-dd HH:mm')}">2026-08-06 10:00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="pager" th:unless="${page.isEmpty()}" th:with="q=${'&status=' + status}">
+        <a th:if="${page.hasPrevious()}" th:href="@{/admin/inquiries(status=${status},page=${page.number - 1})}">← 이전</a>
+        <span th:unless="${page.hasPrevious()}" class="disabled">← 이전</span>
+        <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+        <a th:if="${page.hasNext()}" th:href="@{/admin/inquiries(status=${status},page=${page.number + 1})}">다음 →</a>
+        <span th:unless="${page.hasNext()}" class="disabled">다음 →</span>
+    </div>
+</main>
+</body>
+</html>

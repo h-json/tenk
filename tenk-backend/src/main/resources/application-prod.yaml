@@ -29,6 +29,14 @@ spring:
 # HTTPS 페이지가 "주의 요함" 으로 표시된다. prod 전용(로컬은 프록시 없음).
 server:
   forward-headers-strategy: framework
+  servlet:
+    session:
+      # 관리자 패널 세션. 공개 인터넷에 로그인 폼이 노출돼 있으므로 오래 열어두지 않는다.
+      timeout: 2h
+      cookie:
+        http-only: true
+        secure: true      # HTTPS 전용 (Traefik 뒤)
+        same-site: lax    # 폼 POST 는 same-origin 이라 lax 로 충분하고 CSRF 방어가 한 겹 는다
 
 tenk:
   auth:
@@ -37,6 +45,19 @@ tenk:
       # 키 노출/유출 시: 이 값을 새 키로 교체하면 기존에 발급된 모든 AT/RT가 즉시 무효화됨.
       # private 레포 전제이므로 yaml에 직접 박아 두지만, 리포가 공개로 전환되거나 외부에 새어나가면 즉시 회전(rotate) 필요.
       secret: WVzjLgcdqToIfIflBfiETuAyrzq1D4N0jjEhe+P1IHnAyKGib5khOKw4kHwBoKLRCPO3N78931f3hJdjRAZgUA==
+
+  # 관리자 패널 (https://tenk.hjson248.com/admin). 문의 처리 · 의견 열람 · TESTER 승격 ·
+  # 앱 버전 정책을 여기서 한다 — 예전의 SSH + docker exec mariadb + SQL 의례를 대체한다.
+  # ⚠️ 공개 인터넷에 로그인 폼이 노출된다. 비밀번호는 여기서만 바꾸고(재시작 시 DB 해시 동기화),
+  #    유출되면 즉시 이 값을 교체 후 재시작할 것 — jwt secret 과 같은 운영 방식이다.
+  admin:
+    enabled: true
+    account:
+      email: h.json248@gmail.com
+      password: Ipmh51nZ2UAf2XkU3Mnu
+    # 알림 본문에 붙일 패널 주소. 서버는 자기 공개 주소를 모르고 알림은 스케줄러(요청 밖)에서도
+    # 나가므로 설정으로 받는다. 비우면 링크 줄만 빠지고 알림 자체는 정상 발송된다.
+    base-url: https://tenk.hjson248.com
 
   # 문의·의견 도착 알림 + 미처리 문의 리마인드. 두 갈래로 보내는 건 한쪽을 놓쳐도 다른 쪽이 남기
   # 때문이고, 그래도 놓칠 수 있어서 미처리 문의는 매일 오전 9시에 다시 알린다(InquiryScheduler).

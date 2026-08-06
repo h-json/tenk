@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!--
+  로그인 화면. 공용 셸(layout)을 쓰지 않는다 — 셸의 상단 메뉴·로그아웃은 인증된 뒤에나 의미가 있다.
+
+  ⚠️ 실패 사유를 구분해 알려주지 않는 게 의도다("이메일이 없어요" vs "비밀번호가 틀렸어요").
+     계정 존재 여부가 새면 대입 공격의 절반이 공짜로 풀린다.
+-->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>TenK 관리자 로그인</title>
+    <style>
+        :root { --mint: #1FBE9C; --ink: #1C1D21; --ink-muted: #9AA1AE; --line: #EAECEF; --surface-alt: #F1F3F6; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: #fff; color: var(--ink);
+            font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+        }
+        .box { width: 100%; max-width: 340px; padding: 24px; }
+        .brand { font-size: 26px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+        .brand span { color: var(--mint); }
+        .sub { text-align: center; color: var(--ink-muted); font-size: 13px; margin-bottom: 28px; }
+        label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+        input {
+            width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
+            background: var(--surface-alt); font: inherit; margin-bottom: 16px;
+        }
+        input:focus { outline: 2px solid var(--mint); background: #fff; }
+        button {
+            width: 100%; background: var(--mint); color: #fff; border: none; border-radius: 10px;
+            padding: 13px; font: inherit; font-weight: 700; cursor: pointer;
+        }
+        .msg { border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 18px; font-weight: 600; }
+        .msg.error { background: #FFE8E8; color: #C0392B; }
+        .msg.info { background: var(--surface-alt); color: var(--ink-muted); }
+    </style>
+</head>
+<body>
+<div class="box">
+    <div class="brand">Ten<span>K</span></div>
+    <p class="sub">관리자 페이지</p>
+
+    <p class="msg error" th:if="${param.error}">이메일 또는 비밀번호가 올바르지 않아요.</p>
+    <p class="msg info" th:if="${param.logout}">로그아웃했어요.</p>
+
+    <form th:action="@{/admin/login}" method="post">
+        <label for="username">이메일</label>
+        <input type="text" id="username" name="username" autocomplete="username" autofocus required>
+
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+        <button type="submit">로그인</button>
+    </form>
+</div>
+</body>
+</html>

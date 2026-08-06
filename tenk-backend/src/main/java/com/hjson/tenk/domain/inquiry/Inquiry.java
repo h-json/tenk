@@ -51,6 +51,7 @@ public class Inquiry {
 
     public static final int CONTENT_MAX_LENGTH = 1000;
     public static final int REPLY_EMAIL_MAX_LENGTH = 100;
+    public static final int HANDLER_NOTE_MAX_LENGTH = 500;
 
     /** 제어·형식 문자 거부하되 줄바꿈만 허용 — {@code Feedback} 과 같은 정책. */
     private static final Pattern CONTENT_FORBIDDEN_CHARS = Pattern.compile("[\\p{Cc}\\p{Cf}&&[^\\n]]");
@@ -86,9 +87,19 @@ public class Inquiry {
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
-    /** 답변을 마친 시각. 파기 배치의 기준점이라 {@code status=DONE} 과 짝으로 채운다. */
+    /** 답변을 마친 시각. {@code status=DONE} 과 짝으로 채운다. */
     @Column(name = "handled_dt")
     private LocalDateTime handledDt;
+
+    /**
+     * 관리자 패널에서 남기는 처리 메모 — <b>"무엇을 어떻게 답했나" 한 줄</b>.
+     *
+     * <p>⚠️ <b>답변 전문을 옮겨 담는 칸이 아니다.</b> 답변 원문은 메일 스레드가 아카이브이고,
+     * 여기에 복사하면 보관 대상 개인정보가 늘어 개인정보처리방침 §1·§3 을 다시 손봐야 한다.
+     * 화면에도 같은 취지를 안내로 띄운다.
+     */
+    @Column(name = "handler_note", length = HANDLER_NOTE_MAX_LENGTH)
+    private String handlerNote;
 
     private Inquiry(User user, InquiryType type, String content, String replyEmail) {
         this.user = user;
@@ -107,6 +118,43 @@ public class Inquiry {
                 type,
                 validateAndNormalizeContent(content),
                 validateAndNormalizeReplyEmail(replyEmail));
+    }
+
+    /**
+     * 처리 완료로 표시한다 (관리자 패널). <b>이미 완료된 건을 다시 눌러도 접수 시각을 덮지 않는다</b> —
+     * 최초 처리 시각이 리마인드가 언제 멈췄는지를 말해주는 유일한 기록이라서.
+     *
+     * @param note 처리 메모. 비어 있으면 지운다(수정 화면에서 비우는 것과 같은 뜻).
+     */
+    public void markHandled(String note, LocalDateTime now) {
+        if (this.status != InquiryStatus.DONE) {
+            this.status = InquiryStatus.DONE;
+            this.handledDt = now;
+        }
+        this.handlerNote = normalizeNote(note);
+    }
+
+    /** 실수로 처리 표시한 건을 되돌린다 — 다시 리마인드 대상이 된다. 메모는 남긴다. */
+    public void markPending() {
+        this.status = InquiryStatus.PENDING;
+        this.handledDt = null;
+    }
+
+    /**
+     * 처리 메모는 <b>거부하지 않고 잘라 담는다</b>. 운영자가 스스로 남기는 기록이라 검증으로
+     * 저장을 막을 이유가 없고, 길이 때문에 처리 표시가 실패하는 게 훨씬 나쁘다.
+     */
+    static String normalizeNote(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.replace("\r\n", "\n").replace('\r', '\n').trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.length() > HANDLER_NOTE_MAX_LENGTH
+                ? trimmed.substring(0, HANDLER_NOTE_MAX_LENGTH)
+                : trimmed;
     }
 
     private static String validateAndNormalizeContent(String raw) {

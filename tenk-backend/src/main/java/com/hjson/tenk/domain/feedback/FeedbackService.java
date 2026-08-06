@@ -1,5 +1,6 @@
 package com.hjson.tenk.domain.feedback;
 
+import com.hjson.tenk.admin.AdminProperties;
 import com.hjson.tenk.common.notify.AdminNotifier;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -20,6 +21,7 @@ public class FeedbackService {
 
     private final FeedbackRepository feedbackRepository;
     private final AdminNotifier adminNotifier;
+    private final AdminProperties adminProperties;
 
     /**
      * 의견 1건 저장. 검증은 {@link Feedback} 이 진실의 원천이다.
@@ -37,21 +39,24 @@ public class FeedbackService {
         Feedback saved = feedbackRepository.save(
                 Feedback.of(type, content, replyEmail, appVersion, platform, osVersion));
 
+        String panelUrl = adminProperties.panelUrl("/admin/feedbacks");
         adminNotifier.notifyAdmin(
-                "[TenK] 새 의견 (%s)".formatted(saved.getType()),
+                "[TenK] 새 의견 #%d (%s)".formatted(saved.getId(), saved.getType()),
                 """
                 유형: %s
                 회신: %s
                 환경: %s / %s / %s
 
                 %s
-                """.formatted(
+                %s""".formatted(
                         saved.getType(),
                         saved.getReplyEmail() == null ? "(답변 불필요)" : saved.getReplyEmail(),
                         saved.getPlatform(),
                         saved.getAppVersion(),
                         saved.getOsVersion(),
-                        saved.getContent()));
+                        saved.getContent(),
+                        // 주소 설정이 없으면 링크 줄을 통째로 생략한다 — 알림이 실패해선 안 된다.
+                        panelUrl == null ? "" : "\n목록: " + panelUrl + "\n"));
     }
 
     /**

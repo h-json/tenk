@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>사용자 · TenK 관리자</title></head>
+<body>
+<!--
+  ⚠️ 여기서 하는 일은 **권한 변경 하나뿐**이다. 이용자 데이터를 편집·삭제하는 화면을 늘리지 말 것 —
+     삭제의 진실의 원천은 앱의 탈퇴 흐름과 파기 배치이고, 패널이 우회로가 되면 그 계약이 무너진다.
+-->
+<main th:fragment="content">
+    <h1>사용자</h1>
+    <p class="sub">테스터 승격만 해요. 계정 정보를 고치거나 지우는 기능은 일부러 두지 않았어요.</p>
+
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <div class="note-box">
+        <strong>TESTER 로 올리면 그 계정에 '테스트 데이터 재생성' 버튼이 생기고, 누르면 그 계정의 기록이 전부 지워져요.</strong>
+        소모용 계정에만 주세요 — <strong>심사자 데모 계정은 절대 승격 금지</strong>예요.
+    </div>
+
+    <form th:action="@{/admin/users}" method="get" class="filters">
+        <!-- 카카오 회원번호 정확 일치가 실제 승격 경로다(닉네임은 중복될 수 있다). -->
+        <input type="text" name="keyword" th:value="${keyword}" style="max-width:320px"
+               placeholder="닉네임 일부 또는 카카오 회원번호">
+        <button type="submit" class="ghost small">검색</button>
+        <a th:if="${keyword != null and !keyword.isBlank()}" th:href="@{/admin/users}">전체 보기</a>
+    </form>
+
+    <div th:if="${page.isEmpty()}" class="empty">검색 결과가 없어요.</div>
+
+    <table th:unless="${page.isEmpty()}">
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>닉네임</th>
+            <th>공급자 / 회원번호</th>
+            <th>가입</th>
+            <th>상태</th>
+            <th>권한</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${page.content}">
+            <td class="num" th:text="'#' + ${u.id}">#1</td>
+            <td th:text="${u.nickname}">닉네임</td>
+            <td class="num" th:text="${u.provider} + ' / ' + ${u.providerUserId}">KAKAO / 123</td>
+            <td class="num" th:text="${#temporals.format(u.createdDt, 'yyyy-MM-dd')}">2026-08-06</td>
+            <td>
+                <!-- 탈퇴 계정도 목록에 남긴다 — "왜 로그인이 안 되나" 문의는 이게 곧 답인 경우가 많다. -->
+                <span th:if="${u.deleted}" class="pill deleted">탈퇴</span>
+                <span th:unless="${u.deleted}" class="num">—</span>
+            </td>
+            <td>
+                <span th:if="${u.role.name() == 'ADMIN'}" class="pill tester">ADMIN</span>
+                <!-- ADMIN 은 패널에서 바꿀 수 없다 (권한 상승 경로를 만들지 않는다). -->
+                <form th:unless="${u.role.name() == 'ADMIN'}"
+                      th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post"
+                      style="display:flex;gap:8px;align-items:center">
+                    <input type="hidden" name="keyword" th:value="${keyword}">
+                    <span class="pill" th:classappend="${u.role.name() == 'TESTER'} ? 'tester' : 'done'"
+                          th:text="${u.role}">USER</span>
+                    <button type="submit" name="role" class="ghost small"
+                            th:value="${u.role.name() == 'TESTER'} ? 'USER' : 'TESTER'"
+                            th:text="${u.role.name() == 'TESTER'} ? 'USER 로 내리기' : 'TESTER 로 올리기'">TESTER 로 올리기</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="pager" th:unless="${page.isEmpty()}">
+        <a th:if="${page.hasPrevious()}" th:href="@{/admin/users(keyword=${keyword},page=${page.number - 1})}">← 이전</a>
+        <span th:unless="${page.hasPrevious()}" class="disabled">← 이전</span>
+        <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+        <a th:if="${page.hasNext()}" th:href="@{/admin/users(keyword=${keyword},page=${page.number + 1})}">다음 →</a>
+        <span th:unless="${page.hasNext()}" class="disabled">다음 →</span>
+    </div>
+</main>
+</body>
+</html>

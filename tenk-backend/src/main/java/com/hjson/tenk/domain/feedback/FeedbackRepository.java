@@ -10,9 +10,9 @@ import org.springframework.data.repository.query.Param;
  * 의견 저장소. 계정과 연결되지 않은 데이터라 계정 파기 배치
  * ({@code WithdrawnUserPurgeService})의 삭제 대상이 아니다 — 지우지 말 것.
  *
- * <p>조회 화면은 없다. 쌓인 의견은 DB 에서 직접 훑는다
- * ({@code SELECT * FROM feedback ORDER BY created_dt DESC;}) — 관리자 UI 를 지을 근거가
- * 아직 없고, 의견은 즉시 처리해야 하는 큐가 아니라 모아서 보는 데이터라서.
+ * <p>쌓인 의견은 <b>관리자 패널</b>({@code /admin/feedbacks})에서 훑는다. 의견에는 처리 상태가
+ * 없으므로 목록은 <b>최신순 한 줄기</b>뿐이다 — 즉시 처리해야 하는 큐가 아니라 모아서 보는
+ * 데이터라는 성격은 그대로다.
  */
 public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 

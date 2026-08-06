@@ -200,7 +200,7 @@ docker compose logs -f backend                  # "Started TenkApplication" = va
 
 - **`up -d` 때 `volume "tenk_dbinit" already exists but was not created by Docker Compose` WARN 은 정상** — ③에서 일부러 먼저 만든 것이다.
 - **`Container tenk-backend-1 Started` 는 컨테이너가 떴다는 뜻일 뿐 스프링 부팅 성공이 아니다.** 반드시 로그로 확인할 것(스키마가 어긋나면 여기서 validate 에러로 죽는다).
-- **끝난 뒤 챙길 것**: 계정이 전부 사라졌으므로 **TESTER role 재승격**이 필요하고(`UPDATE user SET role='TESTER' WHERE ...`), `app_config` 는 `schema.sql` 의 시드값으로 돌아가므로 **현재 스토어 버전과 다르면 다시 맞출 것**(`UPDATE app_config SET latest_version=...`).
+- **끝난 뒤 챙길 것**: 계정이 전부 사라졌으므로 **TESTER role 재승격**이 필요하고, `app_config` 는 `schema.sql` 의 시드값으로 돌아가므로 **현재 스토어 버전과 다르면 다시 맞출 것**. 둘 다 **관리자 패널**(`/admin` → '사용자' / '앱 버전')에서 한다 — 2026-08-06 이전에는 `UPDATE user SET role=...` / `UPDATE app_config SET latest_version=...` 를 직접 쳤다. `admin_user` 는 부팅 시 yaml 계정으로 자동 재생성되므로 따로 챙길 게 없다.
 - **알려진 사소한 어긋남**: `db` 컨테이너엔 `TZ` env 가 없어 MariaDB 가 만드는 `DEFAULT current_timestamp()`(현재 `app_config.updated_dt` 하나)는 **UTC** 로 찍힌다. 도메인 시각은 전부 JPA 가 KST JVM 으로 박으므로 기능 영향은 없다.
 
 ---

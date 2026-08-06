@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>앱 버전 · TenK 관리자</title></head>
+<body>
+<main th:fragment="content">
+    <h1>앱 버전 정책</h1>
+    <p class="sub">재배포 없이 즉시 반영돼요. 릴리스 후 스토어 게시가 끝나면 최신 버전을 여기서 올려요.</p>
+
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <div th:if="${config == null}" class="empty">
+        app_config 행이 없어요. schema.sql 의 INSERT 를 적용해야 버전 게이트가 동작해요.
+    </div>
+
+    <div th:if="${config != null}">
+        <!-- 이 경고가 이 화면에서 제일 중요한 문장이다. 순서를 틀리면 사용자가 앱에서 나갈 길이 없어진다. -->
+        <div class="note-box">
+            <strong>최소 지원 버전을 올리기 전에 스토어 게시 반영을 먼저 확인하세요.</strong>
+            스토어에 그 버전이 아직 없으면 사용자가 강제 업데이트 화면에서 빠져나갈 수 없어요.
+        </div>
+
+        <form th:action="@{/admin/app-config}" method="post" style="max-width:520px">
+            <div class="field-row">
+                <label class="field" for="min">최소 지원 버전 — 미만이면 <b>강제 업데이트</b>(앱 사용 차단)</label>
+                <input type="text" id="min" name="minSupportedVersion"
+                       th:value="${config.minSupportedVersion}" required>
+            </div>
+            <div class="field-row">
+                <label class="field" for="latest">최신 버전 — 미만이면 <b>권장 업데이트</b>(안내만)</label>
+                <input type="text" id="latest" name="latestVersion"
+                       th:value="${config.latestVersion}" required>
+            </div>
+            <div class="field-row">
+                <label class="field" for="android">Android 스토어 URL</label>
+                <input type="text" id="android" name="androidStoreUrl" th:value="${config.androidStoreUrl}">
+            </div>
+            <div class="field-row">
+                <label class="field" for="ios">iOS 스토어 URL — 출시 전까지 비워둬요</label>
+                <input type="text" id="ios" name="iosStoreUrl" th:value="${config.iosStoreUrl}">
+            </div>
+            <button type="submit" class="primary">저장</button>
+        </form>
+
+        <p class="sub" style="margin-top:24px">
+            버전 문자열이 이상하면 서버가 <code>LATEST</code> 를 돌려주는 fail-open 이라, 잘못 적어도 앱이 잠기지는 않아요.
+        </p>
+    </div>
+</main>
+</body>
+</html>

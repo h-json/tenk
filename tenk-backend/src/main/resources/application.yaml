@@ -27,6 +27,13 @@ spring:
 tenk:
   upload:
     base-dir: ${TENK_UPLOAD_DIR:./uploads}
+  # 관리자 패널(/admin/**). 기본 꺼짐 — 켜는 곳은 각 프로파일이다.
+  # 꺼져 있으면 보안 체인이 등록되지 않아 /admin/** 이 앱 체인의 anyRequest().authenticated()
+  # 에 걸려 401 로 끊긴다(컨트롤러까지 가지 않음).
+  # ⚠️ account 는 **yaml 이 진실의 원천**이라 부팅할 때마다 계정을 만들거나 비밀번호를 다시 맞춘다
+  #    (AdminAccountInitializer). 그래서 패널에 비밀번호 변경 화면이 없다 — 바꾸려면 여기를 고치고 재시작.
+  admin:
+    enabled: false
   # 관리자(개발자) 알림. 기본은 꺼짐 — local/test 에서 실제 메일·텔레그램이 나가면 안 되고,
   # 자격증명은 prod 프로파일에만 둔다 (jwt secret 과 같은 원칙: 공통 fallback 을 두지 않는다).
   # 켜는 곳은 application-prod.yaml 한 곳뿐.

@@ -17,6 +17,8 @@
 --   refresh_token    : 신설 — JWT 모바일 인증의 RT 보관소
 --   app_config       : 신설 — 앱 최신/최소 지원 버전 + 스토어 URL (단일 행). 강제/권장 업데이트 게이트용
 --   feedback         : 신설 — 메뉴 '의견 보내기'. 익명(user_id 없음) + 회신용 이메일만 선택 개인정보
+--   inquiry          : 신설 — 메뉴 → 고객센터 → '문의하기'. feedback 과 정반대(user_id 저장 = 개인정보)
+--   admin_user       : 신설 — 관리자 패널 로그인 계정. **user 와 분리** (운영자 자격증명 ≠ 이용자 계정)
 -- ============================================================
 -- 코드성 컬럼 규칙 (2026-07-30 통일) — 진실의 원천은 CLAUDE.md "코딩 컨벤션 — 백엔드"
 --   Java enum 을 저장하는 컬럼은 **VARCHAR + @Enumerated(EnumType.STRING)** 로 통일한다.
@@ -31,8 +33,10 @@
 use `tenk`;
 
 -- 외래키 순서를 고려한 드롭
+DROP TABLE IF EXISTS `inquiry`;              -- user 에 FK 가 있어 반드시 user 보다 먼저
 DROP TABLE IF EXISTS `feedback`;
 DROP TABLE IF EXISTS `withdrawal_feedback`;  -- 둘 다 독립 테이블 (FK 없음)
+DROP TABLE IF EXISTS `admin_user`;           -- 관리자 패널 로그인 계정 (user 와 무관한 독립 테이블)
 DROP TABLE IF EXISTS `app_config`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `challenge_badge`;
@@ -218,6 +222,12 @@ CREATE TABLE `feedback` (
     `app_version`  VARCHAR(20)           NULL,      -- 이하 진단용 (클라이언트가 함께 전송)
     `platform`     VARCHAR(10)           NULL,      -- android / ios
     `os_version`   VARCHAR(100)          NULL,
+    -- 관리자 패널에서 남기는 처리 메모. ⚠️ **개인정보를 적지 않는다는 전제**로 도입한 컬럼이다 —
+    -- 답변 전문·이용자 신원을 적으면 이 테이블의 익명성이 깨져 privacy.html 수집표가 따라온다.
+    -- 답변 원문은 계속 메일 스레드가 아카이브다. 화면에도 같은 취지를 안내로 띄운다.
+    -- 라이브 DB 는 ALTER 로 추가:
+    --   ALTER TABLE `feedback` ADD COLUMN `handler_note` VARCHAR(500) NULL AFTER `os_version`;
+    `handler_note` VARCHAR(500)          NULL,
     `created_dt`   DATETIME              NOT NULL,
     PRIMARY KEY (`feedback_id`)
 );
@@ -241,7 +251,13 @@ CREATE TABLE `inquiry` (
     `reply_email` VARCHAR(100)          NOT NULL,  -- 필수 (feedback 과 다른 점)
     `status`      VARCHAR(20)           NOT NULL,  -- InquiryStatus enum name (PENDING/DONE)
     `created_dt`  DATETIME              NOT NULL,
-    `handled_dt`  DATETIME              NULL,      -- 답변 완료 시각 = 파기 기준점
+    `handled_dt`  DATETIME              NULL,      -- 답변 완료 시각 (리마인드 중단 표시와 짝)
+    -- 관리자 패널에서 남기는 처리 메모 — "무엇을 어떻게 답했나" 한 줄.
+    -- ⚠️ **답변 전문을 넣는 칸이 아니다.** 답변 원문은 메일 스레드가 아카이브고, 여기에 옮겨 담으면
+    -- 보관 대상 개인정보가 늘어 privacy.html §1·§3 을 다시 손봐야 한다. 화면에도 그 취지를 안내한다.
+    -- 라이브 DB 는 ALTER 로 추가:
+    --   ALTER TABLE `inquiry` ADD COLUMN `handler_note` VARCHAR(500) NULL AFTER `handled_dt`;
+    `handler_note` VARCHAR(500)         NULL,
     PRIMARY KEY (`inquiry_id`),
     KEY `idx_inquiry_status` (`status`),
     CONSTRAINT `fk_inquiry_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`)
@@ -269,6 +285,26 @@ INSERT INTO `app_config`
 VALUES
     (1, '1.0.0', '1.0.0',
      'https://play.google.com/store/apps/details?id=com.hjson.tenk_app', NULL);
+
+-- 관리자 패널 로그인 계정. **`user` 와 일부러 분리한 독립 테이블이다** (FK 없음).
+-- 운영자 자격증명과 이용자 계정은 생명주기가 다르다 — 이용자는 가입→동의→연령→탈퇴→파기 파이프라인을
+-- 타지만 운영자는 그중 어느 것도 타지 않는다. `user` 에 넣으면 (provider, provider_user_id) NOT NULL
+-- UNIQUE 때문에 가짜 공급자 값이 필요해지고(= AuthProvider.TEST 가 남긴 잔재와 같은 실수), 그 행이
+-- 동의 미완·연령 미확인 상태로 파기 배치 스캔과 사용자 통계에 섞인다.
+-- ⚠️ 이 테이블의 email 은 **운영자 연락처**라 개인정보 수집표(privacy.html §1)의 대상이 아니다.
+--    이용자용 자체 계정(이메일+비밀번호)이 생기면 그때 `user` 에 컬럼을 추가할 것 — 별개 사안이다.
+-- 계정은 부팅 시 `tenk.admin.account` 값으로 생성·동기화된다(AdminAccountInitializer) — 비밀번호는
+-- BCrypt 해시로만 저장되고, **yaml 이 진실의 원천**이라 패널에 비밀번호 변경 화면이 없다.
+-- 라이브 DB 는 이 테이블을 CREATE 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩).
+CREATE TABLE `admin_user` (
+    `admin_user_id`  BIGINT AUTO_INCREMENT NOT NULL,
+    `email`          VARCHAR(100)          NOT NULL,  -- 로그인 ID (소문자로 정규화 저장)
+    `password_hash`  VARCHAR(100)          NOT NULL,  -- BCrypt. 평문 저장 금지
+    `created_dt`     DATETIME              NOT NULL,
+    `last_login_dt`  DATETIME              NULL,
+    PRIMARY KEY (`admin_user_id`),
+    UNIQUE KEY `uk_admin_user_email` (`email`)
+);
 
 -- ============================================================
 -- 배지 마스터 데이터 (3 / 7 / 14 / 30 단계)

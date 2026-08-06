@@ -1,5 +1,6 @@
 package com.hjson.tenk;
 
+import com.hjson.tenk.admin.AdminProperties;
 import com.hjson.tenk.common.config.AuthProperties;
 import com.hjson.tenk.common.config.StorageProperties;
 import java.util.TimeZone;
@@ -13,7 +14,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 // 사용자 응답 시간에 붙지 않게 하려는 것 — 알림이 늦는 건 괜찮지만 저장이 느려지면 안 된다.
 @EnableAsync
 @EnableScheduling
-@ConfigurationPropertiesScan(basePackageClasses = {StorageProperties.class, AuthProperties.class})
+// ⚠️ 스캔 범위가 basePackageClasses 로 못박혀 있다 — 새 패키지에 @ConfigurationProperties 를
+// 만들면 여기에 그 패키지의 클래스를 하나 추가해야 한다. 안 그러면 부팅이 "No qualifying bean of
+// type ...Properties" 로 죽는다 (AdminProperties 가 실제로 그랬다).
+@ConfigurationPropertiesScan(basePackageClasses = {
+        StorageProperties.class, AuthProperties.class, AdminProperties.class})
 @SpringBootApplication
 public class TenkApplication {
 

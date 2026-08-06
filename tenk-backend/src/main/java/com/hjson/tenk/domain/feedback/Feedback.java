@@ -45,6 +45,7 @@ public class Feedback {
     public static final int APP_VERSION_MAX_LENGTH = 20;
     public static final int PLATFORM_MAX_LENGTH = 10;
     public static final int OS_VERSION_MAX_LENGTH = 100;
+    public static final int HANDLER_NOTE_MAX_LENGTH = 500;
 
     /**
      * 제어·형식 문자 거부 — 닉네임/챌린지 이름과 같은 정책이되 <b>줄바꿈만 예외</b>로 허용한다.
@@ -80,6 +81,16 @@ public class Feedback {
     @Column(name = "os_version", length = OS_VERSION_MAX_LENGTH)
     private String osVersion;
 
+    /**
+     * 관리자 패널에서 남기는 처리 메모.
+     *
+     * <p>⚠️ <b>여기에 개인정보를 적으면 이 테이블의 익명성이 깨진다</b> — 그러면 개인정보처리방침
+     * 수집표에 없는 항목을 보관하게 된다. 답변 전문·이용자 신원을 옮겨 담지 말 것. 의견에는
+     * 처리 상태({@code status})가 없으므로 이 메모는 <b>"봤다/반영했다"를 스스로 남기는 용도</b>다.
+     */
+    @Column(name = "handler_note", length = HANDLER_NOTE_MAX_LENGTH)
+    private String handlerNote;
+
     @CreatedDate
     @Column(name = "created_dt", nullable = false, updatable = false)
     private LocalDateTime createdDt;
@@ -106,6 +117,25 @@ public class Feedback {
                 truncate(appVersion, APP_VERSION_MAX_LENGTH),
                 truncate(platform, PLATFORM_MAX_LENGTH),
                 truncate(osVersion, OS_VERSION_MAX_LENGTH));
+    }
+
+    /**
+     * 처리 메모를 남긴다 (관리자 패널). <b>거부하지 않고 잘라 담는다</b> — 운영자가 스스로 남기는
+     * 기록이라 길이 때문에 저장이 실패할 이유가 없다. 비우면 지운다.
+     */
+    public void writeHandlerNote(String note) {
+        if (note == null) {
+            this.handlerNote = null;
+            return;
+        }
+        String trimmed = note.replace("\r\n", "\n").replace('\r', '\n').trim();
+        if (trimmed.isEmpty()) {
+            this.handlerNote = null;
+            return;
+        }
+        this.handlerNote = trimmed.length() > HANDLER_NOTE_MAX_LENGTH
+                ? trimmed.substring(0, HANDLER_NOTE_MAX_LENGTH)
+                : trimmed;
     }
 
     private static String validateAndNormalizeContent(String raw) {

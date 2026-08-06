@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>문의 상세 · TenK 관리자</title></head>
+<body>
+<!--
+  답변은 여기서 보내지 않는다 (의도). 회신 이메일을 눌러 메일 클라이언트로 답장하고, 여기엔
+  "무엇을 어떻게 답했나"만 한 줄 남긴다 — 답변 전문을 DB 에 옮겨 담으면 보관 대상 개인정보가
+  늘어 privacy.html §1·§3 을 다시 손봐야 한다. 메일 스레드가 이미 아카이브다.
+-->
+<main th:fragment="content">
+    <p class="sub" style="margin-bottom:8px"><a th:href="@{/admin/inquiries}">← 문의 목록</a></p>
+    <h1 th:text="'문의 #' + ${inquiry.id}">문의 #1</h1>
+    <p class="sub">
+        <span class="pill" th:classappend="${inquiry.status.name() == 'PENDING'} ? 'pending' : 'done'"
+              th:text="${inquiry.status.name() == 'PENDING'} ? '미처리' : '처리 완료'">미처리</span>
+    </p>
+
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <dl class="meta">
+        <dt>유형</dt>
+        <dd th:text="${inquiry.type}">SERVICE</dd>
+
+        <dt>회신</dt>
+        <!-- 메일 클라이언트로 바로 답장할 수 있게. 제목에 문의 번호를 넣어 스레드를 대조한다. -->
+        <dd>
+            <a th:href="'mailto:' + ${inquiry.replyEmail} + '?subject=' + ${'[TenK] 문의 #' + inquiry.id + ' 답변'}"
+               th:text="${inquiry.replyEmail}">a@b.c</a>
+        </dd>
+
+        <dt>계정</dt>
+        <dd>
+            <span th:text="${inquiry.user.nickname}">닉네임</span>
+            <span class="num" th:text="'(user#' + ${inquiry.user.id} + ')'">(user#1)</span>
+        </dd>
+
+        <dt>접수</dt>
+        <dd th:text="${#temporals.format(inquiry.createdDt, 'yyyy-MM-dd HH:mm')}">2026-08-06 10:00</dd>
+
+        <dt th:if="${inquiry.handledDt != null}">처리</dt>
+        <dd th:if="${inquiry.handledDt != null}"
+            th:text="${#temporals.format(inquiry.handledDt, 'yyyy-MM-dd HH:mm')}">2026-08-06 12:00</dd>
+    </dl>
+
+    <p class="content-block" th:text="${inquiry.content}">문의 본문</p>
+
+    <hr style="border:none;border-top:1px solid var(--line);margin:28px 0">
+
+    <form th:action="@{/admin/inquiries/{id}/handle(id=${inquiry.id})}" method="post">
+        <div class="field-row">
+            <label class="field" for="note">처리 메모</label>
+            <textarea id="note" name="note" th:text="${inquiry.handlerNote}"
+                      placeholder="무엇을 어떻게 답했는지 한 줄로"></textarea>
+            <p class="sub" style="margin:8px 0 0">
+                답변 전문을 옮겨 담는 칸이 아니에요. 원문은 메일 스레드에 남습니다.
+            </p>
+        </div>
+        <button type="submit" class="primary"
+                th:text="${inquiry.status.name() == 'PENDING'} ? '처리 완료로 표시' : '메모 저장'">처리 완료로 표시</button>
+    </form>
+
+    <!-- 되돌리기는 이미 완료된 건에만 노출한다 — 미처리 상태에서 보이면 무엇을 눌러야 할지 헷갈린다. -->
+    <form th:if="${inquiry.status.name() == 'DONE'}"
+          th:action="@{/admin/inquiries/{id}/reopen(id=${inquiry.id})}" method="post" style="margin-top:12px">
+        <button type="submit" class="ghost">미처리로 되돌리기</button>
+    </form>
+</main>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.hjson.tenk.domain.inquiry;
 
+import com.hjson.tenk.admin.AdminProperties;
 import com.hjson.tenk.common.exception.BusinessException;
 import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.common.notify.AdminNotifier;
@@ -22,6 +23,7 @@ public class InquiryService {
     private final InquiryRepository inquiryRepository;
     private final UserRepository userRepository;
     private final AdminNotifier adminNotifier;
+    private final AdminProperties adminProperties;
 
     /**
      * 문의 1건 저장 후 개발자에게 알린다. 검증은 {@link Inquiry} 가 진실의 원천이다.
@@ -41,7 +43,7 @@ public class InquiryService {
         Inquiry inquiry = inquiryRepository.save(Inquiry.of(user, type, content, replyEmail));
 
         adminNotifier.notifyAdmin(
-                "[TenK] 새 문의 (%s)".formatted(inquiry.getType()),
+                "[TenK] 새 문의 #%d (%s)".formatted(inquiry.getId(), inquiry.getType()),
                 """
                 유형: %s
                 회신: %s
@@ -49,13 +51,23 @@ public class InquiryService {
                 접수: %s
 
                 %s
-                """.formatted(
+                %s""".formatted(
                         inquiry.getType(),
                         inquiry.getReplyEmail(),
                         user.getId(),
                         user.getNickname(),
                         LocalDateTime.now().format(STAMP),
-                        inquiry.getContent()));
+                        inquiry.getContent(),
+                        panelLink("/admin/inquiries/" + inquiry.getId())));
+    }
+
+    /**
+     * 알림 끝에 붙일 패널 링크 한 줄. <b>주소 설정이 없으면 빈 문자열</b>이라 본문에 아무것도 안 붙는다 —
+     * 링크가 없다고 알림이 실패하면 안 된다.
+     */
+    private String panelLink(String path) {
+        String url = adminProperties.panelUrl(path);
+        return url == null ? "" : "\n처리: " + url + "\n";
     }
 
     /**
@@ -83,9 +95,8 @@ public class InquiryService {
                 """
                 %s
 
-                처리 후 아래 SQL 로 상태를 바꿔야 알림이 멈춥니다.
-                UPDATE inquiry SET status='DONE', handled_dt=NOW() WHERE inquiry_id=?;
-                """.formatted(oldest));
+                관리자 페이지에서 '처리 완료'로 표시해야 알림이 멈춥니다.
+                %s""".formatted(oldest, panelLink("/admin/inquiries")));
         return pending;
     }
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html th:replace="~{admin/layout :: page(~{::title}, ~{::content})}" xmlns:th="http://www.thymeleaf.org">
+<head><title>의견 · TenK 관리자</title></head>
+<body>
+<!--
+  의견에는 처리 상태가 없다 — 즉시 처리해야 하는 큐가 아니라 모아서 보는 데이터라서 필터도 없고
+  목록은 최신순 한 줄기뿐이다. 상세 화면도 두지 않았다(본문이 짧아 목록에서 다 읽힌다).
+-->
+<main th:fragment="content">
+    <h1>의견</h1>
+    <p class="sub">익명으로 저장돼요 — 누가 보냈는지는 서버도 몰라요. 회신 이메일을 적은 경우에만 답변 대상이에요.</p>
+
+    <p class="flash" th:if="${flash}" th:text="${flash}"></p>
+
+    <div class="note-box">
+        메모에 <strong>개인정보를 적지 마세요.</strong> 이 테이블은 익명이라 개인정보 수집표에 없어요 —
+        신원이나 답변 전문을 적으면 그 전제가 깨집니다.
+    </div>
+
+    <div th:if="${page.isEmpty()}" class="empty">아직 의견이 없어요.</div>
+
+    <table th:unless="${page.isEmpty()}">
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>유형</th>
+            <th>내용</th>
+            <th>회신</th>
+            <th>환경</th>
+            <th>접수</th>
+            <th style="width:260px">메모</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="f : ${page.content}">
+            <td class="num" th:text="'#' + ${f.id}">#1</td>
+            <td th:text="${f.type}">PRAISE</td>
+            <td style="min-width:220px" th:text="${f.content}">내용</td>
+            <td th:text="${f.replyEmail != null} ? ${f.replyEmail} : '—'">—</td>
+            <td class="num"
+                th:text="${(f.platform ?: '?') + ' / ' + (f.appVersion ?: '?')}">android / 1.1.0</td>
+            <td class="num" th:text="${#temporals.format(f.createdDt, 'yyyy-MM-dd HH:mm')}">2026-08-06 10:00</td>
+            <td>
+                <!-- 목록 안에서 바로 저장한다. 의견은 '봤다' 표시가 전부라 상세로 한 단계 더 들어갈 이유가 없다. -->
+                <form th:action="@{/admin/feedbacks/{id}/note(id=${f.id})}" method="post">
+                    <input type="hidden" name="page" th:value="${page.number}">
+                    <textarea name="note" rows="2" th:text="${f.handlerNote}"
+                              placeholder="봤다 / 반영했다"></textarea>
+                    <button type="submit" class="ghost small" style="margin-top:6px">저장</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="pager" th:unless="${page.isEmpty()}">
+        <a th:if="${page.hasPrevious()}" th:href="@{/admin/feedbacks(page=${page.number - 1})}">← 이전</a>
+        <span th:unless="${page.hasPrevious()}" class="disabled">← 이전</span>
+        <span th:text="${page.number + 1} + ' / ' + ${page.totalPages}">1 / 1</span>
+        <a th:if="${page.hasNext()}" th:href="@{/admin/feedbacks(page=${page.number + 1})}">다음 →</a>
+        <span th:unless="${page.hasNext()}" class="disabled">다음 →</span>
+    </div>
+</main>
+</body>
+</html>
