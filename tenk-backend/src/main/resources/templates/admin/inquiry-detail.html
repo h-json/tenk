@@ -3,9 +3,12 @@
 <head><title>문의 상세 · TenK 관리자</title></head>
 <body>
 <!--
-  답변은 여기서 보내지 않는다 (의도). 회신 이메일을 눌러 메일 클라이언트로 답장하고, 여기엔
+  답변은 여기서 보내지 않는다 (의도). '메일로 답장' 으로 메일 클라이언트를 열어 답장하고, 여기엔
   "무엇을 어떻게 답했나"만 한 줄 남긴다 — 답변 전문을 DB 에 옮겨 담으면 보관 대상 개인정보가
   늘어 privacy.html §1·§3 을 다시 손봐야 한다. 메일 스레드가 이미 아카이브다.
+
+  알림이 본문을 싣지 않게 되면서(2026-08-07) 그 아카이브를 만드는 책임이 이 버튼으로 넘어왔다 —
+  초안에 원문을 인용해 두지 않으면 답장 스레드에 무엇에 대한 답인지가 남지 않는다.
 -->
 <main th:fragment="content">
     <p class="sub" style="margin-bottom:8px"><a th:href="@{/admin/inquiries}">← 문의 목록</a></p>
@@ -22,11 +25,7 @@
         <dd th:text="${inquiry.type.label}">서비스 이용</dd>
 
         <dt>회신</dt>
-        <!-- 메일 클라이언트로 바로 답장할 수 있게. 제목에 문의 번호를 넣어 스레드를 대조한다. -->
-        <dd>
-            <a th:href="'mailto:' + ${inquiry.replyEmail} + '?subject=' + ${'[TenK] 문의 #' + inquiry.id + ' 답변'}"
-               th:text="${inquiry.replyEmail}">a@b.c</a>
-        </dd>
+        <dd th:text="${inquiry.replyEmail}">a@b.c</dd>
 
         <dt>계정</dt>
         <dd>
@@ -43,6 +42,27 @@
     </dl>
 
     <p class="content-block" th:text="${inquiry.content}">문의 본문</p>
+
+    <!--
+      Gmail 작성 링크를 쓴다 — mailto: 는 OS 로 넘어가며 2KB 안팎에서 잘리는데, 한글은 URL 인코딩하면
+      1자가 9자라 본문 1000자짜리 문의가 그 한도를 훌쩍 넘긴다. 브라우저가 여는 링크에는 제한이 없다.
+      다른 메일 클라이언트를 쓰거나 계정이 여럿이라 엉뚱한 계정으로 열릴 때를 위해 복사 버튼을 같이 둔다.
+    -->
+    <div class="actions">
+        <a class="btn small" target="_blank" rel="noopener"
+           th:href="@{https://mail.google.com/mail/(view='cm',fs='1',to=${draft.to},su=${draft.subject},body=${draft.body})}">메일로 답장</a>
+        <button type="button" class="ghost small" onclick="copyDraft(this)">초안 복사</button>
+        <span class="sub" style="margin:0">원문이 인용된 채로 열려요.</span>
+    </div>
+    <textarea id="draft-body" hidden th:text="${draft.body}"></textarea>
+    <script>
+        function copyDraft(button) {
+            navigator.clipboard.writeText(document.getElementById('draft-body').value).then(function () {
+                button.textContent = '복사했어요';
+                setTimeout(function () { button.textContent = '초안 복사'; }, 1500);
+            });
+        }
+    </script>
 
     <hr style="border:none;border-top:1px solid var(--line);margin:28px 0">
 

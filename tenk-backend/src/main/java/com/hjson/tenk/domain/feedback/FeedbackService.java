@@ -32,31 +32,21 @@ public class FeedbackService {
      * <p>저장 후 개발자에게 알린다. 의견은 즉시 처리해야 하는 큐가 아니라 모아서 보는 데이터지만,
      * <b>도착 사실조차 모르면 모아서 볼 계기가 없다</b>. 미처리 리마인드는 문의에만 있고 의견에는
      * 없는 것도 같은 이유다 — 의견에는 "처리 완료"라는 상태가 없다.
+     *
+     * <p>⚠️ <b>알림은 "왔다"는 신호뿐이고 본문·회신 이메일을 담지 않는다</b> (2026-08-07). 내용을
+     * 실으면 메일함·텔레그램이 또 하나의 개인정보 보관소가 되고, 접속기록({@code AdminAudit})이 남는
+     * 패널 열람을 우회하는 경로가 생긴다. 내용은 패널에서 본다.
      */
     @Transactional
     public void submit(FeedbackType type, String content, String replyEmail,
                        String appVersion, String platform, String osVersion) {
-        Feedback saved = feedbackRepository.save(
-                Feedback.of(type, content, replyEmail, appVersion, platform, osVersion));
+        feedbackRepository.save(Feedback.of(type, content, replyEmail, appVersion, platform, osVersion));
 
+        // 주소 설정이 없으면 링크 줄을 통째로 생략한다 — 알림이 실패해선 안 된다.
         String panelUrl = adminProperties.panelUrl("/admin/feedbacks");
         adminNotifier.notifyAdmin(
-                "[TenK] 새 의견 #%d (%s)".formatted(saved.getId(), saved.getType()),
-                """
-                유형: %s
-                회신: %s
-                환경: %s / %s / %s
-
-                %s
-                %s""".formatted(
-                        saved.getType(),
-                        saved.getReplyEmail() == null ? "(답변 불필요)" : saved.getReplyEmail(),
-                        saved.getPlatform(),
-                        saved.getAppVersion(),
-                        saved.getOsVersion(),
-                        saved.getContent(),
-                        // 주소 설정이 없으면 링크 줄을 통째로 생략한다 — 알림이 실패해선 안 된다.
-                        panelUrl == null ? "" : "\n목록: " + panelUrl + "\n"));
+                "[TenK] 새 의견이 도착했어요.",
+                panelUrl == null ? "" : "목록: " + panelUrl);
     }
 
     /**

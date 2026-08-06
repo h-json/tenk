@@ -36,7 +36,16 @@
             <td class="num" th:text="'#' + ${f.id}">#1</td>
             <td th:text="${f.type.label}">좋았던 점</td>
             <td style="min-width:220px" th:text="${f.content}">내용</td>
-            <td th:text="${f.replyEmail != null} ? ${f.replyEmail} : '—'">—</td>
+            <!--
+              문의와 달리 원문 인용을 안 넣는다 — 의견은 짧아 이 목록에서 다 읽히고, 답변이 전제된
+              창구가 아니라 이메일을 적은 소수만 대상이라 mailto 로 충분하다.
+            -->
+            <td>
+                <a th:if="${f.replyEmail != null}"
+                   th:href="'mailto:' + ${f.replyEmail} + '?subject=[TenK] 보내주신 의견에 대한 답변'"
+                   th:text="${f.replyEmail}">a@b.c</a>
+                <span th:if="${f.replyEmail == null}">—</span>
+            </td>
             <td class="num"
                 th:text="${(f.platform ?: '?') + ' / ' + (f.appVersion ?: '?')}">android / 1.1.0</td>
             <td class="num" th:text="${#temporals.format(f.createdDt, 'yyyy-MM-dd HH:mm')}">2026-08-06 10:00</td>

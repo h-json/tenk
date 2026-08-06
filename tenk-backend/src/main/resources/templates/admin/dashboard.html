@@ -23,7 +23,7 @@
     </div>
 
     <div th:if="${summary.pendingInquiries() > 0}" class="note-box">
-        미처리 문의가 남아 있으면 <strong>매일 오전 9시</strong>에 메일·텔레그램으로 다시 알려요.
+        미처리 문의가 남아 있으면 <strong>매일 저녁 6시</strong>에 메일·텔레그램으로 다시 알려요.
         처리 완료로 표시하면 멈춥니다. <a th:href="@{/admin/inquiries}">문의 보러 가기 →</a>
     </div>
     <div th:unless="${summary.pendingInquiries() > 0}" class="note-box">

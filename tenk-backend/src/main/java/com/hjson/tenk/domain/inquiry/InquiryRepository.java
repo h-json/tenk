@@ -1,6 +1,5 @@
 package com.hjson.tenk.domain.inquiry;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,10 +31,6 @@ public interface InquiryRepository extends JpaRepository<Inquiry, Long> {
     /** 상세 화면용. 목록과 같은 이유로 user 를 함께 끌어온다. */
     @Query("select i from Inquiry i join fetch i.user where i.id = :id")
     Optional<Inquiry> findByIdForAdmin(@Param("id") Long id);
-
-    /** 미처리 중 가장 오래된 것의 접수 시각 — 리마인드 문구의 "N일 경과" 계산에 쓴다. */
-    @Query("select min(i.createdDt) from Inquiry i where i.status = :status")
-    Optional<LocalDateTime> findOldestCreatedDt(@Param("status") InquiryStatus status);
 
     /// 계정 파기 배치용 — 해당 유저의 모든 inquiry row 벌크 삭제. user 삭제 전에 호출.
     ///

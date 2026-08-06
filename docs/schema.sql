@@ -237,9 +237,9 @@ CREATE TABLE `feedback` (
 --     그래서 이 테이블은 익명정보가 아니라 개인정보이고, 개인정보처리방침 수집표·보관 기간의 대상이며
 --     계정 파기 배치(WithdrawnUserPurgeService)가 user 삭제 직전에 함께 지운다.
 --   * reply_email 이 NOT NULL 이다 — 답변이 전제된 창구라 회신 경로 없이는 성립하지 않는다.
--- 처리 표시는 관리자 UI 없이 SQL 로 한다 (TESTER 승격·app_config 와 동일한 운영 방식):
+-- 처리 표시는 **관리자 패널**(/admin/inquiries)에서 한다. 패널이 안 뜰 때의 폴백으로 SQL 도 유효:
 --   UPDATE `inquiry` SET `status`='DONE', `handled_dt`=NOW() WHERE `inquiry_id`=?;
--- status 를 안 바꾸면 매일 오전 9시 리마인드가 계속 온다(InquiryScheduler).
+-- status 를 안 바꾸면 매일 저녁 6시 리마인드가 계속 온다(InquiryScheduler).
 -- ⚠️ status 는 **리마인드를 멈추는 용도일 뿐 파기 기준이 아니다** — 문의는 답변 여부와 무관하게
 -- 회원 탈퇴 시까지 보관하고 계정 파기 때 함께 지워진다. 답변 기준 파기 배치를 다시 만들지 말 것.
 -- 라이브 DB 는 이 테이블을 CREATE 로 추가해야 함 (dbinit 볼륨은 최초 부팅만 시딩).

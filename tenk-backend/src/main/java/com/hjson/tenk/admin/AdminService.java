@@ -67,7 +67,7 @@ public class AdminService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
-    /** 처리 완료로 표시 → 매일 09:00 리마인드에서 빠진다. 메모는 비워도 된다. */
+    /** 처리 완료로 표시 → 매일 18:00 리마인드에서 빠진다. 메모는 비워도 된다. */
     @Transactional
     public void handleInquiry(Long id, String note) {
         Inquiry inquiry = inquiry(id);

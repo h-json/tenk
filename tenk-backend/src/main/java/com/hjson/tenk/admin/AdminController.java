@@ -1,5 +1,6 @@
 package com.hjson.tenk.admin;
 
+import com.hjson.tenk.domain.inquiry.Inquiry;
 import com.hjson.tenk.domain.inquiry.InquiryStatus;
 import com.hjson.tenk.domain.user.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +79,10 @@ public class AdminController {
     public String inquiry(@PathVariable Long id, Model model) {
         // 본문·회신 이메일·계정이 한 화면에 다 나오는 곳이라 열람 기록이 가장 필요한 지점이다.
         audit.record("INQUIRY_VIEW", "inquiry#" + id, "-");
-        model.addAttribute("inquiry", adminService.inquiry(id));
+        Inquiry inquiry = adminService.inquiry(id);
+        model.addAttribute("inquiry", inquiry);
+        // 알림이 본문을 싣지 않으므로, 답장에 원문을 넣는 건 이 초안이 맡는다.
+        model.addAttribute("draft", InquiryReplyDraft.of(inquiry));
         model.addAttribute("menu", "inquiries");
         return "admin/inquiry-detail";
     }
@@ -95,7 +99,7 @@ public class AdminController {
     @PostMapping("/inquiries/{id}/reopen")
     public String reopenInquiry(@PathVariable Long id, RedirectAttributes redirect) {
         adminService.reopenInquiry(id);
-        redirect.addFlashAttribute("flash", "미처리로 되돌렸어요. 매일 09시 리마인드 대상이 됩니다.");
+        redirect.addFlashAttribute("flash", "미처리로 되돌렸어요. 매일 18시 리마인드 대상이 됩니다.");
         return "redirect:/admin/inquiries/" + id;
     }
 

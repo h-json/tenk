@@ -215,6 +215,24 @@ class AdminPanelIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    @DisplayName("문의 상세의 답장 초안에 원문이 인용된다 — 알림이 본문을 싣지 않는 대가다")
+    void buildsReplyDraftWithQuotedOriginal() throws Exception {
+        Long inquiryId = saveInquiry();
+
+        String html = mockMvc.perform(get("/admin/inquiries/{id}", inquiryId).with(adminUser()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html)
+                .as("mailto: 는 OS 로 넘어가며 잘린다 — 한글 본문은 인코딩되면 길이가 9배다")
+                .contains("mail.google.com")
+                .contains("view=cm");
+        assertThat(html)
+                .as("원문 인용이 빠지면 답장 스레드에 무엇에 대한 답인지가 남지 않는다")
+                .contains("&gt; 기록이 안 돼요");
+    }
+
+    @Test
     @DisplayName("TESTER 승격이 패널에서 된다 — 예전의 UPDATE user SET role 을 대체한다")
     void promotesUserToTester() throws Exception {
         Long userId = saveUser("kakao-admin-2", "승격대상");

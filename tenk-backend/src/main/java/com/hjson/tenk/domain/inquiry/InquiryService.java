@@ -6,19 +6,20 @@ import com.hjson.tenk.common.exception.ErrorCode;
 import com.hjson.tenk.common.notify.AdminNotifier;
 import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserRepository;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ⚠️ <b>알림은 "왔다/남았다"는 신호만 보낸다 — 본문·회신 이메일·계정을 담지 말 것</b> (2026-08-07).
+ * 내용은 패널에서 보고, 답장은 패널의 '메일로 답장'({@link com.hjson.tenk.admin.InquiryReplyDraft})이
+ * 원문을 인용해 준다. 알림에 본문을 도로 넣으면 <b>메일·텔레그램이 또 하나의 개인정보 보관소</b>가 되고,
+ * 접속기록을 남기지 않는 경로로 개인정보가 흘러나간다(패널 열람은 {@code AdminAudit} 에 남는다).
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class InquiryService {
-
-    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final InquiryRepository inquiryRepository;
     private final UserRepository userRepository;
@@ -40,34 +41,12 @@ public class InquiryService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Inquiry inquiry = inquiryRepository.save(Inquiry.of(user, type, content, replyEmail));
+        inquiryRepository.save(Inquiry.of(user, type, content, replyEmail));
 
+        // 방금 저장한 건까지 센 값이다 (JPQL 조회가 flush 를 강제한다).
         adminNotifier.notifyAdmin(
-                "[TenK] 새 문의 #%d (%s)".formatted(inquiry.getId(), inquiry.getType()),
-                """
-                유형: %s
-                회신: %s
-                계정: #%d %s
-                접수: %s
-
-                %s
-                %s""".formatted(
-                        inquiry.getType(),
-                        inquiry.getReplyEmail(),
-                        user.getId(),
-                        user.getNickname(),
-                        LocalDateTime.now().format(STAMP),
-                        inquiry.getContent(),
-                        panelLink("/admin/inquiries/" + inquiry.getId())));
-    }
-
-    /**
-     * 알림 끝에 붙일 패널 링크 한 줄. <b>주소 설정이 없으면 빈 문자열</b>이라 본문에 아무것도 안 붙는다 —
-     * 링크가 없다고 알림이 실패하면 안 된다.
-     */
-    private String panelLink(String path) {
-        String url = adminProperties.panelUrl(path);
-        return url == null ? "" : "\n처리: " + url + "\n";
+                "[TenK] 새 문의가 도착했어요.",
+                pendingBody(inquiryRepository.countByStatus(InquiryStatus.PENDING)));
     }
 
     /**
@@ -84,20 +63,19 @@ public class InquiryService {
         if (pending == 0) {
             return 0;
         }
-
-        String oldest = inquiryRepository.findOldestCreatedDt(InquiryStatus.PENDING)
-                .map(dt -> "가장 오래된 건 %d일 경과 (%s 접수)"
-                        .formatted(Duration.between(dt, LocalDateTime.now()).toDays(), dt.format(STAMP)))
-                .orElse("");
-
-        adminNotifier.notifyAdmin(
-                "[TenK] 미처리 문의 %d건".formatted(pending),
-                """
-                %s
-
-                관리자 페이지에서 '처리 완료'로 표시해야 알림이 멈춥니다.
-                %s""".formatted(oldest, panelLink("/admin/inquiries")));
+        adminNotifier.notifyAdmin("[TenK] 처리되지 않은 문의 내역이 있습니다.", pendingBody(pending));
         return pending;
     }
 
+    /**
+     * 도착 알림과 리마인드가 공유하는 본문 — <b>미처리 건수 한 줄 + 패널 링크</b>가 전부다.
+     *
+     * <p>주소 설정({@code tenk.admin.base-url})이 없으면 링크 줄만 빠진다 — 링크가 없다고 알림이
+     * 실패하면 안 된다.
+     */
+    private String pendingBody(long pending) {
+        String counted = "미처리 문의 개수 : " + pending;
+        String url = adminProperties.panelUrl("/admin/inquiries");
+        return url == null ? counted : counted + "\n\n처리: " + url;
+    }
 }
