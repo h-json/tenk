@@ -12,6 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.hjson.tenk.domain.inquiry.Inquiry;
 import com.hjson.tenk.domain.inquiry.InquiryRepository;
 import com.hjson.tenk.domain.inquiry.InquiryStatus;
@@ -21,7 +24,9 @@ import com.hjson.tenk.domain.user.User;
 import com.hjson.tenk.domain.user.UserRepository;
 import com.hjson.tenk.domain.user.UserRole;
 import com.hjson.tenk.support.IntegrationTestBase;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -83,6 +88,58 @@ class AdminPanelIntegrationTest extends IntegrationTestBase {
 
         mockMvc.perform(formLogin("/admin/login").user(ADMIN).password("wrong"))
                 .andExpect(unauthenticated());
+    }
+
+    @Test
+    @DisplayName("로그인 성공이 접속기록에 남고 마지막 로그인 시각이 갱신된다")
+    void recordsLoginInAuditTrail() throws Exception {
+        List<String> lines = captureAuditLog(() ->
+                mockMvc.perform(formLogin("/admin/login").user(ADMIN).password("test-admin-pw")));
+
+        assertThat(lines).anyMatch(l -> l.contains("action=LOGIN_SUCCESS") && l.contains("actor=" + ADMIN));
+        assertThat(adminUserRepository.findByEmail(ADMIN).orElseThrow().getLastLoginDt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("로그인 실패도 남는다 — 대입 공격의 유일한 탐지 수단이다")
+    void recordsFailedLoginAttempts() throws Exception {
+        List<String> lines = captureAuditLog(() ->
+                mockMvc.perform(formLogin("/admin/login").user(ADMIN).password("wrong")));
+
+        assertThat(lines).anyMatch(l -> l.contains("action=LOGIN_FAILURE"));
+        assertThat(lines)
+                .as("입력된 비밀번호가 로그에 남으면 그 자체가 자격증명 유출이다")
+                .noneMatch(l -> l.contains("wrong"));
+    }
+
+    @Test
+    @DisplayName("개인정보를 여는 화면은 열람만 해도 기록된다 — 유출은 변경이 아니라 열람에서 난다")
+    void recordsReadsOfPersonalData() throws Exception {
+        Long inquiryId = saveInquiry();
+
+        List<String> lines = captureAuditLog(() -> {
+            mockMvc.perform(get("/admin/inquiries/{id}", inquiryId).with(adminUser()));
+            mockMvc.perform(get("/admin/users").param("keyword", "문의자").with(adminUser()));
+        });
+
+        assertThat(lines).anyMatch(l -> l.contains("action=INQUIRY_VIEW"));
+        assertThat(lines).anyMatch(l -> l.contains("action=USER_LIST_VIEW"));
+        assertThat(lines)
+                .as("검색어(닉네임)는 그 자체가 개인정보라 기록하지 않는다")
+                .noneMatch(l -> l.contains("문의자"));
+    }
+
+    @Test
+    @DisplayName("접속기록에 접속지 IP 가 들어간다 — 고시가 요구하는 항목이다")
+    void recordsClientIp() throws Exception {
+        List<String> lines = captureAuditLog(() ->
+                mockMvc.perform(get("/admin/feedbacks")
+                        .header("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
+                        .with(adminUser())));
+
+        assertThat(lines)
+                .as("Traefik 뒤라 X-Forwarded-For 의 첫 값이 실제 클라이언트다")
+                .anyMatch(l -> l.contains("ip=203.0.113.9"));
     }
 
     @Test
@@ -190,6 +247,32 @@ class AdminPanelIntegrationTest extends IntegrationTestBase {
     }
 
     // ── 헬퍼 ────────────────────────────────────────────────────
+
+    /**
+     * 실행 구간 동안 {@code TENK_ADMIN_AUDIT} 로거에 찍힌 줄을 모아 준다.
+     *
+     * <p>파일을 읽지 않고 <b>인메모리 appender 를 잠깐 붙였다 뗀다</b> — 파일 경로·롤링 설정은
+     * 테스트의 관심사가 아니고(그건 logback-spring.xml 소관), 여기서 지키려는 건 <b>"무엇이 기록되고
+     * 무엇이 기록되지 않는가"</b>다. 특히 비밀번호·검색어가 새지 않는지가 핵심이라 내용 단언이 중요하다.
+     */
+    private List<String> captureAuditLog(ThrowingRunnable action) throws Exception {
+        Logger auditLogger = (Logger) LoggerFactory.getLogger("TENK_ADMIN_AUDIT");
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        auditLogger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            auditLogger.detachAppender(appender);
+            appender.stop();
+        }
+        return appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
+    }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor adminUser() {
         return user(ADMIN).authorities(

@@ -35,6 +35,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminController {
 
     private final AdminService adminService;
+    /**
+     * <b>열람도 접속기록 대상이다</b> — 고시의 '수행업무'에 조회가 포함되고, 실제로 유출은 변경이
+     * 아니라 열람에서 일어난다. 개인정보가 <b>화면에 실제로 보이는</b> 곳에만 건다 — 대시보드(집계 숫자)와
+     * 앱 버전(정책 값)은 개인정보가 아니라 제외했다. 변경 기록은 {@link AdminService} 가 담당한다.
+     */
+    private final AdminAudit audit;
 
     /** 로그인 화면. 인증 전 유일하게 열린 경로라 모델에 아무것도 담지 않는다. */
     @GetMapping("/login")
@@ -61,6 +67,7 @@ public class AdminController {
             @PageableDefault(size = 20, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable,
             Model model) {
         InquiryStatus filter = "ALL".equals(status) ? null : InquiryStatus.valueOf(status);
+        audit.record("INQUIRY_LIST_VIEW", "inquiry", "status=" + status + " page=" + pageable.getPageNumber());
         model.addAttribute("page", adminService.inquiries(filter, pageable));
         model.addAttribute("status", status);
         model.addAttribute("menu", "inquiries");
@@ -69,6 +76,8 @@ public class AdminController {
 
     @GetMapping("/inquiries/{id}")
     public String inquiry(@PathVariable Long id, Model model) {
+        // 본문·회신 이메일·계정이 한 화면에 다 나오는 곳이라 열람 기록이 가장 필요한 지점이다.
+        audit.record("INQUIRY_VIEW", "inquiry#" + id, "-");
         model.addAttribute("inquiry", adminService.inquiry(id));
         model.addAttribute("menu", "inquiries");
         return "admin/inquiry-detail";
@@ -96,6 +105,8 @@ public class AdminController {
     public String feedbacks(
             @PageableDefault(size = 20, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable,
             Model model) {
+        // 의견은 익명이지만 회신 이메일이 보이므로 열람 기록 대상이다.
+        audit.record("FEEDBACK_LIST_VIEW", "feedback", "page=" + pageable.getPageNumber());
         model.addAttribute("page", adminService.feedbacks(pageable));
         model.addAttribute("menu", "feedbacks");
         return "admin/feedbacks";
@@ -117,6 +128,11 @@ public class AdminController {
     public String users(@RequestParam(required = false) String keyword,
                         @PageableDefault(size = 20, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable,
                         Model model) {
+        // ⚠️ 검색어 자체를 기록하지 않는다 — 닉네임으로 검색하면 그게 곧 개인정보다.
+        //    "누가 언제 사용자 목록을 봤나"만 남기면 접속기록의 목적은 충족된다.
+        audit.record("USER_LIST_VIEW", "user",
+                "keyword=" + (keyword == null || keyword.isBlank() ? "none" : "given")
+                        + " page=" + pageable.getPageNumber());
         model.addAttribute("page", adminService.searchUsers(keyword, pageable));
         model.addAttribute("keyword", keyword);
         model.addAttribute("menu", "users");

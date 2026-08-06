@@ -34,6 +34,10 @@ tenk:
   #    (AdminAccountInitializer). 그래서 패널에 비밀번호 변경 화면이 없다 — 바꾸려면 여기를 고치고 재시작.
   admin:
     enabled: false
+    # 관리자 접속기록(TENK_ADMIN_AUDIT)이 쌓이는 곳. logback-spring.xml 이 이 값을 읽어
+    # 별도 파일에 1년(13개월) 롤링 보관한다 — 개인정보처리방침 §8 에 고지한 기간이다.
+    # 배포에서는 컨테이너 볼륨(/app/logs)으로 덮어써 재배포에도 기록이 살아남는다.
+    audit-log-dir: ./logs
   # 관리자(개발자) 알림. 기본은 꺼짐 — local/test 에서 실제 메일·텔레그램이 나가면 안 되고,
   # 자격증명은 prod 프로파일에만 둔다 (jwt secret 과 같은 원칙: 공통 fallback 을 두지 않는다).
   # 켜는 곳은 application-prod.yaml 한 곳뿐.

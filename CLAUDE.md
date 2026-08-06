@@ -68,7 +68,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **250개** (2026-08-06 실측, 전원 통과). 구성은 단위(엔티티·서비스 Mockito) + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. 최근 증분: 문의하기 239 → **관리자 패널 11**(E2E — 인증 격리·CSRF·처리·승격 + **앱 체인 무회귀 2**) 추가로 250. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback`·`inquiry`·`admin_user` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 해당 CREATE(+app_config INSERT) 선적용 필요. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **254개** (2026-08-06 실측, 전원 통과). 구성은 단위(엔티티·서비스 Mockito) + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. 최근 증분: 문의하기 239 → **관리자 패널 15**(E2E — 인증 격리·CSRF·처리·승격 + **앱 체인 무회귀 2** + **접속기록 5**) 추가로 254. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback`·`inquiry`·`admin_user` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 해당 CREATE(+app_config INSERT) 선적용 필요. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
@@ -162,6 +162,8 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - MyInfoScreen 의 닉네임 행은 변경 불가 상태면 **`lock_outline` 아이콘만** 노출하고, 다시 가능해지는 시각은 **탭했을 때 SnackBar 로만** 알려준다 (상시 라벨 없음 — 위 닉네임 정책 참고). 메뉴로 돌아오면 `reload()` 로 갱신(닉네임 변경분이 '계정 설정'에 넘길 User 에도 반영되게).
   - **메뉴 화면 제목 = '메뉴', 진입 아이콘 = `Icons.menu`(햄버거) 로 확정 (2026-07-25).** 이 허브는 설정(preference) 모음이 아니라 내 정보·계정·법적 고지·앱 정보 등 **이질적 항목을 모아 분기하는 메뉴**라서 '설정'이 아니다. 예고대로 **설정성 항목은 최상위 토글이 아니라 하위 '설정' 화면**으로 들어갔다(2026-08-01 신설) — 새 설정도 최상위에 토글로 붙이지 말고 그 화면에 넣을 것.
 - **회원 탈퇴 = soft delete 후 1개월 유예 → hard delete**. 탈퇴 즉시 [User.withdraw](tenk-backend/src/main/java/com/hjson/tenk/domain/user/User.java) 로 `is_deleted=true` + `deleted_dt` 기록 + 모든 RT 무효화. 이후 매일 새벽 1:30 배치 [UserRetentionScheduler](tenk-backend/src/main/java/com/hjson/tenk/domain/user/UserRetentionScheduler.java) 가 `deleted_dt` 로부터 **1개월(`WithdrawnUserPurgeService.RETENTION`) 지난 계정**을 물리 삭제 — challenge/amount/media_file row + **디스크 영상 파일** + refresh_token 까지 cascade ([WithdrawnUserPurgeService.purge](tenk-backend/src/main/java/com/hjson/tenk/domain/user/WithdrawnUserPurgeService.java), FK 안전 순서: 디스크→media_file→challenge_badge→amount→challenge→refresh_token→inquiry→user). 유저 1명 단위 트랜잭션 — 스케줄러가 유저별로 외부 호출해 `@Transactional` 프록시를 살린다(self-invocation 금지). 보관 기간(1개월)은 개인정보처리방침 §3 과 일치시킬 것. **개인정보처리방침**은 [privacy.html](tenk-backend/src/main/resources/static/privacy.html) → `https://tenk.hjson248.com/privacy.html` 로 서빙 (SecurityConfig PERMIT_ALL 등록). Play Console 개인정보처리방침 URL·앱 내 링크가 이 주소를 가리킨다.
+  - ⚠️ **법적 문서 2종(privacy·terms)의 유지 기준 = "문서 = 실제 동작" 이다** (2026-08-06 확정 — 변호사 검수를 백로그에서 뺀 대신 이 원칙을 남겼다). **모든 문장은 코드·배치·설정에 대응하는 사실이어야 하고, 하지 않는 것을 적지 말 것** — 지키지 못할 약속이 되고 사고 시 오히려 불리해진다. 대응 관계가 비자명한 곳(§8 안전성 확보조치)은 **문서 안에 HTML 주석으로 대응 코드를 적어뒀다.** 정책·조치를 바꾸면 같은 커밋에서 문서도 고칠 것.
+  - 법률 자문이 필요해지는 트리거: **결제 도입 · 광고 SDK · 제3자 제공 · 해외 이전** — 문서가 사실 서술을 넘어 법적 판단을 요구하게 될 때.
 
 ### 영상
 - 짧은 2초 영상은 **클라이언트가 처음부터 짧게·가볍게 녹화**하는 방식 (사후 변환·트랜스코딩 아님). Flutter 기준 `camera` 패키지의 `ResolutionPreset.medium` + 2초 타이머로 처리. 백엔드는 업로드받은 파일을 그대로 저장. export 가 480x864 로 정규화하므로 medium 위로 올릴 이유 없음 (파일만 커짐).
@@ -387,7 +389,13 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 - **`tenk.admin.enabled=false`(기본)면 보안 체인·컨트롤러가 등록되지 않아** `/admin/**` 이 앱 체인의 `anyRequest().authenticated()` 에 걸려 **401** 로 끊긴다. local 은 켜져 있고(`admin@local`), test 는 해당 테스트에서만 켠다.
 - ⚠️ **범위를 늘리지 말 것 — 안 만들기로 한 것들**: 이용자 데이터 **편집·삭제**(삭제의 진실의 원천은 앱 탈퇴 흐름 + 파기 배치다. 패널이 우회로가 되면 그 계약이 무너진다) · 챌린지/기록/영상 조회 · 통계 대시보드 · **답변 발송**(SMTP 를 붙이면 스팸 이슈까지 여기로 끌려온다) · 비밀번호 변경.
 - **알림 2겹은 그대로 유지한다.** 패널은 **'처리'** 를 맡고 알림은 **'인지'** 를 맡는다 — 도착 사실을 아는 건 여전히 알림의 일이라 패널이 생겼다고 뺄 수 없다.
-- **모든 변경은 [AdminAudit](tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 에 남긴다**(전용 로거 `TENK_ADMIN_AUDIT`). 패널이 이용자 개인정보를 열람하고 권한까지 바꾸므로 접근 기록이 안전성 확보조치의 기본이고, **SQL 로 직접 치던 시절엔 아무 흔적도 안 남았다** — 패널로 옮기며 생긴 이점이다. **기록 없이 바꾸는 경로를 만들지 말 것**, 그리고 ⚠️ **로그에 본문·이메일을 담지 말 것**(로그가 또 하나의 개인정보 보관소가 된다).
+- **접속기록 = [AdminAudit](tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java)** (전용 로거 `TENK_ADMIN_AUDIT`). 「개인정보의 안전성 확보조치 기준」이 요구하는 항목에 맞춰 **계정 · 일시 · 접속지 IP · 수행업무**를 남기고, [privacy.html](tenk-backend/src/main/resources/static/privacy.html) §8 에 **1년 이상 보관**으로 고지돼 있다. **SQL 로 직접 치던 시절엔 아무 흔적도 안 남았다** — 패널로 옮기며 오히려 좋아진 부분이다.
+  - **변경뿐 아니라 열람도 남긴다** — 고시의 '수행업무'에 조회가 포함되고 **유출은 변경이 아니라 열람에서 난다**. 거는 곳은 개인정보가 *화면에 실제로 보이는* 3곳(문의 목록·상세 / 의견 목록 / 사용자 목록)이고, 대시보드(집계)·앱 버전(정책 값)은 개인정보가 아니라 제외했다.
+  - **로그인 성공·실패도 남긴다** ([AdminLoginAuditor](tenk-backend/src/main/java/com/hjson/tenk/admin/AdminLoginAuditor.java), Spring Security 인증 이벤트). **실패가 특히 중요하다** — 로그인 폼이 공개 인터넷에 있어 대입 공격의 유일한 탐지 수단이다. 성공 시 `admin_user.last_login_dt` 도 갱신.
+  - ⚠️ **로그에 담지 말 것 3가지**: **본문·이메일**(로그가 또 하나의 개인정보 보관소가 된다) · **입력된 비밀번호**(오타는 대개 진짜 비밀번호의 변형이라 그 자체가 자격증명 유출) · **검색어**(닉네임으로 검색하면 그게 곧 개인정보 — `keyword=given/none` 만 남긴다). 회귀 가드는 `AdminPanelIntegrationTest` 의 접속기록 5건.
+  - **prod 는 Traefik 뒤라 IP 는 `X-Forwarded-For` 의 첫 값**을 쓴다(`getRemoteAddr()` 은 프록시 IP).
+  - ⚠️ **보관은 파일 + 볼륨 2겹으로 성립한다** — [logback-spring.xml](tenk-backend/src/main/resources/logback-spring.xml) 이 전용 파일에 월 단위 13개월 롤링(`additivity=false` 로 앱 로그와 분리)하고, [docker-compose.yml](deploy/docker-compose.yml) 의 **`admin-audit` 볼륨**이 재배포·컨테이너 교체에도 살아남게 한다. **둘 중 하나만 빠져도 "1년 보관" 고지가 거짓이 된다.** DB 클린 재생성(§5.7) 때 **이 볼륨은 지우지 말 것** — 계정 데이터와 무관하다.
+  - **기록 없이 바꾸는 경로를 만들지 말 것.**
 - **`handler_note`(처리 메모)는 문의·의견 양쪽에 있다.** ⚠️ **답변 전문을 옮겨 담는 칸이 아니다** — 각 도메인 규칙의 경고 참고.
 - **Thymeleaf 서버사이드 렌더링**([templates/admin/](tenk-backend/src/main/resources/templates/admin/)). CSS 는 `layout.html` 에 인라인 — **정적 리소스 경로를 열면 permitAll 예외가 하나 더 생기고** 화면이 다섯 개뿐이라 그 비용이 이득보다 크다.
 

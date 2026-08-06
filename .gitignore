@@ -40,6 +40,8 @@ out/
 
 ### Tenk ###
 tenk-backend/uploads/
+# 관리자 접속기록. 배포에서는 컨테이너 볼륨에 쌓이고, 로컬에서 생기는 건 개발 부산물이라 추적 안 함.
+tenk-backend/logs/
 # 배포용 비밀번호 — 절대 추적 금지 (.env.example 만 커밋)
 deploy/.env
 

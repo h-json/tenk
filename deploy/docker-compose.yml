@@ -63,6 +63,9 @@ services:
       # https 서버 URL 을 만든다. 안 켜면 mixed content 로 "주의 요함" 표시.
       # (application-prod.yaml 에도 있지만, 이미지 재빌드 없이 즉시 적용되게 env 로도 둠.)
       SERVER_FORWARD_HEADERS_STRATEGY: framework
+      # 관리자 접속기록의 저장 위치. 아래 admin-audit 볼륨과 짝이라 **둘을 같이 바꿀 것** —
+      # 개인정보처리방침 §8 에 1년 보관으로 고지했는데 컨테이너 안에만 두면 재배포에 사라진다.
+      TENK_ADMIN_AUDIT_LOG_DIR: /app/logs
     # 외부 접속은 Traefik(443)이 담당. 8080 퍼블리시는 맥 로컬 curl 헬스체크 전용
     # (라우터에서 8080 은 포워딩 안 하므로 인터넷엔 안 열린다).
     ports:
@@ -77,6 +80,9 @@ services:
     volumes:
       # 업로드된 영상은 컨테이너가 지워져도 보존되게 named volume 에.
       - uploads:/app/uploads
+      # 관리자 접속기록(1년 보관 고지). ⚠️ 이 볼륨을 지우면 법적으로 고지한 보관 기간을 못 지킨다 —
+      # DB 클린 재생성(§5.7) 때 db-data 와 함께 지우지 말 것. 접속기록은 계정 데이터와 무관하다.
+      - admin-audit:/app/logs
 
 # web 은 리버스 프록시 공유 엣지(별도 리포 `reverse-proxy`)와 공유하는 external 네트워크.
 # 그 엣지 스택이 이 네트워크를 만들고 소유한다. 사전에 한 번:  docker network create web
@@ -90,4 +96,5 @@ networks:
 volumes:
   db-data:
   uploads:
-  dbinit:   # schema.sql(→01-schema.sql) 시딩. ~/Documents bind mount 회피용.
+  dbinit:       # schema.sql(→01-schema.sql) 시딩. ~/Documents bind mount 회피용.
+  admin-audit:  # 관리자 접속기록 (개인정보처리방침 §8 — 1년 이상 보관). 재배포·DB 재생성과 무관하게 유지.

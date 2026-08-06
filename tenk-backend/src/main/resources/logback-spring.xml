@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  관리자 접속기록(TENK_ADMIN_AUDIT)만 별도 파일로 뺀다.
+
+  왜 파일로 빼는가 — 개인정보처리방침 §8 에 **1년 이상 보관**으로 고지했는데, 애플리케이션 로그로만
+  나가면 컨테이너를 재시작·재배포할 때 사라져 그 약속이 성립하지 않는다. 그래서
+  ① 전용 파일 + 1년 롤링 보관, ② 그 파일을 docker named volume 에 두어 재배포에도 살아남게 한다
+  (deploy/docker-compose.yml 의 `admin-audit` 볼륨).
+
+  ⚠️ additivity="false" 가 중요하다 — 빼지 않으면 같은 줄이 루트 appender(콘솔)로도 나가
+  애플리케이션 로그에 섞이고, 그러면 "보관 기간을 따로 가져간다"는 목적이 무너진다.
+  단 **local 프로파일에서는 콘솔에도 남긴다** — 개발 중엔 눈으로 봐야 한다.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 컨테이너에서는 /app/logs (volume). 로컬은 ./logs. -->
+    <springProperty name="auditDir" source="tenk.admin.audit-log-dir" defaultValue="./logs"/>
+
+    <appender name="ADMIN_AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${auditDir}/admin-audit.log</file>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${auditDir}/admin-audit.%d{yyyy-MM}.log.gz</fileNamePattern>
+            <!-- 월 단위 롤링 × 13개월. 고시가 요구하는 "1년 이상"을 한 달 여유와 함께 만족한다. -->
+            <maxHistory>13</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <logger name="TENK_ADMIN_AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="ADMIN_AUDIT_FILE"/>
+        <springProfile name="local">
+            <appender-ref ref="CONSOLE"/>
+        </springProfile>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

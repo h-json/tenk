@@ -183,6 +183,8 @@ tailscale file get ~/Downloads/ ; md5 ~/Downloads/schema.sql
 cp ~/Downloads/schema.sql ./schema.sql
 
 # ② 스택 내리고 볼륨 삭제 (⚠️ 되돌릴 수 없음. 필요하면 먼저 mariadb-dump 백업)
+#    ⚠️ tenk_admin-audit 는 **지우지 말 것** — 관리자 접속기록이고 개인정보처리방침 §8 에
+#       1년 이상 보관으로 고지돼 있다. 계정 데이터와 무관하므로 클린 재생성 대상이 아니다.
 docker compose down
 docker volume rm tenk_db-data tenk_uploads tenk_dbinit
 
