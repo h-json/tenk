@@ -52,6 +52,18 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 class AdminPanelIntegrationTest extends IntegrationTestBase {
 
+    /**
+     * <b>로컬·운영과 일부러 다른 전용 ID 다 — 실계정 ID 로 "통일" 하지 말 것</b> (2026-08-07 확인).
+     *
+     * <p>통합 테스트는 로컬 {@code tenk} 스키마를 그대로 쓰는데, {@link AdminAccountInitializer} 는
+     * 부팅할 때마다 <b>설정된 이메일의 행을 찾아 비밀번호 해시를 yaml 값으로 맞춘다</b>. 그래서 ID 를
+     * 실계정과 같게 두면 {@code ./gradlew test} 한 번에 <b>로컬 패널 비밀번호가
+     * {@code test-admin-pw} 로 덮여</b> 백엔드를 재시작할 때까지 평소 비밀번호로 못 들어간다.
+     *
+     * <p>대가로 로컬 DB 에 이 계정 행이 하나 남는다(이니셜라이저는 이메일이 다른 행을 지우지 않는다).
+     * <b>안 쓰는 행이 남는 쪽이 실계정 비밀번호가 흔들리는 것보다 낫다</b>는 판단이고, 근본 해법은
+     * 테스트 전용 스키마 분리다({@code tenk_test}) — 지금은 하지 않기로 했다.
+     */
     private static final String ADMIN = "admin@test";
 
     @Autowired MockMvc mockMvc;

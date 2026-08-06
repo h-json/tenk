@@ -43,7 +43,7 @@
                 <span class="pill" th:classappend="${i.status.name() == 'PENDING'} ? 'pending' : 'done'"
                       th:text="${i.status.name() == 'PENDING'} ? '미처리' : '완료'">미처리</span>
             </td>
-            <td th:text="${i.type}">SERVICE</td>
+            <td th:text="${i.type.label}">서비스 이용</td>
             <!-- 목록에선 앞부분만 — 본문 전체는 상세에서 본다 -->
             <td>
                 <a th:href="@{/admin/inquiries/{id}(id=${i.id})}"

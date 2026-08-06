@@ -34,7 +34,7 @@
         <tbody>
         <tr th:each="f : ${page.content}">
             <td class="num" th:text="'#' + ${f.id}">#1</td>
-            <td th:text="${f.type}">PRAISE</td>
+            <td th:text="${f.type.label}">좋았던 점</td>
             <td style="min-width:220px" th:text="${f.content}">내용</td>
             <td th:text="${f.replyEmail != null} ? ${f.replyEmail} : '—'">—</td>
             <td class="num"

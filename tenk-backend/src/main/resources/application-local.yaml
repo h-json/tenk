@@ -10,11 +10,17 @@ tenk:
       # 로컬 개발 전용 HS256 키 (Base64, 256bit 이상). prod에서는 절대 사용 금지.
       secret: dGVuay1sb2NhbC1qd3Qtc2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtMTIzNDU2Nzg=
 
-  # 로컬에서 패널을 열어볼 수 있게 켜둔다. 자격증명은 개발 전용 — prod 값과 반드시 다르게 유지할 것.
-  # 접속: http://localhost:8080/admin
+  # 로컬에서 패널을 열어볼 수 있게 켜둔다. 접속: http://localhost:8080/admin
+  # **로그인 ID 는 prod 와 같은 값, 비밀번호는 로컬 전용**이다 (2026-08-07 결정).
+  #   - ID 를 맞추는 건 로컬에서 확인한 로그인이 곧 운영에서 쓸 로그인이라 "로컬에선 되는데" 가
+  #     안 생기게 하려는 것 (prod 값을 바꾸면 여기도 같이 바꾼다).
+  #   - ⚠️ 비밀번호까지 맞추지 않는 건 **로컬 백엔드가 0.0.0.0:8080 에 열리기 때문**이다 —
+  #     같은 Wi-Fi 의 누구나 이 폼에 접근할 수 있어, 값을 공유하면 카페 같은 공용망에 운영
+  #     자격증명을 들고 나가는 셈이 된다. 여기 값은 외우기 쉬운 로컬 전용으로 둘 것.
+  # 값을 바꾸고 재시작하면 admin_user 해시가 자동으로 다시 맞춰진다 (AdminAccountInitializer).
   admin:
     enabled: true
     account:
-      email: admin@local
-      password: local-admin
+      email: admin.tenk@gmail.com
+      password: gmlwns12!@
     base-url: http://localhost:8080
