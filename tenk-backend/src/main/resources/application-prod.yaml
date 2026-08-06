@@ -48,13 +48,16 @@ tenk:
 
   # 관리자 패널 (https://tenk.hjson248.com/admin). 문의 처리 · 의견 열람 · TESTER 승격 ·
   # 앱 버전 정책을 여기서 한다 — 예전의 SSH + docker exec mariadb + SQL 의례를 대체한다.
-  # ⚠️ 공개 인터넷에 로그인 폼이 노출된다. 비밀번호는 여기서만 바꾸고(재시작 시 DB 해시 동기화),
+  # ⚠️ 공개 인터넷에 로그인 폼이 노출된다. 자격증명은 여기서만 바꾸고(재시작 시 DB 해시 동기화),
   #    유출되면 즉시 이 값을 교체 후 재시작할 것 — jwt secret 과 같은 운영 방식이다.
+  # email 은 **순수 로그인 ID** 다 — 메일이 오가지 않고 형식 검증도 없다. 개인 메일을 쓰지 말 것
+  # (ID 를 추측당하면 비밀번호 하나만 남는다). 서비스 전용 3계정의 역할 구분은 CLAUDE.md "관리자 알림" 참고:
+  #   system.tenk@ = 알림 발신 / support.tenk@ = 수신·고지된 문의처 / admin.tenk@ = 패널 로그인
   admin:
     enabled: true
     account:
-      email: h.json248@gmail.com
-      password: Ipmh51nZ2UAf2XkU3Mnu
+      email: admin.tenk@gmail.com
+      password: EzaF$=G5Qw2g01~RS
     # 알림 본문에 붙일 패널 주소. 서버는 자기 공개 주소를 모르고 알림은 스케줄러(요청 밖)에서도
     # 나가므로 설정으로 받는다. 비우면 링크 줄만 빠지고 알림 자체는 정상 발송된다.
     base-url: https://tenk.hjson248.com
