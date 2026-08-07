@@ -429,7 +429,8 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
   - **변경뿐 아니라 열람도 남긴다** — 고시의 '수행업무'에 조회가 포함되고 **유출은 변경이 아니라 열람에서 난다**. 거는 곳은 개인정보가 *화면에 실제로 보이는* 3곳(문의 목록·상세 / 의견 목록 / 사용자 목록)이고, 대시보드(집계)·앱 버전(정책 값)은 개인정보가 아니라 제외했다.
   - **로그인 성공·실패도 남긴다** ([AdminLoginAuditor](tenk-backend/src/main/java/com/hjson/tenk/admin/AdminLoginAuditor.java), Spring Security 인증 이벤트). **실패가 특히 중요하다** — 로그인 폼이 공개 인터넷에 있어 대입 공격의 유일한 탐지 수단이다. 성공 시 `admin_user.last_login_dt` 도 갱신.
   - ⚠️ **로그에 담지 말 것 3가지**: **본문·이메일**(로그가 또 하나의 개인정보 보관소가 된다) · **입력된 비밀번호**(오타는 대개 진짜 비밀번호의 변형이라 그 자체가 자격증명 유출) · **검색어**(닉네임으로 검색하면 그게 곧 개인정보 — `keyword=given/none` 만 남긴다). 회귀 가드는 `AdminPanelIntegrationTest` 의 접속기록 5건.
-  - **prod 는 Traefik 뒤라 IP 는 `X-Forwarded-For` 의 첫 값**을 쓴다(`getRemoteAddr()` 은 프록시 IP).
+  - ⚠️ **IP 는 `getRemoteAddr()` 로 읽는다 — `X-Forwarded-For` 를 직접 읽지 말 것** (2026-08-08 정정). `server.forward-headers-strategy=framework` 라 Spring 의 `ForwardedHeaderFilter` 가 XFF 를 적용한 뒤 **헤더를 제거하고** `getRemoteAddr()` 을 XFF 첫 값으로 바꿔치기한다 — 헤더를 먼저 읽는 분기는 **영원히 null 이라 죽은 코드**가 된다.
+  - ⚠️ **단 prod 에서는 그 값도 실제 클라이언트가 아니다** — 맥+Colima 의 VM 포트 포워딩이 Traefik 에 닿기 전에 source IP 를 지워서 전부 `172.19.0.1`(도커 게이트웨이)로 찍힌다. 앱·프록시 설정으로 못 고치는 인프라 문제이고, **IP 기반 판정(대입 공격 탐지 등)을 설계하기 전에 [handoff.md](docs/handoff.md) §1-F #28 을 먼저 해결할 것.**
   - ⚠️ **보관은 파일 + 볼륨 2겹으로 성립한다** — [logback-spring.xml](tenk-backend/src/main/resources/logback-spring.xml) 이 전용 파일에 월 단위 13개월 롤링(`additivity=false` 로 앱 로그와 분리)하고, [docker-compose.yml](deploy/docker-compose.yml) 의 **`admin-audit` 볼륨**이 재배포·컨테이너 교체에도 살아남게 한다. **둘 중 하나만 빠져도 "1년 보관" 고지가 거짓이 된다.** DB 클린 재생성(§5.7) 때 **이 볼륨은 지우지 말 것** — 계정 데이터와 무관하다.
   - **기록 없이 바꾸는 경로를 만들지 말 것.**
 - **`handler_note`(처리 메모)는 문의·의견 양쪽에 있다.** ⚠️ **답변 전문을 옮겨 담는 칸이 아니다** — 각 도메인 규칙의 경고 참고.

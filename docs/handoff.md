@@ -52,7 +52,11 @@
 - ✅ **관리자 패널 (#27, 2026-08-06)** — 안건은 "문의·의견을 운영할 수 있게" 였는데, 조사에서 **백로그 ①의 문제의식이 반대 방향**이라는 게 드러났다: 걱정하던 PK 노출이 아니라 **알림 본문에 `inquiry_id` 가 아예 없어서**(리마인드 SQL 도 `WHERE inquiry_id=?` 물음표 그대로) 처리하려면 `SELECT` 로 id 를 찾아야 했다. **사용자 판단으로 최소 관리자 웹 UI 를 짓기로** 방침을 뒤집었고(⑥ 의 "트리거는 UGC 모더레이션" 을 앞당김), 결과적으로 **SQL 의례 4가지(문의 처리·의견 열람·TESTER 승격·앱 버전 정책)와 SSH + `docker exec` 자체가 사라졌다.** ⭐ **백로그 4건 중 2건이 패널로 소멸**(①접수번호·③미처리 조회) — 남은 ②는 `handler_note` 컬럼 하나, ④는 알림 본문 링크로 끝났다. 몸통은 화면이 아니라 **인증**이었다(앱 로그인이 카카오 SDK 전용이라 브라우저 진입로가 없었다) — **보안 체인을 2개로 쪼개** 앱 인증은 한 줄도 안 건드렸다. 관리자 계정은 사용자 제안(`user` 컬럼 추가)을 조정해 **`admin_user` 별도 테이블**로 갔다(생명주기가 다르다). 테스트 **254개**(+15, **앱 체인 무회귀 2 · 접속기록 5 포함**) + 로컬 구동 검증 전항목 통과. **곁가지로 안전성 확보조치까지 메웠다** — privacy.html §8 신설 + 접속기록 완성(IP·로그인·열람·1년 보관 볼륨), **변호사 검수는 드롭하고 "문서 = 실제 동작"을 유지 기준으로** 대체(사용자 결정). 회의록 [decisions.md](decisions.md) "관리자 패널". ⚠️ **백엔드 재배포 + 스키마 3건**(§0).
 - ✅ **관리자 패널 로컬 구동 검증 + 유형 라벨 (2026-08-07)** — 배포 전이라 운영 URL 은 아직 안 열려서 **로컬에서 5화면을 전부 눌러봤다**(로그인 → 대시보드 → 문의 목록·상세·**처리 완료 + 메모** → 의견 → 사용자 → 앱 버전). 처리 결과가 DB 에 반영되고 **접속기록에 본문·이메일·검색어 없이** 찍히는 것까지 확인. 그 과정에서 **유형이 `PRIVACY` 처럼 코드 그대로 노출**되는 걸 발견해 `InquiryType`·`FeedbackType` 에 `label` 을 달았다 — **의견 라벨은 앱 문구와 일부러 다르다**(앱은 선택지 문장, 패널은 목록 한 칸). 곁가지로 **local 관리자 자격증명 방침**(ID 는 운영과 공유, 비밀번호는 로컬 전용)과 **테스트 계정 함정**을 규칙으로 박았다. 테스트 **254개** 전원 통과. 근거는 [decisions.md](decisions.md) "관리자 패널 — 로컬 검증 후속", 상세는 [handoff-archive.md](handoff-archive.md). ⚠️ **앱 코드 변경 없음 · 백엔드는 §0-DEPLOY 에 같이 실린다.**
 - ✅ **관리자 알림을 신호로 축약 + 답장 초안 (2026-08-07)** — 알림 3종에서 **본문·회신 이메일·계정·유형·`#id` 를 전부 뺐다**. 편의가 아니라 두 가지 이유다: 내용을 실으면 **메일함·텔레그램이 수집표·파기 배치 어디에도 안 잡히는 개인정보 보관소**가 되고, **알림으로 읽으면 접속기록이 안 남아** `AdminAudit` 를 세워둔 의미가 사라진다. 리마인드는 **오전 9시 → 저녁 6시**(답장할 시간이 남아 있을 때). ⚠️ **대가로 "알림 메일에 회신" 경로가 사라져** 패널 상세에 **[메일로 답장]**(Gmail 작성 링크 + 원문 인용)과 **[초안 복사]** 를 붙였다 — `mailto:` 는 한글 본문이 인코딩되며 9배로 불어 **OS 한도에서 잘린다**. **이 둘은 한 세트**라 인용을 빼면 *"메일 스레드가 이미 아카이브"* 전제(익명 사본 기각 · `handler_note` 답변 전문 금지)가 무너진다. 테스트 **255개**(+1 원문 인용 가드) 전원 통과. 회의록 [decisions.md](decisions.md) "관리자 알림 — 내용을 싣지 않는다". ⚠️ **앱 코드 변경 없음 · 백엔드는 §0-DEPLOY 에 같이 실린다.**
-- ⏭️ 다음 후보: **§0-DEPLOY(#23 + #27 + 알림 축약 한 번에 — `inquiry`·`admin_user` CREATE + `handler_note` 2건 선적용)** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **§0-DEPLOY 3건 배포 + 앱 `1.2.0+5` 업로드 (2026-08-08)** — 밀려 있던 백엔드 3건(#23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안)을 **스키마 3건 선적용 → 이미지 교체** 순으로 한 번에 반영했고, 앱도 마지막 릴리스(`1.1.0+4`, 08-03) 이후 **8커밋**이 쌓여 있어 `1.2.0+5` 로 올려 Play 에 업로드했다. **서버 측·화면·알림 검증 전항목 통과** — 핵심은 **앱 체인 무회귀**(`GET /api/users/me` 가 로그인 리다이렉트가 아니라 401 `C0003`).
+  배포 직후 **사용자 결정으로 prod DB 를 통째로 재생성**했고([docker-deployment.md](docker-deployment.md) §5.7) `app_config` 는 **`1.2.0` 으로 재설정 완료**. 상세·검증 결과·함정은 [handoff-archive.md](handoff-archive.md).
+  - 🐞 **이 과정에서 백로그 3건이 나왔다** — **#28** 접속기록 IP(§1-F) · **#29** 결과 카드 양옆 여백(§1-G) · **#30** prod 로그에 개인정보 노출(§1-H, **운영에 노출 중**).
+  - ⚠️ **남은 후처리 1건**: **TESTER 재승격** — 클린 재생성으로 계정이 전부 사라졌다. **카카오 재로그인으로 계정이 생긴 뒤** 패널 → '사용자' 에서.
+- ⏭️ 다음 후보: **§0 잔여(`app_config` 1.2.0 · TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#30 prod 로그 위생(운영에 노출 중)** / **#29 결과 카드 양옆 여백** / **#28 접속기록 IP** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -121,26 +125,29 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**백엔드 — 🔴 미배포 3건 (#23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안). 한 번에 나간다.** 세 번째는 스키마 변경이 없어 이미지에만 실린다.
+**백엔드 — ✅ 미배포 0건 (2026-08-08 배포 완료).** #23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안 3건을 한 번에 반영했다.
 
-- [ ] **⚠️ 라이브 DB 에 스키마 3건 선적용** — `ddl-auto=validate` 라 **이미지 교체 전에** 해야 부팅된다. 절차는 [docker-deployment.md](docker-deployment.md) §5.5.
+- [x] ✅ **라이브 DB 스키마 3건 선적용 완료 (2026-08-08)** — DBeaver 로 직접 적용. `inquiry` 는 schema.sql 블록에 `handler_note` 가 **이미 포함**돼 있어 별도 ALTER 가 필요 없었고, `feedback` 만 ALTER 를 쳤다.
   ```sql
-  -- #23
-  CREATE TABLE `inquiry` (...);        -- schema.sql 의 inquiry 블록 그대로
-  -- #27
-  CREATE TABLE `admin_user` (...);     -- schema.sql 의 admin_user 블록 그대로
-  ALTER TABLE `inquiry`  ADD COLUMN `handler_note` VARCHAR(500) NULL AFTER `handled_dt`;
+  CREATE TABLE `inquiry` (...);     -- handler_note 포함
+  CREATE TABLE `admin_user` (...);  -- ⚠️ 행은 넣지 않는다 (부팅 시 tenk.admin.account 로 자동 생성)
   ALTER TABLE `feedback` ADD COLUMN `handler_note` VARCHAR(500) NULL AFTER `os_version`;
   ```
-  ⚠️ **`admin_user` 에 행을 넣지 말 것** — 부팅 시 `tenk.admin.account`(prod yaml)로 자동 생성된다.
+  ⭐ **부팅 성공(`Started TenkApplication in 4.758 seconds`) 자체가 이 3건의 검증**이다 — `ddl-auto=validate` 라 하나라도 빠지면 거기서 죽는다.
+- [x] ✅ **dbinit 볼륨 시드 갱신 완료 (2026-08-08)** — ⚠️ **처음엔 맥에 있던 구버전(18.1kB)이 그대로 들어갔다.** 라이브는 멀쩡하고 **다음 DB 클린 재구축 때만** 부팅 실패하는 종류라 가장 놓치기 쉽다. **`docker cp` 후 전송 바이트 수를 리포의 `docs/schema.sql` 크기와 대조할 것**(당시 23,973B → `Successfully copied 24kB` 확인). 파일 이송은 SSH 키가 깨져 있어 `tailscale file cp docs/schema.sql macmini:` → 맥에서 `tailscale file get .` 로 했다.
 - [x] ✅ **텔레그램 자격증명 채움** (2026-08-06). chat_id `8946220822`.
-- [ ] 배포 후 검증:
+- [x] ✅ **서버 측 배포 검증 전항목 통과 (2026-08-08)** — 윈도우에서 공개 HTTPS 로 실측:
+  - **앱 체인 무회귀(제일 중요)**: `GET /api/users/me` → **401 `{"success":false,"error":{"code":"C0003",…}}`**. 로그인 화면 리다이렉트가 아니다 = 보안 체인 2개 분리가 살아 있다
+  - 관리자 체인: `/admin` → **302 → `/admin/login`**, 로그인 페이지 **200**
+  - `POST /api/inquiry` 미인증 → **401** (PERMIT_ALL 에 안 샜음) / OpenAPI 에 `/api/inquiry` 등록
+  - privacy.html **§8 안전성 확보조치** 노출 / HSTS 정상
+- [ ] 배포 후 검증 — **사람 눈이 필요한 잔여분**:
   - #23 — `POST /api/inquiry`(인증) → 행 생성 + **메일·텔레그램 수신** / 인증 없이 → 401 / 회신 이메일 없이 → 400
   - #27 — `https://tenk.hjson248.com/admin` 로그인(prod yaml 계정) → 문의 목록·처리 / **`GET /api/users/me` 가 여전히 401 JSON `C0003`**(앱 체인 무회귀, 제일 중요) / 알림 본문 끝에 패널 링크
   - **알림에 내용이 안 들어가는지** (2026-08-07 추가) — 문의·의견을 1건씩 넣어 메일·텔레그램이 **`새 문의가 도착했어요.` + `미처리 문의 개수 : N` + 링크**만 담는지. **본문·회신 이메일·닉네임·`#id` 가 한 글자라도 보이면 회귀다.** 이어서 패널 상세의 **[메일로 답장]** 을 눌러 **원문이 인용된 채로** Gmail 작성 창이 열리는지(⚠️ 이게 답장 스레드를 아카이브로 만드는 유일한 장치다). 리마인드 시각은 **저녁 6시**.
   - **유형이 한글 라벨로 뜨는지** (2026-08-07 추가) — 문의 목록·상세 / 의견 목록의 '유형' 칸이 `PRIVACY` 가 아니라 `개인정보`. 라벨은 `InquiryType`·`FeedbackType` 의 `label` 이고 **앱의 선택지 문구와 별개**다(의견은 일부러 다르다 — [../CLAUDE.md](../CLAUDE.md) "의견 보내기" 참고).
-  - #27 접속기록 — `docker compose exec backend cat /app/logs/admin-audit.log` 에 **로그인·열람·변경이 IP 와 함께** 찍히는지. ⚠️ **prod 는 Traefik 뒤라 `ip=` 가 프록시 IP(172.x)로 나오면 `X-Forwarded-For` 가 안 오는 것** — 그때는 Traefik 쪽 헤더 설정을 봐야 한다(로컬은 `X-Forwarded-For` 가 없어 `127.0.0.1` 이 정상).
-  - privacy.html **§8 안전성 확보조치**가 보이는지 (`https://tenk.hjson248.com/privacy.html`)
+  - [x] ✅ **#23·#27 화면·알림 검증 완료 (2026-08-08)** — 패널 로그인·문의 처리·유형 한글 라벨·[메일로 답장] 원문 인용, 알림 2겹 수신 + **내용 미포함** 확인. **Gmail 스팸 필터 문제도 해결됨**(수신 계정에 `from:system.tenk@gmail.com` 필터).
+  - [ ] 🐞 **접속기록 IP 가 전부 `172.19.0.1`** → **백로그 #28** (§1-F). 기록 자체는 정상적으로 남으므로 배포를 막지 않는다.
 - [x] ✅ **관리자 계정 설정 완료 (2026-08-06)** — [application-prod.yaml](../tenk-backend/src/main/resources/application-prod.yaml) 의 `tenk.admin.account`. **ID 는 개인 메일이 아니라 서비스 전용 `admin.tenk@`** 로 잡았다(개인 메일을 ID 로 두면 대입 공격에 ID 를 이미 넘겨준 셈이고, 로그인 실패 로그에도 쌓인다). 바꾸려면 그 값을 고치고 재시작 — DB 해시가 자동 동기화된다(패널에 변경 화면은 없다, 의도).
 - [x] ✅ **#7 예외처리 + #17 알림 지표 배포 완료 (2026-08-03)** — 스키마 변경이 없어 **이미지 교체만** ([docker-deployment.md](docker-deployment.md) §5.1). 테스트 226개 `--rerun-tasks` 전원 통과 후 push → 맥에서 `pull && up -d`. 검증 전항목 통과: `/v3/api-docs` 에 **`currentStreak`·`noSpendDays`**(#17) / **`C0005`·`C0006`·`C0007` 3종 실측**(#7) / 401 envelope `C0003` / HTTPS·HSTS 정상 / 버전 게이트 `UPDATE_REQUIRED`·`LATEST`.
   - ⚠️ **`curl /api/nope` 로 #7 을 확인하려던 예전 메모는 틀린 값이었다** — `PERMIT_ALL` 이 **와일드카드가 아니라 정확 경로 목록**이라 인증 없는 미등록 경로는 Security 가 먼저 **401 C0003** 으로 자른다(디스패치까지 안 간다). `handleMalformedRequest` 를 인증 없이 찌르려면 **PERMIT_ALL 안에서** 골라야 한다: `GET /swagger-ui/nope.html`→404 C0005 / `GET /api/auth/refresh`(POST 전용)→405 C0006 / `POST /api/auth/refresh` + `Content-Type: text/plain`→415 C0007.
@@ -176,11 +183,15 @@
     - [ ] **밝은 배경화면 위에서 아이콘 경계** — 바탕이 흰색이라 흐려진다. 견딜 만한지 보고, 아니면 민트 반전으로 전환 검토(마크 색만 바꾸면 되고 생성기 재실행 1회)
     - [ ] 로그인 화면 로고 lockup(마크 88 + 워드마크 40) — 작은 화면에서 카카오 버튼을 밀어내지 않는지
     - [ ] 결과 카드 워터마크 — 캡처 PNG·영상 마지막 클립 **양쪽**에서 마크가 나오는지
-- [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨. **#27 이후로는 [관리자 패널](https://tenk.hjson248.com/admin) → '사용자'** 에서 카카오 회원번호로 검색해 버튼 한 번(패널 배포 후). 폴백 SQL: `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
+- [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨(**2026-08-08 재생성으로 다시 필요**). ⚠️ **카카오로 한 번 로그인해 계정이 만들어진 뒤에** 승격할 것 — 계정 자체가 없으면 검색이 안 된다. **#27 이후로는 [관리자 패널](https://tenk.hjson248.com/admin) → '사용자'** 에서 카카오 회원번호로 검색해 버튼 한 번(패널 배포 후). 폴백 SQL: `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
 - [x] ✅ **③ 새 AAB 빌드 완료 (2026-08-03)** — `pubspec` **`1.0.0+3` → `1.1.0+4`**(기능 추가라 minor) → `flutter analyze` 0건 → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/bundle/release/app-release.aab` (100.4MB). 병합 매니페스트 실측: `versionCode=4`/`versionName=1.1.0`, **`SCHEDULE_EXACT_ALARM` 없음**(inexact 방침대로), 알림 권한 4종 반영.
   - ✅ **`app_config` 갱신 완료** — `latest_version='1.1.0'` + **`min_supported_version='1.1.0'`(강제)**. 내부 테스터를 최신 빌드로 통일하려는 의도적 선택이라, **1.1.0 미만은 전원 ForceUpdateScreen 에 갇힌다.** 되돌리려면 `min_supported_version='1.0.0'` 으로 UPDATE 한 줄(재배포 불필요). 검증: 구버전→`UPDATE_REQUIRED` / 신버전→`LATEST`.
   - ✅ **Play 내부 테스트 게시 + 실기기 다운로드 확인 (2026-08-03)** — `min` 을 올려둔 상태였으므로 게시 전까지 구버전이 잠겨 있었고, 게시로 그 구간이 닫혔다. ⚠️ **다음에도 이 UPDATE 는 게시 반영 뒤에** — 스토어에 구버전뿐인 상태에서 min 을 올리면 업데이트 버튼을 눌러도 나갈 길이 없다.
   - **Play 업로드 시 "난독화 파일 없음" 경고는 정상** — R8 을 의도적으로 꺼둬서(카카오 Pigeon 제거 회귀) 매핑 파일이 애초에 없다. 난독화가 없으니 크래시 스택트레이스도 이미 읽을 수 있다.
+- [x] ✅ **⑤ `1.2.0+5` 빌드·업로드 완료 (2026-08-08)** — `1.1.0+4`(08-03) 이후 **8커밋**이 안 실려 있었다: `#19` 하단 액션 잘림 · `#24` 휠 picker+세로 고정 · `#20` 컨페티 잔존 · `#21`/`#26` 문구 정리 · `#22` 알림 권유 위치 · `#25` 런처 아이콘 확대 · **`#23` 고객센터 문의하기(신규 기능 → minor bump)**. `flutter analyze` 0건 + `flutter test` **22개** 통과 → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` (100.5MB). 병합 매니페스트 실측: **`versionCode=5`/`versionName=1.2.0`**, `POST_NOTIFICATIONS` 있고 **`SCHEDULE_EXACT_ALARM` 없음**(inexact 방침대로).
+  - [x] ✅ **`app_config` 를 `1.2.0` 으로 설정 완료 (2026-08-08)** — 게시 반영 후 **관리자 패널 → '앱 버전'** 에서. ⚠️ **DB 클린 재생성을 하면 이 값이 시드(`1.0.0/1.0.0`)로 되돌아가니 재설정할 것**(이번에도 그랬다). ⚠️ **`min` 을 올릴 땐 항상 스토어 게시 반영을 먼저 확인** — 스토어에 그 버전이 없으면 강제 업데이트 화면에서 나갈 길이 없다.
+  - [ ] Play Console 앱 아이콘 **재업로드** (`tenk_app/assets_src/icon/play_store_512.png` — #25 로 마크가 커졌다)
+- **DB 3306 포트 노출 — 열어둔 채로 간다 (2026-08-08 사용자 결정).** 상세·지켜야 할 선은 [docker-deployment.md](docker-deployment.md) §5.6. **매 세션 다시 지적하지 말 것.**
 - [ ] **④ Play Console 폼 입력**:
   - [x] 개인정보처리방침 URL / 광고 / 콘텐츠 등급 설문 — ✅ 완료 (2026-07-21)
   - [ ] **앱 액세스 권한(로그인 세부정보)** — 답안 확정(**데모 카카오 계정**, [play-console-app-content.md](play-console-app-content.md) §2). 남은 실행: **데모 카카오 계정 생성** + 콘솔 폼에 아이디/비번 입력 + **새 기기 로그인 재현**(추가 인증 안 뜨는지)
@@ -294,6 +305,39 @@
   - ✅ **후속(같은 날) — 안전성 확보조치를 문서·코드 양쪽에서 메움.** 진단해보니 **조치는 대부분 이미 하고 있었고 빠진 건 문서화**였다(HTTPS·BCrypt·RT 해시·세션 만료·DB 포트 미공개·파기 배치). **조치 자체가 미흡한 건 접속기록 하나** — IP 가 없고 앱 로그로만 나가 재배포에 사라져 "1년 보관"이 성립하지 않았다. privacy.html **§8 신설**(적은 5가지는 전부 실제 조치, 대응 코드를 HTML 주석으로 병기) + **접속기록 완성**(IP · 로그인 성공/실패 · **열람 기록** · 전용 파일 13개월 롤링 + `admin-audit` 볼륨). ⚠️ **로그에 본문·비밀번호·검색어를 담지 않는다**(가드 5건). 테스트 **254개**.
   - ✅ **변호사 검수는 백로그에서 드롭** (사용자 결정) — 대신 **"문서 = 실제 동작"** 을 유지 기준으로 못박았다([../CLAUDE.md](../CLAUDE.md) "회원 탈퇴" 항목 하위). 트리거는 결제·광고 SDK·제3자 제공·해외 이전.
 
+#### 1-F. 접속기록 IP (2026-08-08 등록) — 미착수
+
+- [ ] **#28 관리자 접속기록의 IP 가 전부 `172.19.0.1` 로 찍힌다** — 배포 검증에서 발견. **코드·Traefik 설정은 정상이고 원인은 인프라(macOS + Colima)다.**
+  - **진단 경로(추정으로 두 번 틀렸으니 그대로 옮겨 적는다)**: ① "패널을 `localhost:8080` 으로 직접 열어서 XFF 가 없는 것" 이라고 봤으나, **공개 HTTPS 로 일부러 실패하는 로그인을 쏴 보니**(`actor=xff-probe`) 똑같이 `172.19.0.1` 이라 기각 ② `docker network inspect` 로 확정: **`172.19.0.1` 은 `web`(172.19.0.0/16) 의 게이트웨이**이고 **Traefik 은 `172.19.0.2`**, 백엔드는 `172.19.0.4`. 컨테이너끼리 붙었다면 `.2` 가 찍혀야 한다.
+  - **결론**: 이 모순은 **XFF 가 정상적으로 오고 있고 그 값이 `172.19.0.1`** 일 때만 성립한다 — 즉 **Traefik 자신이 클라이언트를 게이트웨이로 본다.** 외부 요청이 `맥 :443` → **Lima 유저스페이스 포트 포워더** → VM → docker-proxy 를 거치며 **VM 경계에서 원 source IP 가 소실**되기 때문. **Traefik 이전 단계에서 잃으므로 앱에서는 복구 불가.**
+  - **선택지 2개**: **A) Colima vmnet** — `colima start --network-address` 로 VM 에 LAN IP 를 주고 **공유기 80/443 포워딩을 맥 호스트가 아니라 VM IP 로** 변경. 서빙 경로 전체를 건드리는 인프라 작업(sudo + 공유기). **B) 현행 수용 + [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) §8 문구 정정** — 대신 **로그인 실패 기반 대입 공격 탐지가 사실상 불가능**해진다(공개 폼의 유일한 탐지 수단이었다).
+  - ⚠️ **이건 "문서 = 실제 동작" 원칙이 잡아내라고 있는 갭이다** — §8 이 '접속지 IP' 를 남긴다고 고지했는데 실제로는 모든 접속이 같은 게이트웨이 IP 다. A 든 B 든 **하나는 해야 한다.**
+  - **곁다리로 같이 고칠 것**: [AdminAudit.currentIp()](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 의 `getHeader("X-Forwarded-For")` 분기는 **한 번도 실행된 적이 없는 죽은 코드**다 — `SERVER_FORWARD_HEADERS_STRATEGY: framework` 라 Spring 의 `ForwardedHeaderFilter` 가 **XFF 헤더를 떼어낸 뒤** 넘기고, 대신 `getRemoteAddr()` 을 XFF 첫 값으로 바꿔치기한다. 지금 결과를 내는 건 폴백 쪽이다. **주석이 설명하는 동작과 실제가 어긋나 있으니 폴백 하나로 정리할 것.**
+  - **확정 검증(1분, 되돌리기 쉬움)**: reverse-proxy 스택 `command:` 에 `--accesslog=true` 를 잠깐 넣고 `docker compose up -d` → 패널 한 번 열고 `docker compose logs --tail=5 traefik` 의 `ClientAddr` 확인 → 원복.
+
+#### 1-G. 결과 카드 화면 비율 (2026-08-08 등록) — 미착수
+
+- [ ] **#29 결과 카드 화면에 양옆 여백이 생긴다** (실기기, 재발). 규칙([../CLAUDE.md](../CLAUDE.md) "결과 카드")은 **풀블리드 = 카드를 화면 폭에 꽉 맞춘다** 인데 실제로는 액자처럼 보인다.
+  - **원인은 knife-edge 레이아웃이다.** [result_card_screen.dart](../tenk_app/lib/presentation/challenge/result_card/result_card_screen.dart) 가 `Column[상태바 띠 → Expanded(FittedBox(BoxFit.contain)) → 액션 Row]` 구조인데, **`BoxFit.contain` 은 폭·높이 중 더 빡빡한 쪽에 맞춘다.** 카드가 480x864(비율 0.5556)라:
+    > **가용 높이 < 화면 폭 × 1.8 이 되는 순간 높이 기준으로 축소되고, 그 차이가 양옆 여백으로 나온다.**
+  - 384dp 폭 기기 기준 임계 높이는 **691dp** 인데 실제 가용 높이가 **~712dp**(화면 832 − 상태바 − 액션 Row·제스처 인셋)라 **여유가 21dp 뿐이다.** 그래서 **글자 크기 확대·3버튼 내비·큰 상태바** 처럼 액션 Row 나 시스템 인셋을 조금만 키우면 바로 뒤집힌다 — "됐다 안 됐다" 하는 이유.
+  - **고칠 방향 3안** (미결 — 에뮬 A/B 로 실물 비교해 정할 것, [handoff-archive.md](handoff-archive.md) 2026-08-04 #26 의 방식):
+    **A)** `BoxFit.fitWidth` + `ClipRect` — 폭을 무조건 채우고 모자란 높이는 아래를 자른다(워터마크가 잘릴 수 있음)
+    **B)** 액션 Row 를 `Stack` 으로 **카드 위에 띄운다** — 카드에 화면 높이를 통째로 주는 방식. 카드 하단이 화이트라 버튼이 얹혀도 이어져 보이고 **풀블리드 의도에 가장 맞는다**
+    **C)** 액션 Row 높이를 줄여 임계를 벗어난다 — 가장 싸지만 **또 뒤집힐 여지를 남긴다**(지금이 그 상태다)
+  - ⚠️ **캡처물(저장 PNG·영상 마지막 클립)은 이 문제와 무관하다** — 오프스크린에서 480x864 고정으로 그린다. **화면 전용 문제**라 캡처 경로를 건드리지 말 것.
+  - 고칠 때 **위젯 테스트로 가드를 남길 것** — 좁은 화면·큰 텍스트 스케일에서 카드 폭 == 화면 폭인지. 이 화면은 이미 실기기에서만 드러난 결함이 두 번 나왔다(#20 컨페티 잔존, 이 건).
+
+#### 1-H. prod 로그 위생 (2026-08-08 등록) — 미착수 · **현재 운영에 노출 중**
+
+- [ ] **#30 prod 가 모든 JPA 바인딩 파라미터를 애플리케이션 로그에 찍는다.** DB 클린 재생성 로그에서 발견 — `TRACE o.h.orm.jdbc.bind : binding parameter (2:VARCHAR) <- [admin.tenk@gmail.com]`, `(4:VARCHAR) <- [$2a$10$…]`(관리자 BCrypt 해시).
+  - **원인**: [application.yaml](../tenk-backend/src/main/resources/application.yaml) 이 **공통** 파일인데 개발 편의 설정 4개가 여기 있어 prod 에도 적용된다 — `spring.jpa.show-sql: true` · `hibernate.format_sql: true` · `logging.level.org.hibernate.SQL: debug` · `logging.level.org.hibernate.orm.jdbc.bind: trace`.
+  - ⚠️ **관리자 해시만의 문제가 아니다** — JPA 를 지나는 **모든 값**(닉네임 · 문의 본문 · 회신 이메일 · 생년월일 · 성별)이 컨테이너 로그로 나간다. **[AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 에 못박아둔 규칙**(*"내용을 적으면 로그가 또 하나의 개인정보 보관소가 되고, 그러면 로그 자체가 수집표·보관기간의 대상이 된다"*)**이 애플리케이션 로그에서 그대로 벌어지고 있다.** privacy.html §8 신설과도 어긋난다.
+  - **고치는 법**: 위 4개를 `application.yaml` 에서 들어내 [application-local.yaml](../tenk-backend/src/main/resources/application-local.yaml) 로 옮긴다(로컬 개발 경험은 그대로). **이미지 재빌드 + 재배포가 따라온다.**
+  - **재배포 없이 지금 막는 법(중간 조치)**: [docker-compose.yml](../deploy/docker-compose.yml) backend `environment` 에 `SPRING_JPA_SHOW_SQL: "false"` · `LOGGING_LEVEL_ORG_HIBERNATE_SQL: "off"` · `LOGGING_LEVEL_ORG_HIBERNATE_ORM_JDBC_BIND: "off"` 를 넣고 `docker compose up -d`. **env 가 yaml 을 덮으므로 즉시 적용된다.** 근본 수정 때 이 env 는 걷어낼 것(두 곳에 설정이 남으면 드리프트).
+  - **이미 찍힌 로그**: 도커 stdout json 로그에 남아 있다. 지우려면 `docker compose down && up -d` 로 컨테이너를 새로 만들 것(⚠️ `admin-audit` 볼륨은 무관하니 안전하다).
+  - **곁가지 — 같은 커밋에서 고칠 것**: [logback-spring.xml](../tenk-backend/src/main/resources/logback-spring.xml) 의 `<springProfile>` 이 `<logger>` **안에** 있어 부팅 때 WARN 과 함께 **무시된다**(`<springProfile> elements cannot be nested within an <appender>, <logger> or <root> element`). 즉 "local 에선 접속기록을 콘솔에도 남긴다"는 주석은 **한 번도 동작한 적이 없다.** `<springProfile>` 을 `<logger>` 바깥으로 빼 local / !local 두 벌로 분리할 것. 영향은 개발 편의뿐이라 ①보다 가볍다.
+
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 
 > **업적(achievement) 시스템**은 우선순위를 최후로 내렸다 → 맨 아래 §5.
@@ -305,7 +349,7 @@
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **미배포 백엔드 변경 — ✅ 0건 (2026-08-03 기준).** 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;` — 맥에서는 DB 포트 퍼블리시가 없어 `docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "..."` 로 친다(`set -a; . ./.env; set +a` 로 비번을 셸에 올린 뒤). **`min` 을 올릴 땐 Play 게시 반영을 먼저 확인할 것** — 스토어에 새 버전이 없는 상태에서 올리면 강제 업데이트 화면에서 나갈 길이 없다. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
+- **미배포 백엔드 변경 — ✅ 0건 (2026-08-08 기준).** 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전 값은 이제 [관리자 패널](https://tenk.hjson248.com/admin) → '앱 버전' 에서 바꾼다** — 아래 SQL 은 패널이 안 뜰 때의 폴백이다. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;` — 맥에서는 DB 포트 퍼블리시가 없어 `docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "..."` 로 친다(`set -a; . ./.env; set +a` 로 비번을 셸에 올린 뒤). **`min` 을 올릴 땐 Play 게시 반영을 먼저 확인할 것** — 스토어에 새 버전이 없는 상태에서 올리면 강제 업데이트 화면에서 나갈 길이 없다. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
 - **관리자 패널 — ✅ 구현됨 (2026-08-06, #27).** `https://tenk.hjson248.com/admin` (배포 후). 문의 처리 · 의견 열람 · TESTER 승격 · 앱 버전 정책 4가지를 흡수해 **SSH + `docker exec db mariadb` + SQL 의례가 사라졌다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "관리자 패널", 회의록 [decisions.md](decisions.md) "관리자 패널".
   - 예고했던 트리거(UGC 모더레이션)보다 **앞당겨 지었다** — 흡수 대상이 이미 4개였고 ⑥ 자신이 "패널에 자연히 흡수" 라고 예고한 값들이었다. **UGC 신고/모더레이션이 실제로 생기면 이 패널에 화면을 추가**하면 된다(그때 `UserRole.ADMIN` 이 이용자 측 게이트로 쓰인다).
   - ⚠️ **범위를 늘릴 땐 [../CLAUDE.md](../CLAUDE.md) 의 "안 만들 것" 목록을 먼저 볼 것** — 이용자 데이터 편집·삭제, 답변 발송, 비밀번호 변경은 **의도적으로 뺀 것**이지 미구현이 아니다.
@@ -341,6 +385,8 @@
 - **테스트에서 amount 카테고리는 반드시 9종 코드(`"FOOD"` 등)로**: `Amount.spend`/`AmountCreateRequest` 가 `requireValidCode` 로 검증하므로 `"x"`·소문자 `"food"` 같은 더미 값을 쓰면 `AMOUNT_CATEGORY_INVALID` 로 깨진다 (2026-07-11 검증 도입 때 테스트 9건이 이 이유로 깨져 있었고 2026-07-20 수정됨). 단 [AmountTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/amount/AmountTest.java) 의 `"food"`/`"식비"` 는 **거부 검증용 의도된 값**이라 그대로 둘 것.
 - **통합 테스트가 `tenk` 스키마 데이터를 비움**: [IntegrationTestBase](../tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 의 `@BeforeEach` 가 user/challenge/amount/refresh_token 을 DELETE 한다 (badge·app_config 마스터는 유지). `./gradlew test` 후 Flutter 카카오 재로그인 필요. tenk_test 스키마 분리는 일부러 안 함 (다음 운영자가 원하면 그때).
 - **관리자 계정은 "부팅한 마지막 컨텍스트" 가 이긴다 — 테스트 ID 를 실계정과 합치지 말 것** (2026-08-07 실측). [AdminAccountInitializer](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAccountInitializer.java) 는 부팅할 때마다 **설정된 이메일의 행을 찾아 비밀번호 해시를 yaml 값으로 맞춘다**. [AdminPanelIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/admin/AdminPanelIntegrationTest.java) 가 일부러 `admin@test` 라는 **전용 ID** 를 쓰는 이유가 이것 — 실계정 ID 로 "통일" 하면 `./gradlew test` 한 번에 **로컬 패널 비밀번호가 `test-admin-pw` 로 덮여** 백엔드를 재시작할 때까지 평소 비밀번호로 못 들어간다. 대가로 로컬 DB 에 안 쓰는 계정 행이 하나 남지만(이니셜라이저는 **이메일이 다른 행을 지우지 않는다**) 그쪽이 낫다는 판단. 같은 이유로 **운영 admin ID 를 교체할 땐 `DELETE FROM admin_user WHERE email='<옛 ID>';` 가 짝** — 안 지우면 옛 계정이 옛 비밀번호로 계속 유효하다.
+- **`server.forward-headers-strategy=framework` 를 켜면 `X-Forwarded-For` 를 직접 읽을 수 없다** (2026-08-08 실측). Spring 의 `ForwardedHeaderFilter` 가 XFF 를 **적용한 뒤 헤더를 제거하고** 요청을 넘기므로 컨트롤러·컴포넌트에서 `request.getHeader("X-Forwarded-For")` 는 **항상 null** 이다. 대신 그 필터가 `getRemoteAddr()` 을 **XFF 첫 값으로 바꿔치기**해 주므로 **`getRemoteAddr()` 하나만 쓰는 게 정답**이다. XFF 를 먼저 읽고 폴백하는 코드를 새로 쓰지 말 것 — 앞 분기가 죽은 코드가 되어 *주석이 설명하는 동작과 실제가 어긋난다*([AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 가 실제로 그 상태였다, §1-F #28).
+- **prod 에서는 클라이언트 IP 자체가 앱에 도달하지 못한다** (2026-08-08 확정). 맥+Colima 구조상 `맥 :443` → **Lima 유저스페이스 포트 포워더** → VM → docker-proxy 를 거치며 **VM 경계에서 원 source IP 가 소실**돼, Traefik 이 보는 클라이언트가 이미 `172.19.0.1`(도커 게이트웨이)이다. **Traefik 이전 단계라 앱·프록시 설정으로는 못 고친다.** IP 로 무언가를 판정하는 기능(대입 공격 탐지·지역 제한·rate limit)을 설계하기 전에 **§1-F #28 을 먼저 해결할 것** — 안 그러면 모든 요청이 같은 IP 로 보인다.
 - **`app_config` 싱글턴 행을 건드리는 통합 테스트는 반드시 원복할 것**: [AppVersionIntegrationTest](../tenk-backend/src/test/java/com/hjson/tenk/domain/app/AppVersionIntegrationTest.java) 는 앱이 읽는 그 한 행(id=1)을 테스트용 더미(latest=1.2.0, `https://play/android`)로 덮어쓴다. `@AfterEach` 로 시드값(1.0.0/실 Play URL)으로 되돌리지 않으면, 테스트 실행 후 로컬 dev 앱이 가짜 "업데이트 있어요" 를 스토어 더미 주소로 띄운다 (2026-07-26 실제로 발생·수정). app_config 를 만지는 새 테스트도 같은 원복을 넣을 것.
 
 ### Flutter

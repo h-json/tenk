@@ -163,6 +163,7 @@ tailscale status                                        # 맥 MagicDNS 이름 / 
 - **왜 `127.0.0.1` + `tailscale serve` 인가**: `"3306:3306"`(0.0.0.0)로 열면 tailnet 뿐 아니라 집 LAN 에도 열린다. loopback 바인딩 + serve 브릿지면 **tailnet 기기만** 닿아 인터넷·LAN 둘 다 차단(비번 인증은 그 위에 그대로 작동). 신뢰되는 홈 LAN 이면 그냥 `"3306:3306"` 로 열고 serve 를 생략해도 실무상 허용 — 대신 LAN 노출을 감수하는 것.
 - **함정**: `tailscale serve` 의 TCP 문법은 버전마다 다르다 — 안 먹으면 `tailscale serve --help` 로 현재 문법 확인. Tailscale 자체는 이미 이 맥에 깔려 있음(NoMachine GUI 접속용).
 - ⚠️ 이 절은 **디버깅·점검용 임시 접속**이다. 상시 켜두지 말 것 — 끝나면 원복해 격리 기본 상태로 돌린다.
+- **현재 운영 상태 — override 를 상시 유지한다 (2026-08-08 사용자 결정).** DBeaver 로 운영 DB 를 늘 다루기 때문이고, **바인딩이 `127.0.0.1` 이 아니라 `0.0.0.0` 이라 집 LAN 의 모든 기기에서 3306 에 닿는다.** 위 원칙과 다른 상태이지만 **의도된 것이니 매번 되돌리려 하지 말 것.** 지켜야 할 선은 하나 — ⚠️ **공유기에 3306 포워딩을 추가하지 말 것**(그 순간 인터넷에 열린다). 중간안이 필요해지면 override 의 `"3306:3306"` 을 `"127.0.0.1:3306:3306"` 으로 바꾸고 위 `tailscale serve` 를 얹으면 tailnet 한정이 된다.
 
 ### 5.7 DB 클린 재생성 (⚠️ 라이브 데이터 전량 소멸 — 소멸이 허용될 때만)
 
@@ -200,6 +201,8 @@ docker compose pull && docker compose up -d
 docker compose logs -f backend                  # "Started TenkApplication" = validate 통과
 ```
 
+- ⚠️ **맥 폴더의 `schema.sql` 은 기본적으로 낡았다고 의심할 것** (2026-08-08 실제로 밟을 뻔함). 그 파일은 *지난번* 재생성 때 복사해 둔 사본이라, 그 뒤 스키마가 바뀌었으면 **테이블이 빠진 채로 시딩된다.** 무서운 건 **라이브가 멀쩡하다는 점**이다 — 실제 DB 는 §5.5 의 `ALTER` 로 이미 맞춰져 있어 아무 증상이 없고, **다음 클린 재구축 때 비로소 validate 로 죽는다.** 방어는 `docker cp` 가 출력하는 **전송 바이트 수를 리포 `docs/schema.sql` 의 크기와 대조**하는 것(2026-08-08 기준 23,973B → `Successfully copied 24kB`). ③의 `md5sum`/`wc -c` 단계를 건너뛰지 말 것.
+  - **맥으로 파일을 옮기는 수단**: `scp` 가 안 되면(윈도우 SSH 키 문제 등) **Taildrop** 이 편하다 — (윈도우) `tailscale file cp docs/schema.sql <맥>:` → (맥) `tailscale file get .`
 - **`up -d` 때 `volume "tenk_dbinit" already exists but was not created by Docker Compose` WARN 은 정상** — ③에서 일부러 먼저 만든 것이다.
 - **`Container tenk-backend-1 Started` 는 컨테이너가 떴다는 뜻일 뿐 스프링 부팅 성공이 아니다.** 반드시 로그로 확인할 것(스키마가 어긋나면 여기서 validate 에러로 죽는다).
 - **끝난 뒤 챙길 것**: 계정이 전부 사라졌으므로 **TESTER role 재승격**이 필요하고, `app_config` 는 `schema.sql` 의 시드값으로 돌아가므로 **현재 스토어 버전과 다르면 다시 맞출 것**. 둘 다 **관리자 패널**(`/admin` → '사용자' / '앱 버전')에서 한다 — 2026-08-06 이전에는 `UPDATE user SET role=...` / `UPDATE app_config SET latest_version=...` 를 직접 쳤다. `admin_user` 는 부팅 시 yaml 계정으로 자동 재생성되므로 따로 챙길 게 없다.
