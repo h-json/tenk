@@ -54,9 +54,10 @@
 - ✅ **관리자 알림을 신호로 축약 + 답장 초안 (2026-08-07)** — 알림 3종에서 **본문·회신 이메일·계정·유형·`#id` 를 전부 뺐다**. 편의가 아니라 두 가지 이유다: 내용을 실으면 **메일함·텔레그램이 수집표·파기 배치 어디에도 안 잡히는 개인정보 보관소**가 되고, **알림으로 읽으면 접속기록이 안 남아** `AdminAudit` 를 세워둔 의미가 사라진다. 리마인드는 **오전 9시 → 저녁 6시**(답장할 시간이 남아 있을 때). ⚠️ **대가로 "알림 메일에 회신" 경로가 사라져** 패널 상세에 **[메일로 답장]**(Gmail 작성 링크 + 원문 인용)과 **[초안 복사]** 를 붙였다 — `mailto:` 는 한글 본문이 인코딩되며 9배로 불어 **OS 한도에서 잘린다**. **이 둘은 한 세트**라 인용을 빼면 *"메일 스레드가 이미 아카이브"* 전제(익명 사본 기각 · `handler_note` 답변 전문 금지)가 무너진다. 테스트 **255개**(+1 원문 인용 가드) 전원 통과. 회의록 [decisions.md](decisions.md) "관리자 알림 — 내용을 싣지 않는다". ⚠️ **앱 코드 변경 없음 · 백엔드는 §0-DEPLOY 에 같이 실린다.**
 - ✅ **§0-DEPLOY 3건 배포 + 앱 `1.2.0+5` 업로드 (2026-08-08)** — 밀려 있던 백엔드 3건(#23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안)을 **스키마 3건 선적용 → 이미지 교체** 순으로 한 번에 반영했고, 앱도 마지막 릴리스(`1.1.0+4`, 08-03) 이후 **8커밋**이 쌓여 있어 `1.2.0+5` 로 올려 Play 에 업로드했다. **서버 측·화면·알림 검증 전항목 통과** — 핵심은 **앱 체인 무회귀**(`GET /api/users/me` 가 로그인 리다이렉트가 아니라 401 `C0003`).
   배포 직후 **사용자 결정으로 prod DB 를 통째로 재생성**했고([docker-deployment.md](docker-deployment.md) §5.7) `app_config` 는 **`1.2.0` 으로 재설정 완료**. 상세·검증 결과·함정은 [handoff-archive.md](handoff-archive.md).
-  - 🐞 **이 과정에서 백로그 3건이 나왔다** — **#28** 접속기록 IP(§1-F) · **#29** 결과 카드 양옆 여백(§1-G) · **#30** prod 로그에 개인정보 노출(§1-H, **운영에 노출 중**).
+  - 🐞 **이 과정에서 백로그 3건이 나왔다** — **#28** 접속기록 IP(§1-F) · ~~**#29** 결과 카드 양옆 여백~~(✅ 2026-08-17 완료) · **#30** prod 로그에 개인정보 노출(§1-H, **운영에 노출 중**).
   - ⚠️ **남은 후처리 1건**: **TESTER 재승격** — 클린 재생성으로 계정이 전부 사라졌다. **카카오 재로그인으로 계정이 생긴 뒤** 패널 → '사용자' 에서.
-- ⏭️ 다음 후보: **§0 잔여(`app_config` 1.2.0 · TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#30 prod 로그 위생(운영에 노출 중)** / **#29 결과 카드 양옆 여백** / **#28 접속기록 IP** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **#29 결과 카드 양옆 여백 (2026-08-17)** — 풀블리드가 **세 겹**(뜬 액션 Row + `fitWidth` + Column `stretch`)으로 성립한다는 걸 확정하고 가드 9건을 남겼다. ⚠️ **앱 전용 · 다음 릴리스에 실린다 · 실기기 확인 미완**(§1-G).
+- ⏭️ 다음 후보: **§0 잔여(`app_config` 1.2.0 · TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#30 prod 로그 위생(운영에 노출 중)** / **#28 접속기록 IP** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -315,18 +316,10 @@
   - **곁다리로 같이 고칠 것**: [AdminAudit.currentIp()](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 의 `getHeader("X-Forwarded-For")` 분기는 **한 번도 실행된 적이 없는 죽은 코드**다 — `SERVER_FORWARD_HEADERS_STRATEGY: framework` 라 Spring 의 `ForwardedHeaderFilter` 가 **XFF 헤더를 떼어낸 뒤** 넘기고, 대신 `getRemoteAddr()` 을 XFF 첫 값으로 바꿔치기한다. 지금 결과를 내는 건 폴백 쪽이다. **주석이 설명하는 동작과 실제가 어긋나 있으니 폴백 하나로 정리할 것.**
   - **확정 검증(1분, 되돌리기 쉬움)**: reverse-proxy 스택 `command:` 에 `--accesslog=true` 를 잠깐 넣고 `docker compose up -d` → 패널 한 번 열고 `docker compose logs --tail=5 traefik` 의 `ClientAddr` 확인 → 원복.
 
-#### 1-G. 결과 카드 화면 비율 (2026-08-08 등록) — 미착수
+#### 1-G. 결과 카드 화면 비율 (2026-08-08 등록) — ✅ 완료 (2026-08-17)
 
-- [ ] **#29 결과 카드 화면에 양옆 여백이 생긴다** (실기기, 재발). 규칙([../CLAUDE.md](../CLAUDE.md) "결과 카드")은 **풀블리드 = 카드를 화면 폭에 꽉 맞춘다** 인데 실제로는 액자처럼 보인다.
-  - **원인은 knife-edge 레이아웃이다.** [result_card_screen.dart](../tenk_app/lib/presentation/challenge/result_card/result_card_screen.dart) 가 `Column[상태바 띠 → Expanded(FittedBox(BoxFit.contain)) → 액션 Row]` 구조인데, **`BoxFit.contain` 은 폭·높이 중 더 빡빡한 쪽에 맞춘다.** 카드가 480x864(비율 0.5556)라:
-    > **가용 높이 < 화면 폭 × 1.8 이 되는 순간 높이 기준으로 축소되고, 그 차이가 양옆 여백으로 나온다.**
-  - 384dp 폭 기기 기준 임계 높이는 **691dp** 인데 실제 가용 높이가 **~712dp**(화면 832 − 상태바 − 액션 Row·제스처 인셋)라 **여유가 21dp 뿐이다.** 그래서 **글자 크기 확대·3버튼 내비·큰 상태바** 처럼 액션 Row 나 시스템 인셋을 조금만 키우면 바로 뒤집힌다 — "됐다 안 됐다" 하는 이유.
-  - **고칠 방향 3안** (미결 — 에뮬 A/B 로 실물 비교해 정할 것, [handoff-archive.md](handoff-archive.md) 2026-08-04 #26 의 방식):
-    **A)** `BoxFit.fitWidth` + `ClipRect` — 폭을 무조건 채우고 모자란 높이는 아래를 자른다(워터마크가 잘릴 수 있음)
-    **B)** 액션 Row 를 `Stack` 으로 **카드 위에 띄운다** — 카드에 화면 높이를 통째로 주는 방식. 카드 하단이 화이트라 버튼이 얹혀도 이어져 보이고 **풀블리드 의도에 가장 맞는다**
-    **C)** 액션 Row 높이를 줄여 임계를 벗어난다 — 가장 싸지만 **또 뒤집힐 여지를 남긴다**(지금이 그 상태다)
-  - ⚠️ **캡처물(저장 PNG·영상 마지막 클립)은 이 문제와 무관하다** — 오프스크린에서 480x864 고정으로 그린다. **화면 전용 문제**라 캡처 경로를 건드리지 말 것.
-  - 고칠 때 **위젯 테스트로 가드를 남길 것** — 좁은 화면·큰 텍스트 스케일에서 카드 폭 == 화면 폭인지. 이 화면은 이미 실기기에서만 드러난 결함이 두 번 나왔다(#20 컨페티 잔존, 이 건).
+- ~~#29 결과 카드 화면에 양옆 여백이 생긴다~~ → ✅ **A+B 결합으로 종결.** 상세·진단 경로는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목, 규칙은 [../CLAUDE.md](../CLAUDE.md) "결과 카드" 의 풀블리드 항목.
+  - ⚠️ **실기기 확인은 다음 릴리스 때** — 에뮬·기기 없이 위젯 테스트 기하로만 검증했다(가드 [test/result_card_layout_test.dart](../tenk_app/test/result_card_layout_test.dart) 9건). 확정 → 결과 카드 진입 시 **상단 블록이 화면 좌우 끝까지 닿는지**, 그리고 **하단 워터마크가 액션 버튼에 안 가리는지** 볼 것.
 
 #### 1-H. prod 로그 위생 (2026-08-08 등록) — 미착수 · **현재 운영에 노출 중**
 
@@ -397,6 +390,7 @@
 - **에뮬레이터에서 텍스트가 첫 프레임에 안 보이고 화면을 움직이면 나타나면** [[reference-flutter-android-impeller-text-glitch]] — Impeller 텍스트 atlas 버그. `flutter run --no-enable-impeller`로 검증.
 - **매니페스트(`AndroidManifest.xml`) 변경은 hot reload로 반영 안 됨.** 콜드 부팅(`q` → `flutter run`) 또는 hot restart(`R`).
 - **`main.dart` 최상단(`MaterialApp` 의 `builder`/`theme`/`locale`) 변경도 hot reload 로 안 실릴 수 있다.** 2026-07-28 에 `builder` 로 전역 키보드 닫기를 넣었는데 hot reload 후에도 동작하지 않아 코드를 의심했고, 에뮬에서 확인해보니 **코드는 정상이고 반영이 안 된 것**이었다. 최상단을 건드렸는데 동작이 그대로면 **먼저 `R`(hot restart)** 로 확인할 것.
+- **`FittedBox` 는 폭 제약이 loose 면 `fit` 을 무엇으로 주든 자기 자신부터 자식 비율대로 줄인다** (2026-08-17 실측, #29). `RenderFittedBox.performLayout` 이 `constraints.constrainSizeAndAttemptToPreserveAspectRatio(child.size)` 로 **자기 크기**를 먼저 정하기 때문 — 480x864 카드를 360dp 폭 `Column`(기본 `crossAxisAlignment: center`) 안에 두면 FittedBox 자신이 **342.2dp** 로 줄고, `BoxFit.fitWidth` 는 그 342.2 를 채울 뿐이라 **`contain` 과 결과가 같아진다.** `fitWidth`/`fitHeight` 를 의도대로 쓰려면 그 축을 **tight** 로 만들 것(`crossAxisAlignment: stretch` 또는 `SizedBox(width: double.infinity)`). 진단은 추정 말고 `(element.renderObject as RenderBox).size` 를 찍어볼 것 — 격리 테스트에서는 정상이고 실제 트리에서만 틀리는 종류다.
 - **카카오 키해시는 머신마다 다름.** 새 머신 [[reference-kakao-android-keyhash]] 절차로 재등록.
 - **실기기에서 백엔드 도달 불가**: 기본 base URL 인 `10.0.2.2` 는 에뮬레이터 전용 호스트 루프백. 같은 Wi-Fi 의 실기기에서 PC 백엔드를 호출하려면 PC LAN IP 로 바꿔야 한다. 증상은 "카카오 동의 화면까지는 뜨는데 그 뒤 로그인이 안 됨" — 카카오 SDK 는 인터넷에 닿지만 백엔드 교환 콜이 끊긴다. 현재 머신 IP 와 셋업은 아래 "PC LAN IP" 참고.
 - **Android `res/xml/*.xml` 주석에 이중 하이픈 금지**: `<!-- ... -->` 안에 `--` 두 글자가 들어가면 `mergeDebugResources` 가 `ParseError ... 주석에서는 "--" 문자열이 허용되지 않습니다` 로 빌드 실패. XML 1.0 §2.5 strict 적용이라 `--dart-define`, `--flag` 같은 CLI 옵션을 주석에 인용할 때 자주 걸린다. AndroidManifest.xml / network_security_config.xml / 그 외 `app/src/main/res/**.xml` 모두 동일. 해결은 단순히 하이픈을 빼거나 문구를 바꾸면 됨.

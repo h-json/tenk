@@ -179,6 +179,16 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
     // 아래 남는 여백(액션 버튼 자리)과 이어져 경계가 안 보이고, 상단 컬러 블록이 화면 위를
     // 그대로 채운다. 카드 테두리·라운드도 없앴다 — 공유 이미지는 full-bleed 여야 하고,
     // 화면에서도 액자처럼 보이면 카드가 작아 보인다.
+    //
+    // ⚠️ 이 "꽉 맞춘다" 를 지키는 장치가 **두 겹**이다 (2026-08-17, #29 — 실기기에서 두 번
+    // 재발한 자리다). 하나라도 빼면 양옆에 흰 여백이 돌아온다:
+    //   ① 액션 Row 를 Column 에서 빼 **카드 위에 띄운다** → 카드가 상태바 아래 전부를 쓴다.
+    //      Column 자식으로 두면 그 76dp 만큼 가용 높이가 줄어 임계선(폭 × 1.8)을 넘나든다.
+    //   ② [BoxFit.fitWidth] → 폭을 **무조건** 채운다. `BoxFit.contain` 은 폭·높이 중 빡빡한
+    //      쪽에 맞추므로, 가용 높이가 `화면 폭 × 1.8`(카드 비율 480:864) 밑으로 내려가는
+    //      순간 높이 기준으로 축소되고 그 차이가 그대로 좌우 여백이 된다.
+    // 세로가 모자라면 카드 **아래**(흰 영역·워터마크)가 잘린다 — 좌우가 비는 것보다 낫고,
+    // ① 덕분에 잘리는 양이 애초에 작다. 캡처물은 오프스크린 480x864 고정이라 무관하다.
     final celebrating = widget.celebrate &&
         widget.challenge.result == ChallengeResult.success;
     final isSuccess = widget.challenge.result == ChallengeResult.success;
@@ -192,6 +202,12 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
       body: Stack(
         children: [
           Column(
+            // ⚠️ **stretch 를 빼지 말 것 — 이게 없으면 ② 가 무력화된다.** Column 기본값
+            // (center)이면 자식이 loose 한 폭 제약을 받는데, `RenderFittedBox` 는 그때
+            // `constrainSizeAndAttemptToPreserveAspectRatio` 로 **자기 자신부터 자식 비율대로
+            // 줄여버린다**(360 → 342). 그러면 `fitWidth` 는 이미 줄어든 상자를 채울 뿐이라
+            // 여백이 그대로 남는다 — 실제로 이 조합으로 한 번 헛다리를 짚었다.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
                 height: MediaQuery.paddingOf(context).top,
@@ -199,8 +215,11 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
               ),
               Expanded(
                 child: FittedBox(
-                  fit: BoxFit.contain,
+                  fit: BoxFit.fitWidth,
                   alignment: Alignment.topCenter,
+                  // 세로가 모자랄 때 카드 아래를 잘라낸다. FittedBox 기본값은 Clip.none 이라
+                  // 명시하지 않으면 넘친 부분이 액션 바 위로 삐져나와 그려진다.
+                  clipBehavior: Clip.hardEdge,
                   child: ResultCardWidget(
                     challenge: widget.challenge,
                     amounts: widget.amounts,
@@ -208,7 +227,18 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
                   ),
                 ),
               ),
-              SafeArea(
+            ],
+          ),
+          // 액션은 **카드 위에 얹는다** (Column 자식이 아니다 — 위 ① 참고). 카드 하단이
+          // 화이트라 같은 색 바닥을 깔면 경계가 안 보이고, 화면이 짧아 카드가 이 자리까지
+          // 내려오는 경우엔 이 바닥이 잘린 끝단을 덮어준다.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ColoredBox(
+              color: AppColors.bg,
+              child: SafeArea(
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -247,7 +277,7 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
                   ),
                 ),
               ),
-            ],
+            ),
           ),
           // 닫기는 카드 위에 얹는다 (AppBar 를 없앴으므로). 헤더가 가운데 정렬이라
           // **우상단**이 비어 있고, 카드 상단 패딩(62)이 이 버튼 자리를 비워둔 것이다.

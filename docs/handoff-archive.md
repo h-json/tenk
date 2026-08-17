@@ -9,6 +9,12 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
+- **2026-08-17**: ✅ **#29 결과 카드 양옆 여백 — A+B 결합으로 종결.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "결과 카드" 의 풀블리드 항목.
+  - **선택은 A+B**(사용자 결정). B(액션 Row 를 `Stack` 으로 카드 위에 띄움)가 카드에 세로 ~100dp 를 되돌려줘 A(`BoxFit.fitWidth` + 클립)의 유일한 약점인 **잘리는 양**을 거의 0 으로 만들고, A 가 **"폭 == 화면 폭"을 기기·글자 크기와 무관하게** 못박는다. C(액션 Row 축소)는 임계선을 21→37dp 로 미룰 뿐이라 기각.
+  - ⭐ **A 만으로는 안 고쳐졌고, 그게 이 건의 핵심이다.** `fit` 을 `fitWidth` 로 바꿔도 360dp 화면에서 카드가 **342.2dp** 로 나왔다 — `RenderFittedBox.performLayout` 은 폭 제약이 **loose** 면 `constrainSizeAndAttemptToPreserveAspectRatio` 로 **자기 자신부터 자식 비율대로 줄인 뒤**(360→342) 거기에 `fitWidth` 를 적용한다. 즉 `Column` 의 기본 `crossAxisAlignment: center` 가 세 번째 원인이었다. **`stretch` 로 폭을 tight 로 만들어야 A 가 산다** — 세 겹이 다 있어야 성립하고, 하나라도 빠지면 여백이 돌아온다.
+  - **진단 방법**: 격리 위젯 테스트로 `FittedBox(fitWidth)` 단독은 360 이 나오는데 `Scaffold>Stack>Column>Expanded` 안에서는 342 가 나오는 걸 재현 → `RenderBox.size` 를 찍어 **FittedBox 자신이 342.2×616** 임을 확인 → SDK `proxy_box.dart` 의 `performLayout` 에서 근거를 찾았다. **"fit 을 바꿨는데 왜 안 되지" 를 추정으로 넘기지 않고 렌더 객체 크기를 찍은 게 결정적**이었다.
+  - **가드 9건** [test/result_card_layout_test.dart](../tenk_app/test/result_card_layout_test.dart) — 384x832 / **360x640(고치기 전 실패, 좌우 8.9dp)** / 320x568 / 글자 1.5배 / 실패 카드에서 `카드 폭 == 화면 폭`, 카드 상단이 상태바 바로 아래, 액션이 제스처 바 위, 384x832 에선 카드가 액션 바 미침범, 최악 케이스(30일+2줄 이름+배지) 무예외. `flutter analyze` clean, 전체 위젯 테스트 **31개** 통과.
+  - ⚠️ **캡처물은 무관**(오프스크린 480x864 고정) — 화면 전용 문제라 캡처 경로는 안 건드렸다. ⚠️ **실기기 확인은 다음 릴리스 때**(기기 없이 테스트 기하로만 검증). **앱 전용이라 백엔드 재배포와 무관.**
 - **2026-08-08**: ✅ **§0-DEPLOY 3건 prod 배포 + 앱 `1.2.0+5` 내부 테스트 게시 + prod DB 클린 재생성.** 절차는 [docker-deployment.md](docker-deployment.md) §5.5·§5.7.
   - **백엔드 3건을 한 번에** — #23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안. 순서는 **스키마 선적용 → 이미지 교체**(`ddl-auto=validate`). `inquiry` 는 schema.sql 블록에 `handler_note` 가 **이미 포함**돼 있어 백로그가 적어둔 `ALTER TABLE inquiry` 는 불필요했고, `feedback` 만 ALTER 를 쳤다. ⭐ **부팅 성공 자체가 스키마 3건의 검증**이다(`Started TenkApplication in 4.758s`) — 하나라도 빠지면 validate 에서 죽는다.
   - **서버 측 검증 전항목 통과** (윈도우에서 공개 HTTPS 실측): **앱 체인 무회귀** `GET /api/users/me` → **401 `C0003` JSON**(로그인 리다이렉트가 아니다 = 보안 체인 2개 분리 생존, 이번 배포의 핵심) / `/admin` → 302 → `/admin/login` 200 / `POST /api/inquiry` 미인증 401 / OpenAPI 에 `/api/inquiry` / privacy §8 / HSTS. 화면·알림 쪽(패널 로그인·문의 처리·**유형 한글 라벨**·[메일로 답장] 원문 인용·알림 2겹 수신 + **내용 미포함**)도 사용자 검증 통과. **Gmail 스팸 필터 문제도 해결됨.**
