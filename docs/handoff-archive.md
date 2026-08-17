@@ -9,6 +9,13 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
+- **2026-08-17**: ✅ **#30 prod 로그 위생 — 개인정보가 애플리케이션 로그로 새던 것을 막았다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생"(코딩 컨벤션 — 백엔드). ⚠️ **백엔드 재배포 대기 + 맥 compose 파일 갱신 필요.**
+  - ⭐ **문제는 설정 하나가 아니라 "규칙을 한쪽에만 적용한 것"이었다.** [AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 에 *"내용을 적으면 로그가 또 하나의 개인정보 보관소가 된다"* 를 못박아 놓고 **접속기록에만 적용**했고, 애플리케이션 로그는 정반대로 굴러가고 있었다. 새던 값: 닉네임 · 카카오 회원번호 · 생년월일 · 성별 · 문의/의견 본문 · 회신 이메일 · 지출 내용·메모 · 관리자 BCrypt 해시.
+  - **원인**: 개발용 SQL 로깅 4개(`show-sql` · `format_sql` · `org.hibernate.SQL:debug` · `orm.jdbc.bind:trace`)가 **공통** `application.yaml` 에 있어 prod 에도 적용. `application-local.yaml` 로 내렸다(jwt secret 을 공통에 안 두는 것과 같은 원칙). ⚠️ **`show-sql` 은 logback 을 안 거치고 stdout 에 직접 쓰므로 로그 레벨만 내려선 안 꺼진다 — 넷이 한 세트.**
+  - **조사에서 곁가지가 셋 더 나왔다**: ① **로테이션 부재** — 도커 기본 json-file 은 무제한이라 상한이 없으면 **탈퇴자 데이터를 DB 에서 파기해도 로그엔 영원히 남아** "파기했다"가 거짓이 된다(backend·db 각 `10m×5`). ② **로그 4곳** — 카카오 응답 body(프로필 포함) · `[UnreadableBody]`/`[MalformedRequest]` 의 `ex.getMessage()`(Jackson 이 **요청 본문 조각**을 담는다) · 관리자 로그인 ID. ③ **`<springProfile>` 이 `<logger>` 안에 있어** local 접속기록 콘솔 출력이 **한 번도 동작한 적 없었다**.
+  - **판단 2개**: **0단계(재배포 없는 env 중간 조치)를 건너뛴 것** — 이용자가 0명이라 무인 상태에서 새는 건 관리자 해시뿐이고, 미배포 백엔드가 0건이라 *다음 배포 = 이 수정의 배포*여서 막을 공백이 없었다. **에러를 DB 테이블에 쌓는 안은 기각** — DB 장애 때 정작 못 남고, 롤백되는 트랜잭션에 같이 말려들며(`REQUIRES_NEW` 함정), 스택트레이스가 다시 개인정보 보관소가 된다. 에러 알림이 필요해지면 `AdminNotifier` 에 `ERROR` 훅(**스택트레이스 없이 신호만** + rate limit).
+  - **남긴 것**: `[UnhandledException]` 스택트레이스(장애 진단 필수) · `KakaoTokenVerifier` 의 예상 못 한 예외 경로. SQL 로깅이 꺼져 있어야 Hibernate 예외에 파라미터가 안 붙는다는 게 전제다.
+  - **검증**: 테스트 **255개** 통과 + **테스트 출력에 `binding parameter`/`Hibernate:` 0건** / 로컬 부팅에서 logback WARN 소멸 + **local 은 SQL 로깅 유지**(3건) / 일부러 틀린 로그인으로 접속기록을 만들어 **콘솔·파일 양쪽 기록 + 입력 비밀번호 미노출** 확인.
 - **2026-08-17**: ✅ **#29 결과 카드 양옆 여백 — A+B 결합으로 종결.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "결과 카드" 의 풀블리드 항목.
   - **선택은 A+B**(사용자 결정). B(액션 Row 를 `Stack` 으로 카드 위에 띄움)가 카드에 세로 ~100dp 를 되돌려줘 A(`BoxFit.fitWidth` + 클립)의 유일한 약점인 **잘리는 양**을 거의 0 으로 만들고, A 가 **"폭 == 화면 폭"을 기기·글자 크기와 무관하게** 못박는다. C(액션 Row 축소)는 임계선을 21→37dp 로 미룰 뿐이라 기각.
   - ⭐ **A 만으로는 안 고쳐졌고, 그게 이 건의 핵심이다.** `fit` 을 `fitWidth` 로 바꿔도 360dp 화면에서 카드가 **342.2dp** 로 나왔다 — `RenderFittedBox.performLayout` 은 폭 제약이 **loose** 면 `constrainSizeAndAttemptToPreserveAspectRatio` 로 **자기 자신부터 자식 비율대로 줄인 뒤**(360→342) 거기에 `fitWidth` 를 적용한다. 즉 `Column` 의 기본 `crossAxisAlignment: center` 가 세 번째 원인이었다. **`stretch` 로 폭을 tight 로 만들어야 A 가 산다** — 세 겹이 다 있어야 성립하고, 하나라도 빠지면 여백이 돌아온다.

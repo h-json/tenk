@@ -15,8 +15,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MariaDBDialect
-        format_sql: true
-    show-sql: true
+    # ⚠️ show-sql / format_sql / hibernate 로그 레벨은 **application-local.yaml 에만** 둔다.
+    # 여기(공통)에 두면 prod 에도 적용돼 JPA 를 지나는 모든 값(닉네임·문의 본문·회신 이메일·
+    # 생년월일·관리자 비밀번호 해시)이 컨테이너 로그로 나간다 — 로그가 수집표·보관기간
+    # 어디에도 안 잡히는 개인정보 보관소가 된다. 규칙은 CLAUDE.md "로그 위생".
 
   servlet:
     multipart:
@@ -66,7 +68,5 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-logging:
-  level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
+# logging.level 은 공통에 두지 않는다 — 위 jpa 주석과 같은 이유.
+# 개발용 SQL/파라미터 로깅은 application-local.yaml 에 있다.

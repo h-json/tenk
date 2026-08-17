@@ -57,7 +57,8 @@
   - 🐞 **이 과정에서 백로그 3건이 나왔다** — **#28** 접속기록 IP(§1-F) · ~~**#29** 결과 카드 양옆 여백~~(✅ 2026-08-17 완료) · **#30** prod 로그에 개인정보 노출(§1-H, **운영에 노출 중**).
   - ⚠️ **남은 후처리 1건**: **TESTER 재승격** — 클린 재생성으로 계정이 전부 사라졌다. **카카오 재로그인으로 계정이 생긴 뒤** 패널 → '사용자' 에서.
 - ✅ **#29 결과 카드 양옆 여백 (2026-08-17)** — 풀블리드가 **세 겹**(뜬 액션 Row + `fitWidth` + Column `stretch`)으로 성립한다는 걸 확정하고 가드 9건을 남겼다. ⚠️ **앱 전용 · 다음 릴리스에 실린다 · 실기기 확인 미완**(§1-G).
-- ⏭️ 다음 후보: **§0 잔여(`app_config` 1.2.0 · TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#30 prod 로그 위생(운영에 노출 중)** / **#28 접속기록 IP** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **#30 prod 로그 위생 (2026-08-17)** — prod 가 **JPA 를 지나는 모든 값**(닉네임·문의 본문·회신 이메일·생년월일·관리자 BCrypt 해시)을 **무제한으로** 로그에 찍고 있었다. 원인은 개발용 SQL 로깅 4개가 **공통** yaml 에 있던 것 — `application-local.yaml` 로 내렸다. 곁가지가 셋 더 나왔다: **로테이션 부재**(도커 기본 json-file 무제한 → 탈퇴자 데이터를 파기해도 로그엔 영원히 남는다), **예외 메시지·외부 응답 body·로그인 ID 를 찍던 4곳**, **`<springProfile>` 중첩 오류로 한 번도 동작한 적 없던 local 접속기록 콘솔 출력**. 테스트 **255개** 통과 + **로컬 부팅 실검증**(테스트 출력에 SQL·파라미터 0건 / logback WARN 소멸 / 접속기록이 콘솔·파일 양쪽에 + 입력 비밀번호 미노출). ⚠️ **백엔드 재배포 필요 + 맥 compose 파일 갱신**(§0). 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생".
+- ⏭️ 다음 후보: **#30 배포** / **§0 잔여(TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#28 접속기록 IP + 액세스 로그 3갈래(§1-F)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -126,7 +127,8 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**백엔드 — ✅ 미배포 0건 (2026-08-08 배포 완료).** #23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안 3건을 한 번에 반영했다.
+**백엔드 — 🟠 미배포 1건: #30 로그 위생 (2026-08-17).** 스키마 변경 없음 → **이미지 교체만**([docker-deployment.md](docker-deployment.md) §5.1). ⚠️ 단 [docker-compose.yml](../deploy/docker-compose.yml) 에 **로그 로테이션 블록이 추가돼 맥의 compose 파일도 같이 갱신**해야 한다(이미지 교체만으론 안 붙는다). 배포 후 확인: 컨테이너 로그에 `binding parameter` 가 **0건**인지 + 부팅 시 관리자 계정 로그에 ID 가 안 보이는지. **이 배포를 먼저 하고 나서 §0 ② TESTER 재승격을 할 것**(먼저 로그인하면 본인 프로필이 구버전 로그에 남는다).
+그 이전 3건(#23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안)은 2026-08-08 에 반영 완료.
 
 - [x] ✅ **라이브 DB 스키마 3건 선적용 완료 (2026-08-08)** — DBeaver 로 직접 적용. `inquiry` 는 schema.sql 블록에 `handler_note` 가 **이미 포함**돼 있어 별도 ALTER 가 필요 없었고, `feedback` 만 ALTER 를 쳤다.
   ```sql
@@ -306,9 +308,11 @@
   - ✅ **후속(같은 날) — 안전성 확보조치를 문서·코드 양쪽에서 메움.** 진단해보니 **조치는 대부분 이미 하고 있었고 빠진 건 문서화**였다(HTTPS·BCrypt·RT 해시·세션 만료·DB 포트 미공개·파기 배치). **조치 자체가 미흡한 건 접속기록 하나** — IP 가 없고 앱 로그로만 나가 재배포에 사라져 "1년 보관"이 성립하지 않았다. privacy.html **§8 신설**(적은 5가지는 전부 실제 조치, 대응 코드를 HTML 주석으로 병기) + **접속기록 완성**(IP · 로그인 성공/실패 · **열람 기록** · 전용 파일 13개월 롤링 + `admin-audit` 볼륨). ⚠️ **로그에 본문·비밀번호·검색어를 담지 않는다**(가드 5건). 테스트 **254개**.
   - ✅ **변호사 검수는 백로그에서 드롭** (사용자 결정) — 대신 **"문서 = 실제 동작"** 을 유지 기준으로 못박았다([../CLAUDE.md](../CLAUDE.md) "회원 탈퇴" 항목 하위). 트리거는 결제·광고 SDK·제3자 제공·해외 이전.
 
-#### 1-F. 접속기록 IP (2026-08-08 등록) — 미착수
+#### 1-F. 접속기록 IP + 사용자 액세스 로그 (2026-08-08 등록 · 2026-08-17 확장) — 미착수
 
-- [ ] **#28 관리자 접속기록의 IP 가 전부 `172.19.0.1` 로 찍힌다** — 배포 검증에서 발견. **코드·Traefik 설정은 정상이고 원인은 인프라(macOS + Colima)다.**
+> **#30 에서 나온 두 갈래를 여기로 묶었다** (아래 ⓑ·ⓒ). 셋 다 *"IP 를 제대로 못 남긴다"* 는 같은 뿌리라 따로 착수하면 두 번 판단해야 한다. 근거는 [decisions.md](decisions.md) "로그 위생" 결정 5.
+
+- [ ] **ⓐ #28 관리자 접속기록의 IP 가 전부 `172.19.0.1` 로 찍힌다** — 배포 검증에서 발견. **코드·Traefik 설정은 정상이고 원인은 인프라(macOS + Colima)다.**
   - **진단 경로(추정으로 두 번 틀렸으니 그대로 옮겨 적는다)**: ① "패널을 `localhost:8080` 으로 직접 열어서 XFF 가 없는 것" 이라고 봤으나, **공개 HTTPS 로 일부러 실패하는 로그인을 쏴 보니**(`actor=xff-probe`) 똑같이 `172.19.0.1` 이라 기각 ② `docker network inspect` 로 확정: **`172.19.0.1` 은 `web`(172.19.0.0/16) 의 게이트웨이**이고 **Traefik 은 `172.19.0.2`**, 백엔드는 `172.19.0.4`. 컨테이너끼리 붙었다면 `.2` 가 찍혀야 한다.
   - **결론**: 이 모순은 **XFF 가 정상적으로 오고 있고 그 값이 `172.19.0.1`** 일 때만 성립한다 — 즉 **Traefik 자신이 클라이언트를 게이트웨이로 본다.** 외부 요청이 `맥 :443` → **Lima 유저스페이스 포트 포워더** → VM → docker-proxy 를 거치며 **VM 경계에서 원 source IP 가 소실**되기 때문. **Traefik 이전 단계에서 잃으므로 앱에서는 복구 불가.**
   - **선택지 2개**: **A) Colima vmnet** — `colima start --network-address` 로 VM 에 LAN IP 를 주고 **공유기 80/443 포워딩을 맥 호스트가 아니라 VM IP 로** 변경. 서빙 경로 전체를 건드리는 인프라 작업(sudo + 공유기). **B) 현행 수용 + [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) §8 문구 정정** — 대신 **로그인 실패 기반 대입 공격 탐지가 사실상 불가능**해진다(공개 폼의 유일한 탐지 수단이었다).
@@ -316,20 +320,28 @@
   - **곁다리로 같이 고칠 것**: [AdminAudit.currentIp()](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 의 `getHeader("X-Forwarded-For")` 분기는 **한 번도 실행된 적이 없는 죽은 코드**다 — `SERVER_FORWARD_HEADERS_STRATEGY: framework` 라 Spring 의 `ForwardedHeaderFilter` 가 **XFF 헤더를 떼어낸 뒤** 넘기고, 대신 `getRemoteAddr()` 을 XFF 첫 값으로 바꿔치기한다. 지금 결과를 내는 건 폴백 쪽이다. **주석이 설명하는 동작과 실제가 어긋나 있으니 폴백 하나로 정리할 것.**
   - **확정 검증(1분, 되돌리기 쉬움)**: reverse-proxy 스택 `command:` 에 `--accesslog=true` 를 잠깐 넣고 `docker compose up -d` → 패널 한 번 열고 `docker compose logs --tail=5 traefik` 의 `ClientAddr` 확인 → 원복.
 
+- [ ] **ⓑ 사용자 HTTP 액세스 로그가 한 줄도 없다** (2026-08-17 등록, #30 곁가지). Traefik `--accesslog` 미설정이라 *"어제 저녁 문의 등록이 실패했다는데 그때 무슨 요청이 왔었나"* 를 조사할 방법이 없다.
+  - ⚠️ **법 요건이 아니라 운영 필요다** — 「안전성 확보조치 기준」의 1년 보관은 **개인정보취급자(관리자)** 접속기록이 대상이고 이용자 접속기록은 그 조항의 대상이 아니다(근거는 [decisions.md](decisions.md) "로그 위생" 결정 5). **"법 때문에 남긴다"고 적지 말 것** — 남긴다면 목적·기간을 우리가 정해 고지해야 한다.
+  - ⚠️ **ⓐ 보다 먼저 켜지 말 것** — IP 가 전부 게이트웨이라 **켜고도 못 쓰는 로그**가 된다.
+  - 켤 경우 딸려오는 것: [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) **§3 에 보관 기간 한 줄**(§1 은 이미 고지돼 있다) + 로테이션(리버스 프록시 스택 쪽 compose).
+
+- [ ] **ⓒ privacy.html §1 이 실제보다 넓게 적혀 있다** (2026-08-17 등록). §1 수집표의 *"자동 생성 정보 — 접속 로그 및 오류 기록"* 중 **'접속 로그' 는 실제로 남기지 않는다**(ⓑ 참고). 게다가 §3 에 이 항목의 **보관 기간이 없다**.
+  - #30 이전엔 로그에 값이 잔뜩 있어 오히려 문구가 **과소**했는데, 정리하면서 반대가 됐다. **"문서 = 실제 동작" 원칙이 잡아내라고 있는 갭**이라 ⓐ·ⓑ 와 함께 정리한다.
+  - **둘 중 하나**: ⓑ 를 켜고 §3 에 기간을 적거나, **§1 에서 '접속 로그' 를 빼고 '오류 기록' 만 남기거나.** 어느 쪽이든 하나는 해야 한다.
+
 #### 1-G. 결과 카드 화면 비율 (2026-08-08 등록) — ✅ 완료 (2026-08-17)
 
 - ~~#29 결과 카드 화면에 양옆 여백이 생긴다~~ → ✅ **A+B 결합으로 종결.** 상세·진단 경로는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목, 규칙은 [../CLAUDE.md](../CLAUDE.md) "결과 카드" 의 풀블리드 항목.
   - ⚠️ **실기기 확인은 다음 릴리스 때** — 에뮬·기기 없이 위젯 테스트 기하로만 검증했다(가드 [test/result_card_layout_test.dart](../tenk_app/test/result_card_layout_test.dart) 9건). 확정 → 결과 카드 진입 시 **상단 블록이 화면 좌우 끝까지 닿는지**, 그리고 **하단 워터마크가 액션 버튼에 안 가리는지** 볼 것.
 
-#### 1-H. prod 로그 위생 (2026-08-08 등록) — 미착수 · **현재 운영에 노출 중**
+#### 1-H. prod 로그 위생 (2026-08-08 등록) — ✅ 코드 완료 (2026-08-17) · **배포 대기**
 
-- [ ] **#30 prod 가 모든 JPA 바인딩 파라미터를 애플리케이션 로그에 찍는다.** DB 클린 재생성 로그에서 발견 — `TRACE o.h.orm.jdbc.bind : binding parameter (2:VARCHAR) <- [admin.tenk@gmail.com]`, `(4:VARCHAR) <- [$2a$10$…]`(관리자 BCrypt 해시).
-  - **원인**: [application.yaml](../tenk-backend/src/main/resources/application.yaml) 이 **공통** 파일인데 개발 편의 설정 4개가 여기 있어 prod 에도 적용된다 — `spring.jpa.show-sql: true` · `hibernate.format_sql: true` · `logging.level.org.hibernate.SQL: debug` · `logging.level.org.hibernate.orm.jdbc.bind: trace`.
-  - ⚠️ **관리자 해시만의 문제가 아니다** — JPA 를 지나는 **모든 값**(닉네임 · 문의 본문 · 회신 이메일 · 생년월일 · 성별)이 컨테이너 로그로 나간다. **[AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 에 못박아둔 규칙**(*"내용을 적으면 로그가 또 하나의 개인정보 보관소가 되고, 그러면 로그 자체가 수집표·보관기간의 대상이 된다"*)**이 애플리케이션 로그에서 그대로 벌어지고 있다.** privacy.html §8 신설과도 어긋난다.
-  - **고치는 법**: 위 4개를 `application.yaml` 에서 들어내 [application-local.yaml](../tenk-backend/src/main/resources/application-local.yaml) 로 옮긴다(로컬 개발 경험은 그대로). **이미지 재빌드 + 재배포가 따라온다.**
-  - **재배포 없이 지금 막는 법(중간 조치)**: [docker-compose.yml](../deploy/docker-compose.yml) backend `environment` 에 `SPRING_JPA_SHOW_SQL: "false"` · `LOGGING_LEVEL_ORG_HIBERNATE_SQL: "off"` · `LOGGING_LEVEL_ORG_HIBERNATE_ORM_JDBC_BIND: "off"` 를 넣고 `docker compose up -d`. **env 가 yaml 을 덮으므로 즉시 적용된다.** 근본 수정 때 이 env 는 걷어낼 것(두 곳에 설정이 남으면 드리프트).
-  - **이미 찍힌 로그**: 도커 stdout json 로그에 남아 있다. 지우려면 `docker compose down && up -d` 로 컨테이너를 새로 만들 것(⚠️ `admin-audit` 볼륨은 무관하니 안전하다).
-  - **곁가지 — 같은 커밋에서 고칠 것**: [logback-spring.xml](../tenk-backend/src/main/resources/logback-spring.xml) 의 `<springProfile>` 이 `<logger>` **안에** 있어 부팅 때 WARN 과 함께 **무시된다**(`<springProfile> elements cannot be nested within an <appender>, <logger> or <root> element`). 즉 "local 에선 접속기록을 콘솔에도 남긴다"는 주석은 **한 번도 동작한 적이 없다.** `<springProfile>` 을 `<logger>` 바깥으로 빼 local / !local 두 벌로 분리할 것. 영향은 개발 편의뿐이라 ①보다 가볍다.
+- ~~#30 prod 가 모든 JPA 바인딩 파라미터를 애플리케이션 로그에 찍는다~~ → ✅ **수정 완료 (2026-08-17).** 상세는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목, 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생".
+  - **0단계(재배포 없는 env 중간 조치)는 건너뛰었다 (사용자 결정)** — 이용자가 아직 없어 무인 상태에서 새는 건 **관리자 BCrypt 해시·로그인 ID** 뿐이고, 그 로그는 맥 로컬 docker json-file 에만 있어 외부 노출이 없다. 미배포 백엔드가 0건이라 **다음 배포 = 이 수정의 배포**여서 막을 공백 자체가 없었고, env 를 넣었다 빼는 드리프트만 남았을 것이다.
+  - ⚠️ **이미 찍힌 로그는 배포가 알아서 폐기한다** — 새 이미지로 `up -d` 하면 컨테이너가 재생성되고 json-file 로그는 컨테이너에 딸린 파일이라 같이 사라진다. 별도 정리 작업 불필요.
+  - ⚠️ **배포 전에 카카오 재로그인(TESTER 재승격, §0 ②)을 하지 말 것** — 그 순간 본인 프로필이 구버전 로그에 찍힌다. **수정 배포 → 재로그인** 순서.
+  - ⏭️ **에러 알림(ERROR → AdminNotifier)은 백로그로 등록하지 않기로 했다 (사용자 결정).** 필요해지면 [../CLAUDE.md](../CLAUDE.md) "로그 위생" 마지막 항목에 방향만 적혀 있다 — **에러를 DB 테이블에 쌓는 안은 기각**(DB 장애 때 정작 못 남고, 롤백에 같이 말려들고, 스택트레이스가 다시 개인정보 보관소가 된다).
+  - ⏭️ **곁가지 2건은 #28 로 묶었다** (§1-F ⓑ·ⓒ) — 사용자 HTTP 액세스 로그가 0줄인 것 / privacy.html §1 이 실제보다 넓게 적혀 있는 것. **셋 다 "IP 를 제대로 못 남긴다"는 같은 뿌리**라 따로 착수하면 두 번 판단해야 한다.
 
 - **실기기 점검** — ✅ 현재까지 대상 화면 전부 통과(기존 3블록 닉네임/결과카드/SafeArea 2026-06-16 전원 통과, [handoff-archive.md](handoff-archive.md)). 미착수 작업이 아니라 상시 체크 항목: **새 화면을 추가할 때만** 하단 가림 / 제스처·3버튼 내비 / 키보드 inset 을 실기기에서 재점검.
 

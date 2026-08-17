@@ -15,6 +15,13 @@ services:
     restart: unless-stopped
     # 닉네임/메모에 이모지·한글이 들어가므로 서버 기본 문자셋을 utf8mb4 로 강제.
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    # 도커 기본 json-file 은 **무제한 누적**이라 상한을 준다. 관리자 접속기록(admin-audit 볼륨)과
+    # 달리 이 로그는 보관 의무가 없고, 상한이 없으면 "로그 보관 기간" 자체를 말할 수 없다.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     # DB 는 internal 네트워크에만 둬서 Traefik/외부와 격리. backend 만 접근한다.
     networks:
       - internal
@@ -48,6 +55,14 @@ services:
     networks:
       - web
       - internal
+    # 애플리케이션 로그 상한 (총 50MB). ⚠️ 이건 **관리자 접속기록과 다른 스트림**이다 —
+    # 접속기록은 TENK_ADMIN_AUDIT → admin-audit 볼륨에 13개월 롤링으로 따로 나가고,
+    # 여기 상한에 걸리지 않는다(logback additivity=false). 둘을 헷갈려 상한을 늘리지 말 것.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       # 컨테이너 기본 타임존은 UTC 라 LocalDate.now() 가 한국 자정~오전 9시 사이 하루 밀린다

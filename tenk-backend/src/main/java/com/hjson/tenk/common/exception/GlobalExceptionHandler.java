@@ -45,12 +45,16 @@ public class GlobalExceptionHandler {
     /**
      * 요청 본문 자체를 못 읽는 경우 — 깨진 JSON, 타입 불일치, <b>enum 에 없는 코드</b> 등.
      * 핸들러가 없으면 {@code handleEtc} 로 떨어져 <b>클라이언트 잘못인데 500</b> 이 나간다.
-     * 파싱 실패 원문(필드 경로·기대 타입)은 내부 정보라 노출하지 않고 로그로만 남긴다.
+     *
+     * <p>⚠️ <b>{@code ex.getMessage()} 를 찍지 말 것.</b> Jackson 의 파싱 실패 메시지에는
+     * 문제가 된 <b>요청 본문 조각이 그대로 들어간다</b>({@code from String "홍길동"} 형태) —
+     * 닉네임·문의 본문·회신 이메일이 로그로 새는 경로다. 예외 종류만으로 원인은 충분히 좁혀진다.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex,
                                                                  HttpServletRequest req) {
-        log.warn("[UnreadableBody] {} {} -> {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        log.warn("[UnreadableBody] {} {} -> {}", req.getMethod(), req.getRequestURI(),
+                ex.getClass().getSimpleName());
         ErrorCode code = ErrorCode.INVALID_INPUT;
         return ResponseEntity.status(code.getStatus())
                 .body(ApiResponse.fail(new ApiError(code.getCode(), code.getMessage())));
@@ -62,7 +66,9 @@ public class GlobalExceptionHandler {
      *
      * <p>핸들러가 없으면 전부 {@code handleEtc} 로 떨어져 <b>클라이언트 잘못인데 500</b> 이 나가고,
      * 진짜 서버 장애와 섞여 로그·모니터링이 오염된다 ({@code handleUnreadableBody} 와 같은 갈래).
-     * 실패 원문(필드 경로·기대 타입)은 내부 정보라 노출하지 않고 로그로만 남긴다.
+     *
+     * <p>⚠️ 로그에는 <b>예외 종류만</b> 남긴다 — 실패 원문에 파라미터 값이 실릴 수 있다
+     * ({@code handleUnreadableBody} 와 같은 이유).
      */
     @ExceptionHandler({
             MethodArgumentTypeMismatchException.class,
@@ -80,7 +86,7 @@ public class GlobalExceptionHandler {
             default -> ErrorCode.INVALID_INPUT;
         };
         log.warn("[MalformedRequest] {} {} -> {} ({})",
-                req.getMethod(), req.getRequestURI(), code.getCode(), ex.getMessage());
+                req.getMethod(), req.getRequestURI(), code.getCode(), ex.getClass().getSimpleName());
         return ResponseEntity.status(code.getStatus())
                 .body(ApiResponse.fail(new ApiError(code.getCode(), code.getMessage())));
     }

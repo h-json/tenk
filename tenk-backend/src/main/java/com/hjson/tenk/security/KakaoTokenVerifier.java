@@ -53,7 +53,9 @@ public class KakaoTokenVerifier {
             if (e.getStatusCode().value() == 401) {
                 throw new BusinessException(ErrorCode.AUTH_KAKAO_TOKEN_INVALID);
             }
-            log.warn("Kakao API {} failed: status={} body={}", uri, e.getStatusCode(), e.getResponseBodyAsString());
+            // ⚠️ 응답 body 를 찍지 말 것 — /v2/user/me 응답에는 닉네임 등 프로필이 들어 있어
+            //    실패 로그가 개인정보 보관소가 된다. 어느 호출이 어떤 상태로 실패했는지면 충분하다.
+            log.warn("Kakao API {} failed: status={}", uri, e.getStatusCode());
             throw new BusinessException(failureCode);
         } catch (Exception e) {
             log.warn("Kakao API {} call error", uri, e);

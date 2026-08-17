@@ -46,7 +46,9 @@ public class AdminAccountInitializer implements ApplicationRunner {
                 () -> {
                     adminUserRepository.save(
                             AdminUser.of(email, passwordEncoder.encode(account.password())));
-                    log.info("[Admin] 관리자 계정을 생성했습니다: {}", email);
+                    // ⚠️ 로그인 ID 를 찍지 말 것 — 공개된 로그인 폼의 ID 라 그 자체가 자격증명의 절반이다.
+                    //    어떤 계정인지는 yaml 이 진실의 원천이므로 로그로 확인할 이유도 없다.
+                    log.info("[Admin] 관리자 계정을 생성했습니다.");
                 });
     }
 
@@ -55,6 +57,6 @@ public class AdminAccountInitializer implements ApplicationRunner {
             return;
         }
         existing.changePasswordHash(passwordEncoder.encode(rawPassword));
-        log.info("[Admin] 관리자 계정 비밀번호를 yaml 값으로 갱신했습니다: {}", existing.getEmail());
+        log.info("[Admin] 관리자 계정 비밀번호를 yaml 값으로 갱신했습니다.");
     }
 }
