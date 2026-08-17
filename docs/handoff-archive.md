@@ -9,6 +9,18 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
+- **2026-08-17**: ✅ **#28 ⓐ — D2(HAProxy + PROXY protocol) 적용·검증 완료. 관리자 접속기록 IP 가 상수에서 실제 공인 IP 로.** 회의록 [decisions.md](decisions.md) ㉔, 영구 함정은 [docker-deployment.md](docker-deployment.md) §8.4·§8.5, **엣지 설정의 진실의 원천은 `reverse-proxy` 리포 README §8**(커밋 `39b38a1`·`4560710`).
+  - **결과**: `ip=172.19.0.1`(모든 접속자 동일) → **`ip=223.38.225.21`**(휴대폰 LTE 실측). privacy.html §8 은 **문구 수정 불필요** — 이제 고지대로 동작한다. Traefik 의 라벨 라우팅·ACME 는 **전혀 안 바뀌었다**(D2 를 고른 이유 그대로).
+  - ⭐ **1차 소실의 물증이 나왔다** — 호스트 `:80/:443` 리스너가 **`ssh`(Lima SSH 터널 포워더)** 였다. SSH 터널은 연결을 종단하고 새로 만들어 원래 IP 가 그 지점에서 사라진다. 추정으로 세운 진단이 실측으로 확정됐다.
+  - 🕳️ **⭐ 외부 2시간 장애 — macOS 애플리케이션 방화벽(ALF)이 HAProxy 를 차단했다.** 지시서에 없던 실패 지점이고 **새 맥이면 반드시 재발한다**(절차는 §8.4).
+    - **왜 그동안 없었나**: D2 이전에 80/443 을 잡던 건 **Apple 서명 `/usr/bin/ssh`** 라 이미 허용목록에 있었다. Homebrew HAProxy 는 **adhoc 서명 + GUI 없는 root launchd** 라 허용 프롬프트를 띄울 수도 답할 수도 없어 기본 차단. **D2 가 만든 새 실패 지점.**
+    - ⚠️ **증상이 사람을 속인다** — 커널이 핸드셰이크를 완료해 **`nc -z` 는 성공**하는데 프로세스가 accept 를 못 해 **`curl` 만 timeout**. **loopback 은 방화벽을 안 타서 로컬 검증이 전부 200.** 지시서 검증이 전부 `--resolve …:127.0.0.1` 이라 **구조적으로 발견 불가능**했다 → **LAN IP + 외부를 통과 조건으로 승격**(§8.5).
+  - 🕳️ **불필요한 다운타임 2회는 인프라가 아니라 검증 도구가 틀려서 났다** — ① `curl --resolve host:8443:IP` 를 줘도 **URL 에 포트를 안 쓰면** 매핑이 안 걸려 공인 IP 로 나가고 헤어핀 미지원으로 실패 ② **비-root `lsof` 는 root 소켓을 못 본다.** 둘 다 **정상을 장애로 오판해 원복**했다. 오탐 조건을 §8.5 에 적었다.
+  - **맥 세션이 지시서보다 잘한 것**: ① **임시 프로브 컨테이너로 Lima loopback 포워딩을 다운타임 없이 선검증**(지시서는 포트를 옮긴 *뒤* 확인하게 해서, 실패하면 이미 내려간 뒤였다) ② **3-2 직후 정상 상태에서 피어 IP 를 측정**해 `trustedIPs` 를 확정(다운타임 중 디버깅 회피) ③ `log /dev/log local0` 이 **macOS 엔 없는 리눅스 syslog 소켓**임을 잡아 `log stdout` 으로 교체.
+  - **지시서가 전제하지 못한 것 2개**: **엣지에 tenk 말고 speakeasy(`english.hjson248.com`)가 함께 붙어 있다**(사용자 승인 후 함께 진행 — 두 사이트 다 진짜 IP 를 얻었고 speakeasy 는 IP 로직이 없어 동작 변화 0) / **맥 Claude Code 는 `sudo` 를 실행할 수 없다**(TTY 없음 → root 작업은 사용자가 Terminal 에서 직접).
+  - **검증(재부팅 후 최종)**: loopback·**LAN IP** 두 사이트 200 / LAN IP `:80` 301(ACME 생존) / 외부 제3자 fetch 200 + HSTS·쿠키 플래그 정상 / **앱 체인 무회귀** `/api/users/me` 401 `C0003` JSON / **재부팅 자동 시작**(root LaunchDaemon 이라 로그인 불필요) / 인증서 tenk 9/29 · english 9/30.
+  - **후속 3건은 [handoff.md](handoff.md) §1-F ⓓ·ⓔ·ⓕ 로 이관** — **8/30 전후 ACME 실제 갱신 확인**(가장 늦게 드러나는 실패 지점) · 공유기 DHCP 예약(리스 2시간이라 IP 가 바뀌면 D2 와 무관하게 외부 접속이 죽는다) · `AdminAudit` 죽은 코드 정리.
+  - 맥 백업·스크립트: `~/backup/d2-20260817/`(원복 `scripts/d2-rollback.sh`).
 - **2026-08-17**: ✅ **#30 prod 배포 완료 + TESTER 재승격.** 절차는 [docker-deployment.md](docker-deployment.md) §5.0·§5.1. **스키마 변경이 없어 이미지 교체 + compose 전송**으로 끝났다.
   - **검증 전항목 통과** — 전송 대조(`6046` B / `ca80c246…` **바이트 동일**) / 다이제스트 `a49c3e07…` 일치 / `LogConfig` = `10m×5` / 부팅 로그의 `admin` 매치가 **Spring 내부 빈 이름 하나뿐**(이메일 없음) / ⭐ **`app_config` 를 읽는 요청을 쏜 뒤 `binding parameter` 0건**(DB 를 실제로 탄 상태에서 확인한 것이 핵심) / `/api/users/me` 401 / `app_config` 1.2.0 보존.
   - 🕳️ **⭐ 이번 배포가 08-08 의 조용한 사고를 드러냈다 — `admin-audit` 볼륨이 그때 안 붙어 관리자 접속기록 9일치가 소실됐다.** `up -d` 출력에서 `dbinit` 은 *"already exists"* 인데 **`admin-audit` 만 `Created`** 로 나온 게 단서였고, `docker compose exec backend ls -la /app/logs` 로 **오늘 파일 하나뿐**임을 확인한 뒤 `git log -S admin-audit` 로 원인을 특정했다.

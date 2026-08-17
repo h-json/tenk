@@ -29,11 +29,22 @@
      Docker Hub : hjson248/tenk:latest (arm64)
         │  pull
         ▼
-[M1 맥미니 · arm64 = 서버]  Colima(리눅스 VM + dockerd)
+[M1 맥미니 · arm64 = 서버]
+  인터넷 :80/:443 → 공유기 → HAProxy :80/:443   ← ★ 도커 밖, root LaunchDaemon (#28 D2)
+                               │ mode tcp · TLS 안 품 · PROXY protocol v2 부착
+                               ↓
+                             Colima(리눅스 VM + dockerd)
+                               └ Traefik 127.0.0.1:8081 / 127.0.0.1:8443
+                                   │ trustedIPs 로 쪽지를 읽어 XFF 생성 · 라벨 라우팅 · ACME
+                                   ├→ tenk-backend:8080   (tenk.hjson248.com)
+                                   └→ speakeasy:8000      (english.hjson248.com) ← 별도 리포
   ~/Documents/projects/claude/tenk/docker-compose.yml
     ├─ backend (hjson248/tenk:latest)  ─ :8080
     └─ db (mariadb:11) + schema.sql 자동적용 + named volume
 ```
+
+> **HAProxy 단은 리버스 프록시가 아니라 "발신인 스티커를 붙이는 TCP 중계기"** 다 — 인증서를 들고 있지 않고 HTTP 도 안 읽는다. Colima(Lima)의 포트 포워더가 **SSH 터널로 연결을 재생성하며 클라이언트 IP 를 지우기 때문**에, VM 바깥에서 진짜 IP 를 쪽지로 붙여 넘긴다. 근거·대안 비교는 [decisions.md](decisions.md) ㉔, 엣지 상세는 **`reverse-proxy` 리포 README §8 이 진실의 원천**이다.
+> ⚠️ **엣지는 tenk 전용이 아니다** — `english.hjson248.com`(speakeasy, 별도 리포 `speaking-english`)가 같이 붙어 있다. **엣지를 건드리는 작업은 두 사이트를 동시에 내린다.**
 
 **왜 이렇게:** 윈도우 빌드 → 맥 pull만(맥엔 소스·빌드도구 없이 clean 유지). arm64는 M1 Colima VM용 — build 단계만 `$BUILDPLATFORM`으로 윈도우 네이티브, 런타임만 arm64(QEMU 회피). 엔진은 Colima(Docker Desktop 아님, 무료·헤드리스, 내부는 동일 `dockerd`).
 
@@ -318,6 +329,45 @@ docker compose logs -f backend                  # "Started TenkApplication" = va
 ### 8.3 Flutter base URL 전환 (완료 2026-07-02)
 - ✅ [.vscode/launch.json](../.vscode/launch.json) `tenk_app (device)` 의 `--dart-define=API_BASE_URL` 을 `https://tenk.hjson248.com` 로 전환. [network_security_config.xml](../tenk_app/android/app/src/main/res/xml/network_security_config.xml) 의 LAN IP(`192.168.0.7`) cleartext 예외 줄 제거 — 실기기가 HTTPS 로 붙어 cleartext 불필요. `tenk_app (emulator)` 는 그대로 `http://10.0.2.2:8080`(로컬 개발용) 유지. 로컬 백엔드를 실기기로 테스트할 때만 해당 PC LAN IP 를 두 파일에 다시 추가.
 
+### 8.4 🔥 macOS 애플리케이션 방화벽(ALF)이 도커 밖 서비스를 차단한다 (2026-08-17, #28 D2)
+
+> **외부 접속이 약 2시간 끊긴 원인.** 새 맥에 셋업하거나 80/443 을 잡는 프로세스를 바꾸면 **반드시 재발한다.**
+
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add        /opt/homebrew/opt/haproxy/bin/haproxy
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblockapp /opt/homebrew/opt/haproxy/bin/haproxy
+sudo brew services restart haproxy
+```
+
+- **왜**: ALF 가 켜져 있고(`--getglobalstate` = 1) 허용목록에 haproxy 가 없다. Homebrew haproxy 는 **adhoc 서명**이라 "다운로드된 서명 앱 자동 허용"에 안 걸리고, launchd 가 **GUI 세션 없이 root 로** 띄우니 허용 프롬프트를 **띄울 수도 답할 수도 없다** → 기본 차단.
+- **왜 그동안 안 겪었나**: D2 이전에 80/443 을 잡던 것은 Lima 포트 포워더 = **Apple 서명 `/usr/bin/ssh`** 라 이미 허용목록에 있었다. **도커 밖 서비스를 엣지 앞에 세우는 순간 생기는 새 실패 지점**이다.
+- ⚠️ **증상이 사람을 속인다**: 커널이 3-way 핸드셰이크를 완료하므로 **`nc -z` 는 성공**하는데, 프로세스가 accept 를 못 해 **`curl` 은 ClientHello 이후 timeout** 이다. `nc` 로 "포트 열림"을 확인하고 넘어가면 놓친다.
+- `brew upgrade haproxy` 후에도 유지될 가능성이 높지만(허용목록이 심볼릭 경로로 등록됨), **업그레이드 후엔 아래 §8.5 검증을 다시 돌릴 것.**
+- **(선택) 하드닝** — HAProxy 가 root 로 돌면서 `chroot`·`user`/`group` 미지정이라 기동 시 경고 2줄이 남는다. **기능엔 영향 없다.** 정리하려면 `chroot /var/empty` + 권한 강등 후 §8.5 재검증. 특권 포트(80/443) 바인딩 때문에 **시작은 root 여야 한다**는 점은 그대로다.
+
+### 8.5 ⚠️ 서빙 경로 검증은 **세 지점**을 다 통과해야 한다
+
+**loopback 만 보면 위 §8.4 를 구조적으로 발견할 수 없다** — loopback 은 방화벽을 안 타기 때문에 차단 중에도 200 이 나온다. 실제로 그래서 2시간을 늦게 발견했다.
+
+```bash
+LANIP=$(ipconfig getifaddr en0)
+
+# ① loopback — 가장 약한 검증. 방화벽·비-loopback 바인딩 문제를 전혀 못 잡는다
+curl -sk --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs -o /dev/null -w '%{http_code}\n'   # 200
+
+# ② LAN IP — ★ 방화벽을 잡는 유일한 로컬 지점. 반드시 포함할 것
+curl -sk --resolve tenk.hjson248.com:443:$LANIP    https://tenk.hjson248.com/v3/api-docs -o /dev/null -w '%{http_code}\n'   # 200
+curl -s  --resolve tenk.hjson248.com:80:$LANIP     http://tenk.hjson248.com/             -o /dev/null -w '%{http_code}\n'   # 301 (ACME 경로 생존)
+
+# ③ 외부 — 맥에서는 확인 불가(NAT 헤어핀 미지원, §8.2). 휴대폰 LTE 또는 제3자 서버로
+curl -s "https://api.hackertarget.com/httpheaders/?q=https://tenk.hjson248.com/privacy.html"
+```
+
+- ⚠️ **엣지에 붙은 두 사이트를 다 볼 것** — `english.hjson248.com` 도 같이 통과해야 한다.
+- ⚠️ **`curl --resolve` 는 URL 에 포트를 명시해야 적용된다.** `--resolve host:8443:IP` 를 줘도 URL 이 `https://host/path` 면 기본 443 으로 나가 매핑이 안 걸리고, 실제 DNS→공인 IP 로 향해 헤어핀 미지원으로 `exit 7` 이 된다. 반드시 `https://host:8443/path`. **정상을 장애로 오판해 불필요한 원복을 한 실제 원인**이다.
+- ⚠️ **`sudo` 없이 `lsof | grep haproxy` 로 판정하지 말 것** — 비-root 는 root 소켓을 못 봐 "안 떴다" 로 오판한다. 이것도 불필요한 원복을 유발했다.
+- ⚠️ **PROXY protocol 을 켠 뒤에는 `:8081`/`:8443` 직접 접속이 거부되는 게 정상이다** — Traefik 이 쪽지를 요구하기 때문. 버그가 아니므로 검증은 반드시 **HAProxy 를 경유하는 `:80`/`:443`** 으로 한다.
+
 ---
 
 ## 9. 맥에서 Claude Code 로 운영하기 (operator orientation)
@@ -345,8 +395,14 @@ docker compose -f ~/Documents/projects/claude/tenk/docker-compose.yml ps        
 docker compose -f ~/Documents/projects/claude/reverse-proxy/docker-compose.yml ps     # traefik 상태
 colima status && docker context show                  # VM·컨텍스트(=colima)
 curl -s --resolve tenk.hjson248.com:443:127.0.0.1 https://tenk.hjson248.com/v3/api-docs | grep -oE 'https?://tenk[^"]*'
+
+# ★ 도커 밖에 HAProxy 단이 있으므로(§8.4) loopback 만으로는 부족하다 — LAN IP 도 볼 것
+sudo brew services list | grep haproxy                  # started 여야 함 (sudo 없이는 root 서비스가 안 보인다)
+LANIP=$(ipconfig getifaddr en0)
+curl -sk --resolve tenk.hjson248.com:443:$LANIP    https://tenk.hjson248.com/v3/api-docs -o /dev/null -w 'tenk    %{http_code}\n'
+curl -sk --resolve english.hjson248.com:443:$LANIP https://english.hjson248.com/         -o /dev/null -w 'english %{http_code}\n'
 ```
-기대값: 컨테이너 3개 Up, 마지막 curl 이 `https://tenk.hjson248.com`. 어긋나면 §6 / §8.
+기대값: 컨테이너 3개 Up, 도메인 curl 이 `https://tenk.hjson248.com`, **LAN IP 로도 두 사이트 200**. 어긋나면 §6 / §8(특히 **§8.4 방화벽** · §8.5 검증 3지점).
 
 ### 9.4 자주 하는 운영 (상세는 §5·§8)
 - **설정만 바뀜**(compose/env/schema): 리포 수정 → 맥 복사 → `docker compose up -d`. 이미지 재빌드 불필요.
