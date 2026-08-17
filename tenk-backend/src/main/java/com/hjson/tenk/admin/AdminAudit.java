@@ -1,6 +1,5 @@
 package com.hjson.tenk.admin;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -58,8 +57,17 @@ public class AdminAudit {
     }
 
     /**
-     * 접속지 IP. ⚠️ <b>prod 는 Traefik 뒤라 {@code getRemoteAddr()} 이 프록시 IP 를 준다</b> —
-     * {@code X-Forwarded-For} 의 <b>첫 번째</b> 값이 실제 클라이언트다(뒤쪽은 경유 프록시).
+     * 접속지 IP.
+     *
+     * <p>⚠️ <b>{@code X-Forwarded-For} 를 직접 읽지 말 것.</b> {@code server.forward-headers-strategy=framework}
+     * 라서 Spring 의 {@code ForwardedHeaderFilter} 가 <b>XFF 헤더를 떼어낸 뒤</b> 넘기고, 대신
+     * {@code getRemoteAddr()} 을 XFF 첫 값으로 <b>바꿔치기</b>한다. 즉 헤더를 먼저 보는 분기는
+     * <b>영원히 null 이라 죽은 코드</b>가 된다(2026-08-17 까지 실제로 그 상태였고, 결과를 내던 것은
+     * 폴백 쪽이었다).
+     *
+     * <p>prod 에서 이 값이 실제 클라이언트 IP 인 것은 <b>맥의 HAProxy 가 PROXY protocol 로 넘긴
+     * 덕분</b>이다(#28 D2). 그 앞단이 없으면 Colima 의 SSH 포트 포워더가 IP 를 지워 모든 접속이
+     * 같은 게이트웨이 IP 로 찍힌다 — docker-deployment.md §2·§8 참고.
      *
      * <p>스케줄러 등 요청 밖에서 불리면 요청 자체가 없으므로 {@code -} 를 남긴다.
      */
@@ -67,11 +75,6 @@ public class AdminAudit {
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) {
             return "-";
         }
-        HttpServletRequest request = attrs.getRequest();
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return attrs.getRequest().getRemoteAddr();
     }
 }

@@ -257,8 +257,9 @@ cd ~/Documents/projects/claude/tenk
 md5 ./schema.sql        # ← 윈도우: Get-FileHash docs\schema.sql -Algorithm MD5
 
 # ② 스택 내리고 볼륨 삭제 (⚠️ 되돌릴 수 없음. 필요하면 먼저 mariadb-dump 백업)
-#    ⚠️ tenk_admin-audit 는 **지우지 말 것** — 관리자 접속기록이고 개인정보처리방침 §8 에
-#       1년 이상 보관으로 고지돼 있다. 계정 데이터와 무관하므로 클린 재생성 대상이 아니다.
+#    ⚠️ tenk_admin-audit / tenk_app-logs 는 **지우지 말 것** — 각각 관리자 접속기록(§8, 13개월)과
+#       이용자 접속기록·오류 로그(§3, 3개월)이고 개인정보처리방침에 보관 기간이 고지돼 있다.
+#       계정 데이터와 무관하므로 클린 재생성 대상이 아니다. 아래 rm 목록에 넣지 말 것.
 docker compose down
 docker volume rm tenk_db-data tenk_uploads tenk_dbinit
 
@@ -386,7 +387,8 @@ curl -s "https://api.hackertarget.com/httpheaders/?q=https://tenk.hjson248.com/p
 ├─ tenk/            # 리포 deploy/ 복사본: docker-compose.yml(name:tenk) · schema.sql(=docs/schema.sql, dbinit 시드) · .env(커밋 금지)
 └─ reverse-proxy/   # 공유 엣지 (★ 별도 리포 clone — tenk 소관 아님, name:traefik)
 ```
-- **런타임 파일은 named volume**(폴더가 `~/Documents` 밑이라 TCC bind mount 불가 — §9.6): `tenk_db-data`·`tenk_uploads`·`tenk_dbinit`·`traefik_letsencrypt`. 백업은 `docker cp`.
+- **런타임 파일은 named volume**(폴더가 `~/Documents` 밑이라 TCC bind mount 불가 — §9.6): `tenk_db-data`·`tenk_uploads`·`tenk_dbinit`·**`tenk_admin-audit`**·**`tenk_app-logs`**·`traefik_letsencrypt`. 백업은 `docker cp`.
+  - ⚠️ **뒤 둘은 로그 보관 볼륨이라 성격이 다르다** — `admin-audit`(관리자 접속기록, 13개월, privacy §8) / `app-logs`(이용자 접속기록 + 오류 로그, 3개월, privacy §3). **계정 데이터와 무관하므로 DB 클린 재생성(§5.7) 때 지우지 말 것.** 볼륨이 안 붙으면 로그는 정상적으로 쓰이면서 재배포에 사라지고 **에러가 하나도 안 난다**(§5.1 ⓪).
 - 두 스택은 external 네트워크 `web` 로 연결(`docker network create web` 1회, §8). 이미지 소스는 맥에 없음(§2) → 코드 재배포는 §9.4.
 
 ### 9.3 첫 진입 루틴 (상태부터 확인)

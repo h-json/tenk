@@ -29,6 +29,12 @@ spring:
 tenk:
   upload:
     base-dir: ${TENK_UPLOAD_DIR:./uploads}
+  # 이용자 접속기록(TENK_ACCESS_LOG)과 애플리케이션 오류 로그가 쌓이는 곳. logback-spring.xml 이
+  # 이 값을 읽어 **일 단위 × 90(3개월)** 롤링 보관한다 — 개인정보처리방침 §3 에 고지한 기간이다.
+  # ⚠️ 관리자 접속기록(tenk.admin.audit-log-dir, 13개월)과 **다른 스트림**이니 값을 맞추지 말 것.
+  # 배포에서는 컨테이너 볼륨(/app/app-logs)으로 덮어써 재배포에도 기록이 살아남는다.
+  log:
+    dir: ${TENK_LOG_DIR:./logs}
   # 관리자 패널(/admin/**). 기본 꺼짐 — 켜는 곳은 각 프로파일이다.
   # 꺼져 있으면 보안 체인이 등록되지 않아 /admin/** 이 앱 체인의 anyRequest().authenticated()
   # 에 걸려 401 로 끊긴다(컨트롤러까지 가지 않음).

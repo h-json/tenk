@@ -48,7 +48,10 @@ import org.springframework.test.web.servlet.MockMvc;
         "tenk.admin.enabled=true",
         "tenk.admin.account.email=admin@test",
         "tenk.admin.account.password=test-admin-pw",
-        "tenk.admin.base-url=https://example.test"
+        "tenk.admin.base-url=https://example.test",
+        // prod 와 같게 맞춘다 — 이게 없으면 ForwardedHeaderFilter 가 안 붙어 IP 검증이
+        // **실제와 다른 경로**를 통과시킨다 (AdminAudit.currentIp 주석 참고).
+        "server.forward-headers-strategy=framework"
 })
 class AdminPanelIntegrationTest extends IntegrationTestBase {
 
@@ -150,7 +153,8 @@ class AdminPanelIntegrationTest extends IntegrationTestBase {
                         .with(adminUser())));
 
         assertThat(lines)
-                .as("Traefik 뒤라 X-Forwarded-For 의 첫 값이 실제 클라이언트다")
+                .as("ForwardedHeaderFilter 가 XFF 첫 값으로 getRemoteAddr 을 바꿔치기한다 — "
+                        + "AdminAudit 은 헤더를 직접 읽지 않고 그 결과만 쓴다")
                 .anyMatch(l -> l.contains("ip=203.0.113.9"));
     }
 
