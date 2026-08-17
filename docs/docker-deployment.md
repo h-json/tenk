@@ -403,8 +403,14 @@ sudo brew services list | grep haproxy                  # started 여야 함 (su
 LANIP=$(ipconfig getifaddr en0)
 curl -sk --resolve tenk.hjson248.com:443:$LANIP    https://tenk.hjson248.com/v3/api-docs -o /dev/null -w 'tenk    %{http_code}\n'
 curl -sk --resolve english.hjson248.com:443:$LANIP https://english.hjson248.com/         -o /dev/null -w 'english %{http_code}\n'
+
+# ★ 로그 볼륨이 붙어 있고 실제로 쌓이는지 (개인정보처리방침 §3·§8 에 보관 기간을 고지한 것들)
+docker compose -f ~/Documents/projects/claude/tenk/docker-compose.yml exec backend \
+  sh -c 'ls -la /app/logs /app/app-logs'
 ```
-기대값: 컨테이너 3개 Up, 도메인 curl 이 `https://tenk.hjson248.com`, **LAN IP 로도 두 사이트 200**. 어긋나면 §6 / §8(특히 **§8.4 방화벽** · §8.5 검증 3지점).
+기대값: 컨테이너 3개 Up, 도메인 curl 이 `https://tenk.hjson248.com`, **LAN IP 로도 두 사이트 200**, 로그 파일 3개(`admin-audit.log` / `access.log`·`application.log`)에 **오늘 날짜의 크기 증가**. 어긋나면 §6 / §8(특히 **§8.4 방화벽** · §8.5 검증 3지점).
+
+⚠️ **로그는 "붙어 있나"뿐 아니라 "쌓이고 있나"까지 봐야 한다.** 볼륨이 안 붙어도 로그는 **정상적으로 쓰이면서** 재배포에 사라지고 **에러가 하나도 안 난다** — 2026-08-08 에 `admin-audit` 이 그렇게 9일치를 잃었고, `docker compose ps` 로는 전혀 안 드러났다. 이 한 줄이 그걸 잡는 자리다.
 
 ### 9.4 자주 하는 운영 (상세는 §5·§8)
 - **설정만 바뀜**(compose/env/schema): 리포 수정 → 맥 복사 → `docker compose up -d`. 이미지 재빌드 불필요.
