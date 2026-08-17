@@ -9,7 +9,15 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
-- **2026-08-17**: ✅ **#30 prod 로그 위생 — 개인정보가 애플리케이션 로그로 새던 것을 막았다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생"(코딩 컨벤션 — 백엔드). ⚠️ **백엔드 재배포 대기 + 맥 compose 파일 갱신 필요.**
+- **2026-08-17**: ✅ **#30 prod 배포 완료 + TESTER 재승격.** 절차는 [docker-deployment.md](docker-deployment.md) §5.0·§5.1. **스키마 변경이 없어 이미지 교체 + compose 전송**으로 끝났다.
+  - **검증 전항목 통과** — 전송 대조(`6046` B / `ca80c246…` **바이트 동일**) / 다이제스트 `a49c3e07…` 일치 / `LogConfig` = `10m×5` / 부팅 로그의 `admin` 매치가 **Spring 내부 빈 이름 하나뿐**(이메일 없음) / ⭐ **`app_config` 를 읽는 요청을 쏜 뒤 `binding parameter` 0건**(DB 를 실제로 탄 상태에서 확인한 것이 핵심) / `/api/users/me` 401 / `app_config` 1.2.0 보존.
+  - 🕳️ **⭐ 이번 배포가 08-08 의 조용한 사고를 드러냈다 — `admin-audit` 볼륨이 그때 안 붙어 관리자 접속기록 9일치가 소실됐다.** `up -d` 출력에서 `dbinit` 은 *"already exists"* 인데 **`admin-audit` 만 `Created`** 로 나온 게 단서였고, `docker compose exec backend ls -la /app/logs` 로 **오늘 파일 하나뿐**임을 확인한 뒤 `git log -S admin-audit` 로 원인을 특정했다.
+    - **원인**: 볼륨은 커밋 `2e261a1`(#27 후속, 08-06)에서 `deploy/docker-compose.yml` 에 추가됐는데, **08-08 배포가 "스키마 선적용 → 이미지 교체" 만 하고 compose 파일을 맥에 안 옮겼다.**
+    - ⚠️ **경로가 우연히 같아 더 안 보였다** — logback 기본값 `./logs` 가 `WORKDIR /app` 때문에 볼륨 마운트 지점과 같은 `/app/logs` 라, **로그는 정상적으로 쓰였고 다만 컨테이너에 딸려 있었다.** `docker compose ps` 로는 전혀 안 드러난다.
+    - **영향 — 문제 삼지 않는다 (2026-08-17 사용자 판단).** 08-08~08-17 접속기록이 소실됐고 복구 불가지만, **아직 실제 운영 전이라 이용자가 0명**이고 그 기간의 패널 접속은 전부 개발자 본인의 검증이었다. [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) §8 이 보호하려는 것은 *이용자 개인정보를 누가 열람했나* 인데 **열람 대상 자체가 없었다.** 오늘부터는 볼륨에 정상 적재된다(첫 기록 = TESTER 승격). ⚠️ **이 면제는 실제 운영 시작 전까지만 유효하다** — 아래 "실제 운영 시작" 참고.
+    - **재발 방지**: [docker-deployment.md](docker-deployment.md) **§5.1 에 "⓪ compose 파일 md5 대조" 를 필수 단계로 신설**. ⭐ **#30 의 로그 로테이션과 정확히 같은 실패 모드**다 — *"`pull && up -d` 는 이미지만 갈아끼우고, compose 변경은 아무 에러 없이 조용히 누락된다."* 두 번 밟았으니 문장이 아니라 **절차**로 박았다.
+  - **TESTER 재승격 완료** — 08-08 클린 재생성으로 사라졌던 것. **배포 → 재로그인** 순서를 지켜 본인 프로필이 구버전(로깅 중이던) 이미지에 안 남게 했다.
+- **2026-08-17**: ✅ **#30 prod 로그 위생 — 개인정보가 애플리케이션 로그로 새던 것을 막았다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생"(코딩 컨벤션 — 백엔드). ✅ **prod 배포 완료 (같은 날, 위 항목).**
   - ⭐ **문제는 설정 하나가 아니라 "규칙을 한쪽에만 적용한 것"이었다.** [AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 에 *"내용을 적으면 로그가 또 하나의 개인정보 보관소가 된다"* 를 못박아 놓고 **접속기록에만 적용**했고, 애플리케이션 로그는 정반대로 굴러가고 있었다. 새던 값: 닉네임 · 카카오 회원번호 · 생년월일 · 성별 · 문의/의견 본문 · 회신 이메일 · 지출 내용·메모 · 관리자 BCrypt 해시.
   - **원인**: 개발용 SQL 로깅 4개(`show-sql` · `format_sql` · `org.hibernate.SQL:debug` · `orm.jdbc.bind:trace`)가 **공통** `application.yaml` 에 있어 prod 에도 적용. `application-local.yaml` 로 내렸다(jwt secret 을 공통에 안 두는 것과 같은 원칙). ⚠️ **`show-sql` 은 logback 을 안 거치고 stdout 에 직접 쓰므로 로그 레벨만 내려선 안 꺼진다 — 넷이 한 세트.**
   - **조사에서 곁가지가 셋 더 나왔다**: ① **로테이션 부재** — 도커 기본 json-file 은 무제한이라 상한이 없으면 **탈퇴자 데이터를 DB 에서 파기해도 로그엔 영원히 남아** "파기했다"가 거짓이 된다(backend·db 각 `10m×5`). ② **로그 4곳** — 카카오 응답 body(프로필 포함) · `[UnreadableBody]`/`[MalformedRequest]` 의 `ex.getMessage()`(Jackson 이 **요청 본문 조각**을 담는다) · 관리자 로그인 ID. ③ **`<springProfile>` 이 `<logger>` 안에 있어** local 접속기록 콘솔 출력이 **한 번도 동작한 적 없었다**.

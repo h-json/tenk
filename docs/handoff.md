@@ -58,7 +58,10 @@
   - ⚠️ **남은 후처리 1건**: **TESTER 재승격** — 클린 재생성으로 계정이 전부 사라졌다. **카카오 재로그인으로 계정이 생긴 뒤** 패널 → '사용자' 에서.
 - ✅ **#29 결과 카드 양옆 여백 (2026-08-17)** — 풀블리드가 **세 겹**(뜬 액션 Row + `fitWidth` + Column `stretch`)으로 성립한다는 걸 확정하고 가드 9건을 남겼다. ⚠️ **앱 전용 · 다음 릴리스에 실린다 · 실기기 확인 미완**(§1-G).
 - ✅ **#30 prod 로그 위생 (2026-08-17)** — prod 가 **JPA 를 지나는 모든 값**(닉네임·문의 본문·회신 이메일·생년월일·관리자 BCrypt 해시)을 **무제한으로** 로그에 찍고 있었다. 원인은 개발용 SQL 로깅 4개가 **공통** yaml 에 있던 것 — `application-local.yaml` 로 내렸다. 곁가지가 셋 더 나왔다: **로테이션 부재**(도커 기본 json-file 무제한 → 탈퇴자 데이터를 파기해도 로그엔 영원히 남는다), **예외 메시지·외부 응답 body·로그인 ID 를 찍던 4곳**, **`<springProfile>` 중첩 오류로 한 번도 동작한 적 없던 local 접속기록 콘솔 출력**. 테스트 **255개** 통과 + **로컬 부팅 실검증**(테스트 출력에 SQL·파라미터 0건 / logback WARN 소멸 / 접속기록이 콘솔·파일 양쪽에 + 입력 비밀번호 미노출). ⚠️ **백엔드 재배포 필요 + 맥 compose 파일 갱신**(§0). 상세는 [handoff-archive.md](handoff-archive.md), 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생".
-- ⏭️ 다음 후보: **#30 배포** / **§0 잔여(TESTER 재승격 · Play 콘솔 폼 3종 + 데모 계정)** / **#28 접속기록 IP + 액세스 로그 3갈래(§1-F)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- 🔵 **#28 착수 → 전제 회의로 확장, 본안은 미결 (2026-08-17).** 원인 진단은 **한 번 더 확정**했고(XFF 가 오는데 그 값이 이미 게이트웨이 = Traefik 조차 진짜 IP 를 못 받는다), 그 과정에서 **선택지 D(맥 네이티브 프록시)가 새로 나와** 2택이 4택이 됐다 — *IP 는 봉투 겉면이라 사라지지만 **HTTP 헤더는 편지 내용이라 살아남는다***. 한 단계 위 질문(*"맥+Docker 운영 서버가 통상적인가"*)은 **별도 회의로 결론**냈다: **3중 특수 케이스이고, 지금까지 겪은 인프라 함정이 전부 그 산물**이며, 통상적 정답인 **리눅스 이전은 트리거를 달아 §4 에 등록**(#28 을 그것으로 풀지 않는다). ✅ **본안은 D2(맥에 HAProxy + PROXY protocol)로 확정** — Traefik 을 그대로 두고 얇은 TCP 중계기만 앞세운다. A(Colima vmnet) 를 뺀 결정적 이유는 *되돌리는 난이도* 였다(엣지 설정은 즉시 원복, **Colima 재부팅 실패는 집에 가야 안다**). ⏭️ **실행은 맥 세션 몫**(§1-F 에 3단 절차·함정 2개·원복). 회의록 [decisions.md](decisions.md) ㉔ "서버 전제".
+  - ⚠️ **답변 태도 교정 2건이 이 회의에서 나왔다** — *"이용자 0명이라 필요 없다"* 는 논거 금지(§1-F), *"맥에서 Docker 는 흔하다"* 처럼 **용도를 뭉뚱그린 통상성 판정** 금지(㉔).
+- ✅ **#30 prod 배포 + TESTER 재승격 완료 (2026-08-17).** 검증 전항목 통과(⭐ `app_config` 를 읽는 요청 뒤 **`binding parameter` 0건**). 🕳️ **그 과정에서 08-08 의 조용한 사고가 드러났다** — `admin-audit` 볼륨이 그때 안 붙어(**compose 파일을 안 옮겼다**) **관리자 접속기록 9일치가 소실**됐다. **#30 로그 로테이션과 정확히 같은 실패 모드**라 [docker-deployment.md](docker-deployment.md) **§5.1 ⓪ 에 "compose md5 대조" 를 필수 단계로 신설**했다. 상세는 [handoff-archive.md](handoff-archive.md).
+- ⏭️ 다음 후보: **#28 D2 실행(맥 세션, §1-F)** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정 + 아이콘 재업로드)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -127,8 +130,8 @@
 
 **Play Console 내부 테스트 — ✅ 게시·카카오 로그인 확인 (2026-07-08).**
 
-**백엔드 — 🟠 미배포 1건: #30 로그 위생 (2026-08-17).** 스키마 변경 없음 → **이미지 교체만**([docker-deployment.md](docker-deployment.md) §5.1). ⚠️ 단 [docker-compose.yml](../deploy/docker-compose.yml) 에 **로그 로테이션 블록이 추가돼 맥의 compose 파일도 같이 갱신**해야 한다(이미지 교체만으론 안 붙는다). 배포 후 확인: 컨테이너 로그에 `binding parameter` 가 **0건**인지 + 부팅 시 관리자 계정 로그에 ID 가 안 보이는지. **이 배포를 먼저 하고 나서 §0 ② TESTER 재승격을 할 것**(먼저 로그인하면 본인 프로필이 구버전 로그에 남는다).
-그 이전 3건(#23 문의하기+관리자 알림 / #27 관리자 패널 / 알림 축약·답장 초안)은 2026-08-08 에 반영 완료.
+**백엔드 — ✅ 미배포 0건 (2026-08-17 기준).** #30 로그 위생을 배포하며 밀린 것이 없어졌다(그 이전 3건은 2026-08-08 반영). 검증 결과·소실 사고는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목.
+- ⚠️ **다음 배포 때 반드시 `deploy/docker-compose.yml` md5 를 맥 것과 대조할 것** — [docker-deployment.md](docker-deployment.md) **§5.1 ⓪** 로 신설된 필수 단계다. `pull && up -d` 는 **이미지만** 갈아끼우고 compose 변경은 **아무 에러 없이 조용히 누락**된다. **이미 두 번 밟았다**(08-08 `admin-audit` 볼륨 → 접속기록 9일치 소실 / 08-17 로그 로테이션).
 
 - [x] ✅ **라이브 DB 스키마 3건 선적용 완료 (2026-08-08)** — DBeaver 로 직접 적용. `inquiry` 는 schema.sql 블록에 `handler_note` 가 **이미 포함**돼 있어 별도 ALTER 가 필요 없었고, `feedback` 만 ALTER 를 쳤다.
   ```sql
@@ -186,7 +189,8 @@
     - [ ] **밝은 배경화면 위에서 아이콘 경계** — 바탕이 흰색이라 흐려진다. 견딜 만한지 보고, 아니면 민트 반전으로 전환 검토(마크 색만 바꾸면 되고 생성기 재실행 1회)
     - [ ] 로그인 화면 로고 lockup(마크 88 + 워드마크 40) — 작은 화면에서 카카오 버튼을 밀어내지 않는지
     - [ ] 결과 카드 워터마크 — 캡처 PNG·영상 마지막 클립 **양쪽**에서 마크가 나오는지
-- [ ] **② TESTER role 재승격** — 클린 재생성으로 초기화됨(**2026-08-08 재생성으로 다시 필요**). ⚠️ **카카오로 한 번 로그인해 계정이 만들어진 뒤에** 승격할 것 — 계정 자체가 없으면 검색이 안 된다. **#27 이후로는 [관리자 패널](https://tenk.hjson248.com/admin) → '사용자'** 에서 카카오 회원번호로 검색해 버튼 한 번(패널 배포 후). 폴백 SQL: `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
+- [x] ✅ **② TESTER role 재승격 완료 (2026-08-17)** — #30 배포 검증 후 카카오 재로그인 → 패널에서 승격. **배포 → 재로그인 순서**를 지켜 본인 프로필이 구버전 로그에 안 남게 했다. (아래는 다음에 또 필요해질 때의 절차)
+  - **절차 (DB 클린 재생성 때마다 다시 필요하다)** — ⚠️ **카카오로 한 번 로그인해 계정이 만들어진 뒤에** 승격할 것 — 계정 자체가 없으면 검색이 안 된다. **#27 이후로는 [관리자 패널](https://tenk.hjson248.com/admin) → '사용자'** 에서 카카오 회원번호로 검색해 버튼 한 번(패널 배포 후). 폴백 SQL: `UPDATE user SET role='TESTER' WHERE provider='KAKAO' AND provider_user_id='<카카오회원번호>';` — **심사자 데모 계정은 승격 금지**(시딩 버튼이 노출됨).
 - [x] ✅ **③ 새 AAB 빌드 완료 (2026-08-03)** — `pubspec` **`1.0.0+3` → `1.1.0+4`**(기능 추가라 minor) → `flutter analyze` 0건 → `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `build/app/outputs/bundle/release/app-release.aab` (100.4MB). 병합 매니페스트 실측: `versionCode=4`/`versionName=1.1.0`, **`SCHEDULE_EXACT_ALARM` 없음**(inexact 방침대로), 알림 권한 4종 반영.
   - ✅ **`app_config` 갱신 완료** — `latest_version='1.1.0'` + **`min_supported_version='1.1.0'`(강제)**. 내부 테스터를 최신 빌드로 통일하려는 의도적 선택이라, **1.1.0 미만은 전원 ForceUpdateScreen 에 갇힌다.** 되돌리려면 `min_supported_version='1.0.0'` 으로 UPDATE 한 줄(재배포 불필요). 검증: 구버전→`UPDATE_REQUIRED` / 신버전→`LATEST`.
   - ✅ **Play 내부 테스트 게시 + 실기기 다운로드 확인 (2026-08-03)** — `min` 을 올려둔 상태였으므로 게시 전까지 구버전이 잠겨 있었고, 게시로 그 구간이 닫혔다. ⚠️ **다음에도 이 UPDATE 는 게시 반영 뒤에** — 스토어에 구버전뿐인 상태에서 min 을 올리면 업데이트 버튼을 눌러도 나갈 길이 없다.
@@ -315,10 +319,34 @@
 - [ ] **ⓐ #28 관리자 접속기록의 IP 가 전부 `172.19.0.1` 로 찍힌다** — 배포 검증에서 발견. **코드·Traefik 설정은 정상이고 원인은 인프라(macOS + Colima)다.**
   - **진단 경로(추정으로 두 번 틀렸으니 그대로 옮겨 적는다)**: ① "패널을 `localhost:8080` 으로 직접 열어서 XFF 가 없는 것" 이라고 봤으나, **공개 HTTPS 로 일부러 실패하는 로그인을 쏴 보니**(`actor=xff-probe`) 똑같이 `172.19.0.1` 이라 기각 ② `docker network inspect` 로 확정: **`172.19.0.1` 은 `web`(172.19.0.0/16) 의 게이트웨이**이고 **Traefik 은 `172.19.0.2`**, 백엔드는 `172.19.0.4`. 컨테이너끼리 붙었다면 `.2` 가 찍혀야 한다.
   - **결론**: 이 모순은 **XFF 가 정상적으로 오고 있고 그 값이 `172.19.0.1`** 일 때만 성립한다 — 즉 **Traefik 자신이 클라이언트를 게이트웨이로 본다.** 외부 요청이 `맥 :443` → **Lima 유저스페이스 포트 포워더** → VM → docker-proxy 를 거치며 **VM 경계에서 원 source IP 가 소실**되기 때문. **Traefik 이전 단계에서 잃으므로 앱에서는 복구 불가.**
-  - **선택지 2개**: **A) Colima vmnet** — `colima start --network-address` 로 VM 에 LAN IP 를 주고 **공유기 80/443 포워딩을 맥 호스트가 아니라 VM IP 로** 변경. 서빙 경로 전체를 건드리는 인프라 작업(sudo + 공유기). **B) 현행 수용 + [privacy.html](../tenk-backend/src/main/resources/static/privacy.html) §8 문구 정정** — 대신 **로그인 실패 기반 대입 공격 탐지가 사실상 불가능**해진다(공개 폼의 유일한 탐지 수단이었다).
+  - ✅ **2026-08-17 재진단에서 원인이 한 번 더 확정됐다** — `SERVER_FORWARD_HEADERS_STRATEGY: framework` 라 XFF 가 **없었다면** `getRemoteAddr()` 이 TCP 피어인 **Traefik(`.2`)** 을 줘야 한다. `.1`(게이트웨이)이 나온다는 건 **XFF 가 오는데 그 값이 이미 게이트웨이**라는 뜻 = Traefik 조차 진짜 IP 를 못 받는다.
+  - ✅ **2026-08-17: D2 로 확정** (아래 표 + [decisions.md](decisions.md) ㉔ 결정 5). **Traefik 을 그대로 두고** 맥에 얇은 TCP 중계기(HAProxy)만 앞세워 PROXY protocol 로 진짜 IP 를 넘긴다.
+  - **선택지 4개** (2026-08-17 에 **D 추가** — 근거·비교는 [decisions.md](decisions.md) ㉔ "서버 전제"):
+
+    | | 무엇을 | Colima 리스크 | 공유기 | 엣지(별도 리포) | 진짜 IP |
+    |---|---|---|---|---|---|
+    | **A** Colima vmnet | `colima start --network-address` 로 VM 에 LAN IP → 공유기 80/443 을 **맥이 아니라 VM IP** 로 | ⚠️ [재부팅 후 주소 소실 이슈](https://github.com/abiosoft/colima/issues/642) | 변경 | 무변경 | ✅ |
+    | **D** 맥 네이티브 프록시 | 맥에서 **도커 밖으로** 도는 프록시를 맨 앞에(**D1** Caddy/nginx 가 TLS+XFF / **D2** HAProxy 가 PROXY protocol → Traefik) | ✅ 없음 | 무변경 | **재설계** | ✅ |
+    | **C** 패널 tailnet 전용 | `/admin` 을 공개 라우팅에서 제외([docker-compose.yml](../deploy/docker-compose.yml) 라벨 `&& !PathPrefix(/admin)`) — IP 대신 **공격 표면을 제거** | ✅ 없음 | 무변경 | 라벨 한 줄 | ❌ |
+    | **B** 현행 수용 | privacy.html §8 문구만 정정 | ✅ 없음 | 무변경 | 무변경 | ❌ |
+
+    - **왜 D 가 늦게 나왔나**: IP 는 *봉투 겉면*이라 중계기를 지나면 사라지지만, **HTTP 헤더는 편지 내용이라 살아남는다.** 그래서 **진짜 IP 를 아는 마지막 존재(= VM 바깥, 맥 위)** 가 헤더에 적어주면 VM 경계를 건너온다. Traefik 은 이미 XFF 를 쓰고 있지만 **이미 늦은 자리**라 게이트웨이를 적을 뿐이다.
+    - ⚠️ **Lima/Colima 포워더도 Docker Desktop 도 PROXY protocol 을 지원하지 않는다** — 맥용 Docker 전반의 알려진 제약이라 **엔진을 바꿔서 해결되지 않는다.**
+    - **B·C 는 IP 를 포기하는 안**이라 **이용자 액세스 로그(ⓑ)를 나중에도 켤 수 없다.** C 는 보안을 올릴 뿐 기록 문제를 풀지 않으므로 **§8 문구 정정은 B 와 동일하게 필요**하다.
+    - ⚠️ **"이용자가 0명이라 필요 없다" 는 논거를 쓰지 말 것** (2026-08-17 사용자 지적). 필요성은 **이용자가 있는 상태**를 기준으로 판단하고, "0명" 은 *지금 손대기 좋은 시점인가* 를 볼 때만 쓴다 — 그 기준으로는 **다운타임 비용이 0 인 지금이 가장 싼 시점**이다.
   - ⚠️ **이건 "문서 = 실제 동작" 원칙이 잡아내라고 있는 갭이다** — §8 이 '접속지 IP' 를 남긴다고 고지했는데 실제로는 모든 접속이 같은 게이트웨이 IP 다. A 든 B 든 **하나는 해야 한다.**
   - **곁다리로 같이 고칠 것**: [AdminAudit.currentIp()](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 의 `getHeader("X-Forwarded-For")` 분기는 **한 번도 실행된 적이 없는 죽은 코드**다 — `SERVER_FORWARD_HEADERS_STRATEGY: framework` 라 Spring 의 `ForwardedHeaderFilter` 가 **XFF 헤더를 떼어낸 뒤** 넘기고, 대신 `getRemoteAddr()` 을 XFF 첫 값으로 바꿔치기한다. 지금 결과를 내는 건 폴백 쪽이다. **주석이 설명하는 동작과 실제가 어긋나 있으니 폴백 하나로 정리할 것.**
-  - **확정 검증(1분, 되돌리기 쉬움)**: reverse-proxy 스택 `command:` 에 `--accesslog=true` 를 잠깐 넣고 `docker compose up -d` → 패널 한 번 열고 `docker compose logs --tail=5 traefik` 의 `ClientAddr` 확인 → 원복.
+  - **⏭️ D2 실행 — ⚠️ 맥 Claude Code 세션이 필요하다** (윈도우에선 `colima`·`reverse-proxy` 리포에 손이 안 닿는다, [docker-deployment.md](docker-deployment.md) §9). 상세 지시서는 세션 스크래치패드에 작성했고(`mac-d2-haproxy-instructions.md`), **아래가 그 요약이라 없어져도 재생성 가능**하다.
+    - [ ] **① 조사** — 엣지에 붙은 서비스 목록 / Traefik 버전 / `docker network inspect web` 의 **게이트웨이 IP**(`trustedIPs` 에 쓴다) / 8081·8443 이 비었는지 / ⚠️ **엣지에도 `docker-compose.override.yml` 이 있는지**(tenk 스택엔 실제로 있다 — [docker-deployment.md](docker-deployment.md) §5.6. 자동 병합이라 **base 를 고쳐도 override 가 `ports` 를 덧칠하면 무효가 된다**. 파일이 아니라 `docker compose config` 로 판단할 것). 🛑 **엣지에 tenk 외 서비스가 있거나 override 가 ports 를 건드리면 멈추고 보고할 것**
+    - [ ] **② 백업** — 두 compose 파일 + `docker ps` 포트 스냅샷. **볼륨 백업은 불필요**(D2 는 VM·볼륨을 안 건드린다 — A 안이었다면 필수였다)
+    - [ ] **③ 적용은 3단으로 쪼갠다** ⚠️ **한 번에 하지 말 것** — Traefik 에 `proxyProtocol` 을 켜는 순간 그 포트는 **쪽지 없는 일반 접속을 거부**하므로 HAProxy 와 Traefik 은 **동시에 뒤집혀야** 한다:
+      **3-1** Traefik 포트를 `127.0.0.1:8081:80` / `127.0.0.1:8443:443` 로 이동(PROXY 는 아직 끔) → 새 포트 응답 확인 →
+      **3-2** `brew install haproxy` + TCP 모드로 80·443 통과(쪽지 없이) → **사이트가 밖에서 정상 동작해야 함** →
+      **3-3** HAProxy 에 `send-proxy-v2` + Traefik 에 `proxyProtocol.trustedIPs=<게이트웨이 IP>` 를 **같이** 넣고 양쪽 재시작
+    - [ ] **④ 검증** — 사이트 200 / **앱 체인 무회귀**(`/api/users/me` 가 401 `C0003`) / **휴대폰 LTE 로 일부러 실패하는 관리자 로그인 → 접속기록에 공인 IP** / ACME 80 경로(`/.well-known/acme-challenge/probe` 가 404) / ⚠️ **`sudo reboot` 후 HAProxy 자동 시작**(이 안의 유일한 새 실패 지점)
+    - [ ] **⑤ 리포 역반영** — 맥 파일은 복사본이고 **리포가 소스 오브 트루스**다. `haproxy.cfg` 와 엣지 compose 변경분을 반드시 리포에 반영할 것(안 하면 다음 배포에 조용히 사라진다)
+  - ⚠️ **구현 함정 2개 (설계 단계에서 발견 — 놓치면 사고)**: ① **80번도 같이 통과시킬 것** — Let's Encrypt 갱신 요청이 80 으로 온다. 빠뜨리면 **인증서 만료일에 사이트가 죽는다**(가장 늦게 터진다) ② **Traefik 포트는 `127.0.0.1` 바인딩** — PROXY protocol 은 쪽지를 그냥 믿으므로 직접 닿을 수 있으면 **접속기록 IP 를 위조**할 수 있다.
+  - **원복**: `sudo brew services stop haproxy` → 엣지 compose 백업 복원 → `up -d`. **볼륨·DB·VM 무관이라 데이터 손실 위험 없음.**
 
 - [ ] **ⓑ 사용자 HTTP 액세스 로그가 한 줄도 없다** (2026-08-17 등록, #30 곁가지). Traefik `--accesslog` 미설정이라 *"어제 저녁 문의 등록이 실패했다는데 그때 무슨 요청이 왔었나"* 를 조사할 방법이 없다.
   - ⚠️ **법 요건이 아니라 운영 필요다** — 「안전성 확보조치 기준」의 1년 보관은 **개인정보취급자(관리자)** 접속기록이 대상이고 이용자 접속기록은 그 조항의 대상이 아니다(근거는 [decisions.md](decisions.md) "로그 위생" 결정 5). **"법 때문에 남긴다"고 적지 말 것** — 남긴다면 목적·기간을 우리가 정해 고지해야 한다.
@@ -334,7 +362,7 @@
 - ~~#29 결과 카드 화면에 양옆 여백이 생긴다~~ → ✅ **A+B 결합으로 종결.** 상세·진단 경로는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목, 규칙은 [../CLAUDE.md](../CLAUDE.md) "결과 카드" 의 풀블리드 항목.
   - ⚠️ **실기기 확인은 다음 릴리스 때** — 에뮬·기기 없이 위젯 테스트 기하로만 검증했다(가드 [test/result_card_layout_test.dart](../tenk_app/test/result_card_layout_test.dart) 9건). 확정 → 결과 카드 진입 시 **상단 블록이 화면 좌우 끝까지 닿는지**, 그리고 **하단 워터마크가 액션 버튼에 안 가리는지** 볼 것.
 
-#### 1-H. prod 로그 위생 (2026-08-08 등록) — ✅ 코드 완료 (2026-08-17) · **배포 대기**
+#### 1-H. prod 로그 위생 (2026-08-08 등록) — ✅ **종결 (2026-08-17 코드 + 같은 날 prod 배포·검증 완료)**
 
 - ~~#30 prod 가 모든 JPA 바인딩 파라미터를 애플리케이션 로그에 찍는다~~ → ✅ **수정 완료 (2026-08-17).** 상세는 [handoff-archive.md](handoff-archive.md) 2026-08-17 항목, 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생".
   - **0단계(재배포 없는 env 중간 조치)는 건너뛰었다 (사용자 결정)** — 이용자가 아직 없어 무인 상태에서 새는 건 **관리자 BCrypt 해시·로그인 ID** 뿐이고, 그 로그는 맥 로컬 docker json-file 에만 있어 외부 노출이 없다. 미배포 백엔드가 0건이라 **다음 배포 = 이 수정의 배포**여서 막을 공백 자체가 없었고, env 를 넣었다 빼는 드리프트만 남았을 것이다.
@@ -354,10 +382,23 @@
 - 동일 패턴: `GoogleTokenVerifier` / `NaverTokenVerifier` + `AuthService`에 분기 + `POST /api/auth/google/login` / `/naver/login`. **브라우저 redirect 흐름은 사용하지 않음** (모바일 SDK 전제).
 
 ### 4. 운영 고려사항 (필요해지면)
-- **미배포 백엔드 변경 — ✅ 0건 (2026-08-08 기준).** 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전 값은 이제 [관리자 패널](https://tenk.hjson248.com/admin) → '앱 버전' 에서 바꾼다** — 아래 SQL 은 패널이 안 뜰 때의 폴백이다. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;` — 맥에서는 DB 포트 퍼블리시가 없어 `docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "..."` 로 친다(`set -a; . ./.env; set +a` 로 비번을 셸에 올린 뒤). **`min` 을 올릴 땐 Play 게시 반영을 먼저 확인할 것** — 스토어에 새 버전이 없는 상태에서 올리면 강제 업데이트 화면에서 나갈 길이 없다. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
+
+- ⭐ **"실제 운영 시작" 은 별도 이벤트이고, 그 배포 시점은 사용자가 알려준다 (2026-08-17 확정).** 지금은 내부 테스트 단계라 **이용자가 0명**이고, 그래서 아래 성격의 항목은 **그 시점 전까지 느슨하게 가도 된다**:
+  - **로그·기록의 보존** — 관리자 접속기록이 재배포로 날아가도 문제 삼지 않는다(실제로 08-08~08-17 에 소실됐고 **면제로 종결**, [handoff-archive.md](handoff-archive.md)). 열람 대상인 이용자 개인정보 자체가 없기 때문이다.
+  - **DB 클린 재생성** — 계정·챌린지·영상이 다 날아가도 되는 이유가 같다(2026-07-30 · 08-08 두 번 했다).
+  - **다운타임** — 인프라 작업(#28 D2 등)을 지금 하는 게 가장 싼 이유.
+  - ⚠️ **반대로 그 시점부터는 위 셋이 전부 실제 비용이 된다.** 운영 시작 배포를 준비할 땐 **이 목록을 체크리스트로 다시 읽을 것** — 특히 ① `admin-audit` 볼륨이 실제로 붙어 있는지(§5.1 ⓪ 대조) ② 백업 절차가 있는지 ③ 파기 배치가 도는지.
+
+- **미배포 백엔드 변경 — ✅ 0건 (2026-08-17 기준).** 지켜야 할 것: `ios_store_url` 은 iOS 출시 전까지 NULL 유지. **앱 버전 값은 이제 [관리자 패널](https://tenk.hjson248.com/admin) → '앱 버전' 에서 바꾼다** — 아래 SQL 은 패널이 안 뜰 때의 폴백이다. **앱 버전을 올릴 땐 재배포 없이** `UPDATE app_config SET latest_version=..., min_supported_version=... WHERE app_config_id=1;` — 맥에서는 DB 포트 퍼블리시가 없어 `docker compose exec -T db mariadb -uroot -p"$DB_ROOT_PASSWORD" tenk -e "..."` 로 친다(`set -a; . ./.env; set +a` 로 비번을 셸에 올린 뒤). **`min` 을 올릴 땐 Play 게시 반영을 먼저 확인할 것** — 스토어에 새 버전이 없는 상태에서 올리면 강제 업데이트 화면에서 나갈 길이 없다. 배포 절차는 [docker-deployment.md](docker-deployment.md) §5.1(코드만 변경) / §5.5(라이브 스키마 변경) / §5.7(DB 클린 재생성).
 - **관리자 패널 — ✅ 구현됨 (2026-08-06, #27).** `https://tenk.hjson248.com/admin` (배포 후). 문의 처리 · 의견 열람 · TESTER 승격 · 앱 버전 정책 4가지를 흡수해 **SSH + `docker exec db mariadb` + SQL 의례가 사라졌다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "관리자 패널", 회의록 [decisions.md](decisions.md) "관리자 패널".
   - 예고했던 트리거(UGC 모더레이션)보다 **앞당겨 지었다** — 흡수 대상이 이미 4개였고 ⑥ 자신이 "패널에 자연히 흡수" 라고 예고한 값들이었다. **UGC 신고/모더레이션이 실제로 생기면 이 패널에 화면을 추가**하면 된다(그때 `UserRole.ADMIN` 이 이용자 측 게이트로 쓰인다).
   - ⚠️ **범위를 늘릴 땐 [../CLAUDE.md](../CLAUDE.md) 의 "안 만들 것" 목록을 먼저 볼 것** — 이용자 데이터 편집·삭제, 답변 발송, 비밀번호 변경은 **의도적으로 뺀 것**이지 미구현이 아니다.
+- **서버 이전 (맥미니 → 리눅스) — 트리거가 오면 검토** (2026-08-17 등록). **지금 결정할 일이 아니다.** 근거·전제는 [decisions.md](decisions.md) ㉔ "서버 전제".
+  - **왜 후보인가**: 우리 구성(맥 서버 × Docker × 공개 서비스)은 **3중 특수 케이스**라 인프라 함정을 직접 뚫어야 한다. 리눅스로 가면 **#28(클라이언트 IP 소실)·TCC bind mount·NAT 헤어핀·Colima 재부팅 복귀 검증이 전부 문제 자체로서 사라진다.** 통상적인 정답은 이쪽이다.
+  - **⭐ 이전 비용은 낮다** — Docker 로 묶여 있어 `docker-compose.yml` + **named volume 4개**(`db-data`·`uploads`·`admin-audit`·`dbinit`) 복사 + DNS·방화벽이 사실상 전부. **그래서 #28 을 지금 환경에서 닫는 노력도 버려지지 않는다.**
+  - **선택지**: ① 안 쓰는 PC·노트북 재활용(비용 0 — 단 데스크탑은 전력 50~100W 라 24시간이면 VPS 가 더 싸다) ② 미니PC(N100 급 15~25만원, 홈랩 사실상 표준) ③ VPS(**오라클 Always Free** 는 ARM 4코어/24GB 무료 + **춘천 리전**이라 지연도 좋다. 단 생성 재고·무료 정책 변동 리스크 / 유료는 국내 월 1~2만원, 해외는 월 6천원이나 **한국에서 150~250ms**) ④ ~~맥미니에 Asahi Linux~~ — 실서버로 쓸 만큼 성숙하지 않아 **권하지 않음**.
+  - ⚠️ **착수 트리거 (이 중 하나라도 오면 재검토)**: 이용자가 붙어 **가용성(정전·인터넷 끊김)이 실제 손해**가 될 때 / 집 업로드 대역폭이 **영상 다운로드에 부족**해질 때 / **인프라 함정에 쓰는 시간이 월 비용보다 비싸다고 느껴질 때**.
+  - ⚠️ **잃는 것도 적을 것**: 클라우드면 **월 비용** + **디스크가 비싸진다**(영상이 쌓이는 서비스라 이게 실제 변수 — 집 서버는 디스크가 싸다) + 물리적 통제권.
 - **영상 저장소 S3/MinIO 이전** — `LocalFileStorage`를 인터페이스로 추출 후 구현체 분리.
 - **AT 강제 무효화(블랙리스트)** — 필요 시 Redis. 현재는 AT 만료 시간(1시간)에 의존.
 - **CI 도입** — 현재 통합 테스트가 로컬 `tenk` 스키마를 비우는 구조라 CI 에서 그대로 못 돈다. 도입 시 Testcontainers + 별도 `tenk_test` 스키마로 갈아탈 것.

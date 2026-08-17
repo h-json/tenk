@@ -37,6 +37,11 @@
 
 **왜 이렇게:** 윈도우 빌드 → 맥 pull만(맥엔 소스·빌드도구 없이 clean 유지). arm64는 M1 Colima VM용 — build 단계만 `$BUILDPLATFORM`으로 윈도우 네이티브, 런타임만 arm64(QEMU 회피). 엔진은 Colima(Docker Desktop 아님, 무료·헤드리스, 내부는 동일 `dockerd`).
 
+> ⚠️ **이 구성은 흔한 패턴이 아니다 — 인프라 층에선 레퍼런스가 적다고 전제하고 갈 것** (2026-08-17 확인, 근거는 [decisions.md](decisions.md) ㉔ "서버 전제").
+> **맥을 서버로**(애플이 서버 시장에서 철수) × **그 맥에서 Docker 를**(맥 서버의 대표 사례인 iOS 빌드 CI 는 Docker 를 안 쓴다) × **공개 인터넷 서비스로**(맥 홈랩은 대개 집 안 전용) = **3중 특수 케이스**. 흔한 건 **맥 + Docker 를 로컬 개발용으로** 쓰는 것이고, 거기선 아래 함정들이 아예 안 보인다.
+> **이 문서의 함정 항목 대부분이 그 산물이다** — TCC bind mount 불가(§9.6) · NAT 헤어핀(§8.2) · 클라이언트 IP 소실([handoff.md](handoff.md) §1-F #28) · Colima 재부팅 복귀를 수동 검증해야 하는 것(§6). **리눅스 서버였다면 넷 다 안 생긴다.**
+> 그럼에도 선택은 합리적이다(맥미니 보유 → 서버 비용 0·저전력·무소음). **통상적 정답인 리눅스 이전은 트리거를 달아 [handoff.md](handoff.md) §4 에 등록**해 뒀고, Docker 로 묶여 있어 이전 비용은 낮다(compose + named volume 4개 + DNS). ⚠️ **단 이 "특수 케이스" 전제를 앱·백엔드 층까지 확대하지 말 것** — 그쪽은 완전히 평범하다.
+
 ---
 
 ## 3. 배포 파일 (리포)
@@ -62,7 +67,55 @@
 
 ## 5. 런북
 
+### 5.0 맥으로 파일 옮기기 — **FileZilla (SFTP)**
+
+> 아래 여러 절차(§5.4 시딩 · §5.5 스키마 변경 · §5.7 DB 재생성 · compose 갱신)가 이걸 공유한다.
+> **이미지는 Docker Hub 로 가지만, `docker-compose.yml`·`schema.sql` 같은 배포 설정 파일은 이 경로로 간다.**
+
+| 항목 | 값 |
+|---|---|
+| 프로토콜 | **SFTP - SSH File Transfer Protocol** (FTP 아님) |
+| 호스트 / 포트 | 맥의 Tailscale 이름 또는 LAN IP / **22** |
+| 사용자 | `sonhuijun` |
+| 원격 경로 | `/Users/sonhuijun/Documents/projects/claude/tenk/` |
+| 로컬 경로 | 리포의 `deploy/` (compose) · `docs/` (schema.sql) |
+
+- 맥에 **시스템 설정 → 일반 → 공유 → 원격 로그인(Remote Login)** 이 켜져 있어야 한다.
+
+⚠️ **전송 모드를 Binary 로 고정할 것** (설정 → 전송 → 파일 형식 → "기본 전송 형식: 바이너리").
+FileZilla 기본값인 **Auto 는 텍스트 파일의 줄바꿈(CRLF↔LF)을 변환**한다. 그러면 **바이트 수와 해시가 달라져 아래 대조 검증이 통째로 무의미해진다.**
+실제로 리포의 두 파일은 줄바꿈이 서로 다르다 — `deploy/docker-compose.yml` 은 **LF**, `docs/schema.sql` 은 **CRLF**(`.gitattributes` 로 강제한 게 아니라 `core.autocrlf=true` 의 결과다). 기능상으론 둘 다 문제없지만, **검증을 성립시키려면 바이트가 그대로여야 한다.**
+
+⚠️ **리포가 소스 오브 트루스, 맥은 복사본이다** (§9.1). **항상 리포에서 끌어올 것.** FileZilla 는 원격 파일을 그 자리에서 편집하기 쉬운데, 그렇게 고치면 **드리프트가 생겨 다음 전송에 조용히 덮여 사라진다.** 급해서 맥에서 고쳤다면 **반드시 리포에 역반영**할 것.
+
+**전송 후 대조 (필수)** — 덮어쓰기 전 맥에서 `cp <파일> <파일>.bak` 로 되돌릴 자리를 만들고:
+```powershell
+# 윈도우 (리포 루트)
+Get-Item deploy\docker-compose.yml | Select-Object Name,Length
+Get-FileHash deploy\docker-compose.yml -Algorithm MD5
+```
+```bash
+# 맥
+cd ~/Documents/projects/claude/tenk
+stat -f%z docker-compose.yml && md5 docker-compose.yml
+```
+**크기·해시가 양쪽에서 같아야 한다.** 다르면 십중팔구 전송 모드가 Auto 다.
+
+- **막히면**: 접속은 되는데 `~/Documents` 하위에서 권한 오류가 나면 macOS **TCC** 가 원격 세션의 접근을 막는 경우다 — 시스템 설정 → 개인정보 보호 및 보안 → **전체 디스크 접근 권한**에 `sshd-keygen-wrapper`(또는 `sshd`)를 추가. (Colima 가 `~/Documents` 를 bind mount 못 하는 것과 **뿌리는 같지만 별개 증상**이다, §9.6.)
+- **대안**: Taildrop `tailscale file cp <파일> <맥>:` → 맥에서 `tailscale file get .`. SSH 자체가 안 될 때의 폴백이고, **이쪽은 줄바꿈 변환이 없다.**
+
 ### 5.1 코드 고친 뒤 재배포 (업데이트 사이클)
+> ⚠️ **⓪ 먼저 — 리포의 `deploy/docker-compose.yml` 이 맥 것과 같은지 대조할 것. 이 단계를 건너뛰지 말 것.**
+> `docker compose pull && up -d` 는 **이미지만** 갈아끼운다. compose 파일에 생긴 변경(볼륨·env·로깅·포트)은 **파일을 옮겨야만** 반영되고, 안 옮겨도 **아무 에러 없이 조용히** 지나간다.
+> ```powershell
+> (Get-FileHash deploy\docker-compose.yml -Algorithm MD5).Hash    # 윈도우
+> ```
+> ```bash
+> md5 ~/Documents/projects/claude/tenk/docker-compose.yml          # 맥 — 다르면 §5.0 으로 전송
+> ```
+> **실제로 두 번 밟은 함정이다.** ① 2026-08-08 배포가 이미지만 교체해 **`admin-audit` 볼륨이 맥에 안 붙었고**(커밋 `2e261a1` 에서 추가됐는데 파일을 안 옮겼다), 그 결과 관리자 접속기록이 볼륨이 아니라 **컨테이너 로컬**에 쌓여 다음 재배포에 **9일치가 소실**됐다 — 개인정보처리방침 §8 의 "1년 이상 보관" 고지 대비 공백. ② 2026-08-17 #30 의 로그 로테이션도 같은 종류라 파일 전송을 별도 단계로 못박아야 했다.
+> ⚠️ **경로가 우연히 같아 더 안 보였다** — logback 기본값 `./logs` 가 `WORKDIR /app` 때문에 볼륨 마운트 지점과 같은 `/app/logs` 라, **로그는 정상적으로 쓰이는데 휘발성일 뿐**이었다. `docker compose ps` 로는 절대 안 드러난다.
+
 ```powershell
 # ① 윈도우 (tenk-backend/ 에서) — 다시 빌드 & push
 docker buildx build --platform linux/arm64 -t hjson248/tenk:latest --push .
@@ -74,6 +127,15 @@ docker compose pull && docker compose up -d
 curl -s http://localhost:8080/v3/api-docs | head -c 200      # OpenAPI JSON
 curl -i http://localhost:8080/api/challenges                 # 401 envelope = 정상
 ```
+
+⚠️ **맥에는 `docker-compose.override.yml` 이 상시 존재하고, `docker compose` 가 이걸 base 위에 자동 병합한다**(플래그 불필요 — §5.6, DB 3306 퍼블리시용). 즉 **base 파일만 보고 "적용될 설정"을 판단하면 틀린다.**
+compose 설정을 바꾼 뒤 검증할 땐 파일을 `grep` 하지 말고 **병합 결과를 뱉는 명령**을 쓸 것:
+```bash
+docker compose config                      # base + override 병합 결과 = 실제 적용값
+docker compose config | grep -A4 'logging:'   # 예: 로그 로테이션이 실제로 붙었는지
+docker inspect $(docker compose ps -q backend) --format '{{json .HostConfig.LogConfig}}'  # 컨테이너에 반영됐는지
+```
+**override 는 리포에 없다**(머신 한정·비커밋이 의도). 그래서 리포의 base 만 보면 존재를 알 수 없다 — 맥에서 뭔가 예상과 다르면 **override 를 먼저 의심할 것.**
 
 ### 5.2 재부팅 생존
 - **Colima 자동 시작**: `brew services start colima` (LaunchAgent 등록 → 로그인 시 자동 `colima start`). `brew services list`에 `started`.
@@ -112,7 +174,7 @@ docker rm -f seed
 #  traefik_letsencrypt: 비어 있으면 Traefik 이 새 인증서를 자동 발급하므로 시딩 불필요.
 #  (기존 인증서를 복원할 때만 acme.json 을 같은 docker cp 방식으로 넣고 chmod 600.)
 
-# ── 두 스택 기동 (배포 파일 scp 복사 후) ──
+# ── 두 스택 기동 (배포 파일을 FileZilla 로 복사한 뒤 — §5.0) ──
 #  reverse-proxy 스택은 별도 리포에서 옴 — 호스트/엣지 최초 셋업 상세는 그 리포 README §6.
 cd ~/Documents/projects/claude/reverse-proxy && docker compose up -d
 cd ~/Documents/projects/claude/tenk && cp .env.example .env   # 비밀번호 채우기
@@ -179,9 +241,9 @@ tailscale status                                        # 맥 MagicDNS 이름 / 
 cd ~/Documents/projects/claude/tenk
 
 # ① schema.sql 최신본을 배포 폴더에 두고 md5 로 대조 (윈도우 개발머신 값과 일치해야 함)
-#    맥에 SSH 가 안 될 때는 Taildrop 이 편하다:  (윈도우) tailscale file cp docs/schema.sql <맥>:
-tailscale file get ~/Downloads/ ; md5 ~/Downloads/schema.sql
-cp ~/Downloads/schema.sql ./schema.sql
+#    전송은 FileZilla(SFTP) — 접속 정보·⚠️바이너리 모드 고정은 §5.0 참고.
+#    docs/schema.sql 은 작업 트리에서 CRLF 라, Auto 모드로 보내면 md5 가 안 맞는다.
+md5 ./schema.sql        # ← 윈도우: Get-FileHash docs\schema.sql -Algorithm MD5
 
 # ② 스택 내리고 볼륨 삭제 (⚠️ 되돌릴 수 없음. 필요하면 먼저 mariadb-dump 백업)
 #    ⚠️ tenk_admin-audit 는 **지우지 말 것** — 관리자 접속기록이고 개인정보처리방침 §8 에
@@ -202,7 +264,7 @@ docker compose logs -f backend                  # "Started TenkApplication" = va
 ```
 
 - ⚠️ **맥 폴더의 `schema.sql` 은 기본적으로 낡았다고 의심할 것** (2026-08-08 실제로 밟을 뻔함). 그 파일은 *지난번* 재생성 때 복사해 둔 사본이라, 그 뒤 스키마가 바뀌었으면 **테이블이 빠진 채로 시딩된다.** 무서운 건 **라이브가 멀쩡하다는 점**이다 — 실제 DB 는 §5.5 의 `ALTER` 로 이미 맞춰져 있어 아무 증상이 없고, **다음 클린 재구축 때 비로소 validate 로 죽는다.** 방어는 `docker cp` 가 출력하는 **전송 바이트 수를 리포 `docs/schema.sql` 의 크기와 대조**하는 것(2026-08-08 기준 23,973B → `Successfully copied 24kB`). ③의 `md5sum`/`wc -c` 단계를 건너뛰지 말 것.
-  - **맥으로 파일을 옮기는 수단**: `scp` 가 안 되면(윈도우 SSH 키 문제 등) **Taildrop** 이 편하다 — (윈도우) `tailscale file cp docs/schema.sql <맥>:` → (맥) `tailscale file get .`
+  - **맥으로 파일을 옮기는 수단**: **FileZilla(SFTP)** 가 기본이다 — 접속 정보·⚠️**바이너리 모드 고정**·전송 후 대조는 **§5.0**. SSH 자체가 안 될 때의 폴백은 Taildrop(`tailscale file cp <파일> <맥>:` → 맥에서 `tailscale file get .`).
 - **`up -d` 때 `volume "tenk_dbinit" already exists but was not created by Docker Compose` WARN 은 정상** — ③에서 일부러 먼저 만든 것이다.
 - **`Container tenk-backend-1 Started` 는 컨테이너가 떴다는 뜻일 뿐 스프링 부팅 성공이 아니다.** 반드시 로그로 확인할 것(스키마가 어긋나면 여기서 validate 에러로 죽는다).
 - **끝난 뒤 챙길 것**: 계정이 전부 사라졌으므로 **TESTER role 재승격**이 필요하고, `app_config` 는 `schema.sql` 의 시드값으로 돌아가므로 **현재 스토어 버전과 다르면 다시 맞출 것**. 둘 다 **관리자 패널**(`/admin` → '사용자' / '앱 버전')에서 한다 — 2026-08-06 이전에는 `UPDATE user SET role=...` / `UPDATE app_config SET latest_version=...` 를 직접 쳤다. `admin_user` 는 부팅 시 yaml 계정으로 자동 재생성되므로 따로 챙길 게 없다.
