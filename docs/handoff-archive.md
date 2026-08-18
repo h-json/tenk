@@ -9,6 +9,13 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
+- **2026-08-18**: 🚀✅ **#28 ⓑⓒⓕ prod 배포 완료 — 이용자 접속기록(3개월) LIVE.** 절차는 [docker-deployment.md](docker-deployment.md) §5.1, 규칙은 [../CLAUDE.md](../CLAUDE.md) "로그 위생".
+  - **이미지**: HEAD 에서 `linux/arm64` 빌드 → `hjson248/tenk:latest` push (digest `sha256:c2595d3a…7b80008`). 스키마 변경 없음.
+  - ⭐ **compose 전송이 이번 배포의 실질 내용이었다** — `app-logs` 볼륨과 `TENK_LOG_DIR` env 는 **이미지가 아니라 compose 에만** 있어서, 이미지만 갈아끼웠으면 로그가 **정상적으로 쓰이면서 재배포에 사라졌을 것**이다(08-08 `admin-audit` 9일치 소실과 같은 모양). §5.1 ⓪ 가 신설된 이유가 이것.
+    - 🔎 **검증은 md5 대조보다 `docker compose config` 가 강하다** — 병합 결과에 `source: app-logs` · `TENK_LOG_DIR: /app/app-logs` · named volume `tenk_app-logs` 가 다 보이면 **"파일이 옳다"가 아니라 "실제로 적용됐다"** 가 확인된다(맥엔 상시 `docker-compose.override.yml` 이 있어 base 파일만 봐선 판단이 틀린다, §5.1).
+  - **검증 4항목 전건 통과**: ① 볼륨 병합 확인 ② `access.log`·`application.log` 2개 생성 ③ `?foo=secret` + `Authorization: Bearer xxx` 로 쏜 요청의 로그에 **쿼리스트링·토큰 없음**(`path=/api/challenges` 만) ④ **401 이 기록됨** — 필터가 Security **앞**에 살아 있다는 증거이고, 정작 조사하고 싶은 게 인증 실패건이라 이 항목이 핵심이다.
+  - ⭐ **⑤ 실제 공인 IP 기록까지 확인 — 로컬 검증만으론 절대 안 드러나는 지점이다.** 맥에서 `localhost:8080` 으로 친 요청은 도커 게이트웨이(`172.20.0.1`)로 찍히는 게 정상이라, **D2 로 살려낸 실제 IP 경로가 새 필터에서도 도는지는 그 방법으로 증명되지 않는다.** 외부(윈도우 PC, 다른 네트워크)에서 `https://tenk.hjson248.com/api/users/me` 를 쏘니 **`ip=220.116.178.205`(PC 공인 IP)** 가 그대로 찍혔다 — HAProxy PROXY protocol → Traefik → `ForwardedHeaderFilter` → `getRemoteAddr()` 체인이 `AccessLogFilter` 에서도 온전하다는 뜻.
+    - **§8.5(검증 3지점) · ⓔ 의 "PC 가 다른 네트워크인 게 여기선 이점" 이 또 맞았다** — 맥에선 NAT 헤어핀 미지원이라 자기 도메인 curl 이 아예 안 된다(§8.2).
 - **2026-08-18**: ✅ **§0 ① 실기기 검증 체크리스트 전건 종결** — 08-03 에 "20단계 전 항목 통과" 로 닫혔는데 하위 체크박스가 안 찍혀 미완처럼 읽히던 것을 헤더 통과 목록과 1:1 대조해 정리했다(7건 이관). 헤더에 없어 **애매하다고 사용자에게 되물은 5건은 전부 "확인했다" 로 종결**:
   - **메뉴 앱 버전 행** — 실기기에서 `최신 버전이에요` 정상 표시. **관리자 패널로 경우의 수를 전수 확인**했다(정책 값이 DB 행이라 패널에서 바꿔가며 `LATEST`/`UPDATE_AVAILABLE`/`UPDATE_REQUIRED` 3분기를 다 밟을 수 있다 — #27 패널이 검증 비용을 줄인 사례).
   - **비행기 모드(#7)** — 네트워크 오류 예외처리 확인 완료. 남아 있던 3화면(챌린지 상세 / 기록 저장 / 영상 업로드 중 끊김)까지 닫았다.
