@@ -37,7 +37,7 @@ android {
 
     defaultConfig {
         applicationId = "com.hjson.tenk_app"
-        // 카카오 SDK 요구사항: minSdk 21 이상. flutter.minSdkVersion이 21이면 그대로 두고, 더 낮으면 21로 명시.
+        // 실효 하한은 24 — Flutter 엔진 기본값(3.29+)이 24이고, ffmpeg·flutter_local_notifications·카카오 SDK 도 24를 요구한다.
         minSdk = maxOf(flutter.minSdkVersion, 21)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
