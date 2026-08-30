@@ -192,7 +192,8 @@
 - [ ] **⑦ `1.0.0+7` 빌드·게시 (#31 + 버전 재번호)** — 코드·에뮬 검증은 완료. ⚠️ **순서를 지킬 것.**
   - [x] ✅ **에뮬 E2E 완료 (2026-08-30)** — 결과 카드 화면(성공·실패 양쪽)에 워터마크 없고 잘린 흔적 없음 / **갤러리 저장 PNG(960×1728)에는 워터마크 온전**. `adb pull` 로 실물 확인했다. (완료 탭에 시드가 이미 있어 **재생성 wipe 없이** 진행)
   - [ ] ⚠️ **1단계 — `app_config` 를 먼저 `1.0.0` 으로 내린다** (관리자 패널 → '앱 버전'). **`min_supported_version`·`latest_version` 둘 다.** 현재 라이브 값은 `latest=1.2.1` / **`min=1.2.0`** 이라(실측), 이걸 안 내리고 게시하면 새 빌드가 **`UPDATE_REQUIRED` 로 강제 업데이트 화면에 갇히고 출구인 스토어에 그 빌드가 있어 못 빠져나온다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "앱 버전" 의 *"버전을 내릴 때는 순서가 뒤집힌다"*.
-  - [ ] **2단계 — 빌드·게시**: `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → 병합 매니페스트로 **`versionCode=7`/`versionName=1.0.0`** 실측 → Play 내부 테스트.
+  - [x] ✅ **2단계 — AAB 빌드 완료 (2026-08-30)** — `flutter build appbundle --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → `app-release.aab` **100.5MB**. 병합 매니페스트 실측: **`versionCode=7`/`versionName=1.0.0`**, `POST_NOTIFICATIONS` 있고 **`SCHEDULE_EXACT_ALARM`·`USE_EXACT_ALARM` 없음**(⚠️ 주석이 grep 에 걸리는 오탐이 있으니 `<uses-permission>` 실선언으로만 볼 것 — 08-18 이력).
+  - [ ] **3단계 — Play 내부 테스트 업로드** (⚠️ 반드시 1단계 뒤에).
   - ⚠️ **`versionCode` 는 `+7` 그대로다** — `+6` 이 이미 올라가 있어 Play 가 `+1` 을 거부한다.
   - ⚠️ **되돌릴 수 없는 손해**: 기존 `1.2.1+6` 설치본은 앞으로 우리가 낼 어떤 버전보다 높은 값을 보고하므로 **강제·권장 업데이트가 영영 안 걸린다**(Play 자동 업데이트만 닿는다). 실사용자 0명인 지금이라 감수하는 것.
 
