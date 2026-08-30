@@ -98,6 +98,10 @@ Future<void> _pumpCard(
   required Size size,
   Challenge? challenge,
   double textScale = 1.0,
+  // 기기 인셋은 보통 기본값이면 충분하지만, #31 은 **상태바가 두꺼운 기기**(펀치홀 40dp)
+  // 에서만 드러났다 — 카드가 그만큼 아래로 밀려 하단이 액션 바에 먹힌다.
+  double statusBar = _statusBar,
+  double navBar = _navBar,
 }) async {
   final c = challenge ?? _challenge(days: 7);
   tester.view.physicalSize = size;
@@ -108,8 +112,8 @@ Future<void> _pumpCard(
     MediaQuery(
       data: MediaQueryData(
         size: size,
-        viewPadding: const EdgeInsets.only(top: _statusBar, bottom: _navBar),
-        padding: const EdgeInsets.only(top: _statusBar, bottom: _navBar),
+        viewPadding: EdgeInsets.only(top: statusBar, bottom: navBar),
+        padding: EdgeInsets.only(top: statusBar, bottom: navBar),
         textScaler: TextScaler.linear(textScale),
       ),
       child: MaterialApp(
@@ -117,6 +121,36 @@ Future<void> _pumpCard(
         home: UserScope(
           api: _offlineUserApi(),
           child: ResultCardScreen(challenge: c, amounts: _amounts(c)),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// 화면 배치를 빼고 **카드 위젯 자체만** 그린다 (캡처 경로가 보는 모습).
+///
+/// 카드는 480x864 고정이라 기본 테스트 창(800x600)에 넣으면 세로로 넘친다 — 캡처는
+/// 오프스크린이라 제약이 없으므로 뷰를 카드 크기로 맞춰 같은 조건을 만든다.
+Future<void> _pumpRawCard(
+  WidgetTester tester,
+  Challenge c, {
+  bool? showWatermark,
+}) async {
+  tester.view.physicalSize =
+      const Size(ResultCardWidget.width, ResultCardWidget.height);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('ko'),
+      home: Material(
+        child: ResultCardWidget(
+          challenge: c,
+          amounts: _amounts(c),
+          nickname: '테스터',
+          // 기본값 자체가 캡처 동작이라, 안 넘기는 경로도 그대로 재현한다.
+          showWatermark: showWatermark ?? true,
         ),
       ),
     ),
@@ -186,11 +220,57 @@ void main() {
       expect(share.bottom, lessThanOrEqualTo(640 - _navBar));
     });
 
-    // 세로가 넉넉하면 카드가 액션 바 위에서 끝나 워터마크까지 다 보인다.
+    // 세로가 넉넉하면 카드가 액션 바 위에서 끝난다.
     testWidgets('384x832 에선 카드가 액션 바를 침범하지 않는다', (tester) async {
       await _pumpCard(tester, size: const Size(384, 832));
       final save = tester.getRect(find.widgetWithText(FilledButton, '갤러리 저장'));
       expect(_cardRect(tester).bottom, lessThanOrEqualTo(save.top));
+    });
+  });
+
+  // ── 워터마크는 캡처 전용이다 (#31) ──────────────────────────────────────────
+  //
+  // 화면은 풀블리드라 세로가 모자라면 카드 아래를 잘라내는데(위 #29), 카드 하단 16dp 안에
+  // 있던 워터마크가 액션 바의 **불투명 흰 바닥**에 먹혔다. 여유가 평범한 3버튼 내비
+  // 기기에서도 8.8dp뿐이라 상태바가 두꺼운 기기(펀치홀 40dp)에서 실제로 잘렸다
+  // (`1.2.1+6` 실기기). 간격 조정이 아니라 **역할대로 가르는 것**이 수정이다.
+  group('워터마크는 캡처에만 남는다 (#31)', () {
+    // 잘리던 그 자리가 지금은 비어 있어야 한다. 화면에 워터마크를 되돌리면 여기서 걸린다.
+    testWidgets('화면에는 워터마크가 없다', (tester) async {
+      await _pumpCard(tester, size: const Size(384, 832));
+      expect(find.text('TenK'), findsNothing);
+    });
+
+    // 기기 인셋이 커져도(펀치홀 40 + 3버튼 48) 마찬가지 — 원래 잘리던 조합이다.
+    testWidgets('인셋이 큰 기기에서도 없다', (tester) async {
+      await _pumpCard(
+        tester,
+        size: const Size(384, 832),
+        statusBar: 40,
+        navBar: 48,
+      );
+      expect(find.text('TenK'), findsNothing);
+    });
+
+    // ⭐ 캡처 경로를 지키는 가드. [ResultCardCapture] 는 `showWatermark` 를 넘기지 않으므로
+    // **기본값이 곧 캡처 동작**이다 — 기본값을 false 로 뒤집으면 갤러리 저장·공유 PNG 와
+    // 영상 마지막 클립에서 출처 표기가 통째로 사라지는데, 그건 화면만 봐서는 안 보인다.
+    testWidgets('캡처용 기본값은 워터마크를 그린다', (tester) async {
+      final c = _challenge(days: 7);
+      await _pumpRawCard(tester, c);
+      expect(find.text('TenK'), findsOneWidget);
+    });
+
+    // 워터마크는 `Spacer` **뒤**에 있어서 빼도 위쪽이 안 밀린다 — 화면과 저장본이
+    // 워터마크 유무만 다르다는 보장. 이게 깨지면 저장 PNG 와 화면이 갈라진다.
+    testWidgets('워터마크 유무가 위쪽 콘텐츠를 밀지 않는다', (tester) async {
+      final c = _challenge(days: 7);
+      Future<Rect> gridRect({required bool watermark}) async {
+        await _pumpRawCard(tester, c, showWatermark: watermark);
+        return tester.getRect(find.text('7일간의 기록'));
+      }
+
+      expect(await gridRect(watermark: true), await gridRect(watermark: false));
     });
   });
 

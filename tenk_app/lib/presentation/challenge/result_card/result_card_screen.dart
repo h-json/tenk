@@ -187,8 +187,10 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
     //   ② [BoxFit.fitWidth] → 폭을 **무조건** 채운다. `BoxFit.contain` 은 폭·높이 중 빡빡한
     //      쪽에 맞추므로, 가용 높이가 `화면 폭 × 1.8`(카드 비율 480:864) 밑으로 내려가는
     //      순간 높이 기준으로 축소되고 그 차이가 그대로 좌우 여백이 된다.
-    // 세로가 모자라면 카드 **아래**(흰 영역·워터마크)가 잘린다 — 좌우가 비는 것보다 낫고,
+    // 세로가 모자라면 카드 **아래**(빈 흰 영역)가 잘린다 — 좌우가 비는 것보다 낫고,
     // ① 덕분에 잘리는 양이 애초에 작다. 캡처물은 오프스크린 480x864 고정이라 무관하다.
+    // ⚠️ 그 잘리는 자리에 **워터마크를 다시 두지 말 것** — 실기기에서 액션 바에 먹혔다(#31).
+    // 아래 `showWatermark: false` 참고. 지금 잘리는 건 아무것도 없는 흰 여백뿐이다.
     final celebrating = widget.celebrate &&
         widget.challenge.result == ChallengeResult.success;
     final isSuccess = widget.challenge.result == ChallengeResult.success;
@@ -224,6 +226,12 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
                     challenge: widget.challenge,
                     amounts: widget.amounts,
                     nickname: _nickname,
+                    // **화면에서는 워터마크를 그리지 않는다** (#31). 잘리는 자리가 하필
+                    // 워터마크인데(위 "아래를 잘라낸다" 참고), 워터마크가 하는 일은
+                    // *공유된 이미지에 출처를 남기는 것*이라 화면에선 애초에 할 일이 없다.
+                    // 캡처([ResultCardCapture])는 기본값(true)이라 저장·공유 PNG 와 영상
+                    // 마지막 클립에는 그대로 남는다 — 여기만 끄는 게 핵심이다.
+                    showWatermark: false,
                   ),
                 ),
               ),

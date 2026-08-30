@@ -26,6 +26,7 @@ class ResultCardWidget extends StatelessWidget {
     required this.challenge,
     required this.amounts,
     required this.nickname,
+    this.showWatermark = true,
   });
 
   static const double width = 480;
@@ -36,6 +37,21 @@ class ResultCardWidget extends StatelessWidget {
 
   /// null 이면 헤더에서 닉네임 부분 생략 — "만원 챌린지" 만 표시.
   final String? nickname;
+
+  /// 하단 TenK 워터마크를 그릴지. **기본 true — 캡처 경로가 옳은 쪽이 기본값이다.**
+  ///
+  /// 워터마크가 하는 일은 *공유된 이미지에 출처를 남기는 것*이라 **화면에서는 할 일이 없다.**
+  /// 반대로 화면에서는 자리를 다툰다 — [ResultCardScreen] 은 풀블리드라 세로가 모자라면
+  /// 카드 **아래를** 잘라내는데(#29), 카드 하단 16dp 안에 있는 이 워터마크가 액션 바의
+  /// 불투명 흰 바닥에 가장 먼저 먹힌다. 여유는 평범한 3버튼 내비 기기에서도 **8.8dp뿐**이라
+  /// 상태바가 두꺼운 기기(펀치홀 40dp)에서 실제로 잘렸다(#31, `1.2.1+6` 실기기).
+  ///
+  /// ⚠️ **간격 조정으로 막으려 들지 말 것** — 버튼 라벨이 한 글자 길어지거나 다음 기기의
+  /// 인셋이 조금만 커지면 다시 터진다. 역할대로 가르는 게 근본 제거다.
+  ///
+  /// 이 Row 는 [Spacer] **뒤**에 있어서 빼도 위쪽 콘텐츠는 1px 도 안 움직인다 — 화면과
+  /// 저장본이 워터마크 유무만 다르다.
+  final bool showWatermark;
 
   bool get _isSuccess => challenge.result == ChallengeResult.success;
 
@@ -120,33 +136,34 @@ class ResultCardWidget extends StatelessWidget {
               spendColor: _isSuccess ? const Color(0xFFA5E3D3) : const Color(0xFFFF6B6B),
             ),
             const Spacer(),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 마크는 `CustomPainter` 라 캡처 전에 precache 할 게 없다 (배지 PNG 와
-                  // 다른 점). 색은 글자와 같은 뮤트 톤이되 **트랙은 반드시 남긴다** —
-                  // 빼면 갭이 열려 `0` 이 `C` 로 읽힌다(런처 아이콘에서 트랙을 완전한
-                  // 원으로 둔 것과 같은 이유).
-                  TenkLogoMark(
-                    size: 17,
-                    color: _inkMuted,
-                    trackColor: _slotBorder,
-                  ),
-                  SizedBox(width: 7),
-                  Text(
-                    'TenK',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
+            if (showWatermark)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 마크는 `CustomPainter` 라 캡처 전에 precache 할 게 없다 (배지 PNG 와
+                    // 다른 점). 색은 글자와 같은 뮤트 톤이되 **트랙은 반드시 남긴다** —
+                    // 빼면 갭이 열려 `0` 이 `C` 로 읽힌다(런처 아이콘에서 트랙을 완전한
+                    // 원으로 둔 것과 같은 이유).
+                    TenkLogoMark(
+                      size: 17,
                       color: _inkMuted,
-                      letterSpacing: 3,
+                      trackColor: _slotBorder,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 7),
+                    Text(
+                      'TenK',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: _inkMuted,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
