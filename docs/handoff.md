@@ -64,7 +64,8 @@
 - ✅ **#28 ⓐ 완료 — D2 적용·검증 (2026-08-17).** 관리자 접속기록 IP 가 상수 `172.19.0.1` → **실제 공인 IP `223.38.225.21`**. privacy.html §8 은 **문구 수정 불필요**(이제 고지대로 동작). Traefik 의 라벨 라우팅·ACME 무변경. 🕳️ **외부 2시간 장애 — macOS 방화벽(ALF)이 HAProxy 를 차단**했고, **loopback 검증만으로는 구조적으로 발견 불가능**했다 → 함정·검증 3지점을 [docker-deployment.md](docker-deployment.md) **§8.4·§8.5** 에 박았다. ⏭️ **후속 3건은 §1-F ⓓ(8/30 ACME 갱신 확인 — 날짜 정해짐)·ⓔ(공유기 DHCP 예약)·ⓕ(AdminAudit 정리)**.
 - ✅ **#28 ⓑⓒⓕ 완료 (2026-08-17 코드 + 2026-08-18 prod 배포·검증)** — 이용자 접속기록을 **백엔드 logback·3개월**로 신설(Traefik 안은 **용량 순환이라 고지보다 오래 보관**해 기각). ⭐ **'오류 기록'까지 같은 볼륨·같은 기간으로 옮긴 게 핵심** — 안 그랬으면 ⓒ 가 절반만 닫혔다. privacy §3 신설, `AdminAudit` 죽은 코드는 **실증 후** 제거. 테스트 **259개**(+4) 통과 + 로그 3파일 실물 확인(유출 0). ⚠️ **새 볼륨 `app-logs` 라 compose 전송이 필수였다** — 배포 검증 4항목 + **외부 요청으로 실제 공인 IP 기록까지** 확인하고 닫았다.
 - ✅ **#28 ⓔ 공유기 DHCP 예약 완료 (2026-08-18)** — ⭐ **백로그가 예약 지점을 1개로 적었는데 실제로는 2개였다**: 홈이 **이중 공유기**(SK브로드밴드 → ipTIME)라 포트포워딩이 2단이고 DHCP 주소도 2개라, 맥만 고정했으면 **ipTime 의 WAN 이 바뀌는 순간 똑같이 죽는다.** ⚠️ **검증은 리스 갱신이 아니라 두 공유기 재부팅**이어야 한다(예약이 없어도 같은 MAC 엔 쓰던 주소를 다시 준다 — 갱신 결과는 증거가 아니다). 곁가지로 **macOS '로컬 네트워크' 권한이 브라우저를 조용히 막는 함정**(§8.4 ALF 와 같은 계열)을 발견해 같이 박았다. 규칙은 [docker-deployment.md](docker-deployment.md) §8.6·§8.7, 실행 기록은 [handoff-archive.md](handoff-archive.md).
-- ⏭️ 다음 후보: **#31 결과 카드 워터마크(§1-G)** / **#28 잔여(ⓓ 8/30 ACME 갱신 확인 — 리마인더 걸어둠)** / **§0 잔여(Play 콘솔 폼 3종 + 데모 계정 + 아이콘 재업로드)** / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위).
+- ✅ **#28 ⓓ ACME 자동 갱신 확인 — 통과 (2026-09-07).** 예정대로 **8/30·8/31 에 실제 갱신**되어 만료가 **11/28·11/29** 로 밀렸다. **D2(HAProxy + PROXY protocol) 에서 가장 늦게 드러나는 실패 지점이 닫힌 것** — httpChallenge 가 HAProxy `:80` → Traefik `web` 을 그대로 통과한다는 실증이다. 이로써 **#28 전건 종결**(§1-F). 검증 방법은 [docker-deployment.md](docker-deployment.md) §8.5.
+- ⏭️ 다음 후보: **§0 잔여(Play 콘솔 폼 3종 + 데모 계정 + 아이콘 재업로드)** — 전부 콘솔 웹 작업이라 답안지([play-console-app-content.md](play-console-app-content.md))를 옆에 두고 입력만 하면 된다 / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**(#29·#30·#31 종결), **미배포 백엔드 변경도 0건**.
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -309,10 +310,10 @@
   - ✅ **후속(같은 날) — 안전성 확보조치를 문서·코드 양쪽에서 메움.** 진단해보니 **조치는 대부분 이미 하고 있었고 빠진 건 문서화**였다(HTTPS·BCrypt·RT 해시·세션 만료·DB 포트 미공개·파기 배치). **조치 자체가 미흡한 건 접속기록 하나** — IP 가 없고 앱 로그로만 나가 재배포에 사라져 "1년 보관"이 성립하지 않았다. privacy.html **§8 신설**(적은 5가지는 전부 실제 조치, 대응 코드를 HTML 주석으로 병기) + **접속기록 완성**(IP · 로그인 성공/실패 · **열람 기록** · 전용 파일 13개월 롤링 + `admin-audit` 볼륨). ⚠️ **로그에 본문·비밀번호·검색어를 담지 않는다**(가드 5건). 테스트 **254개**.
   - ✅ **변호사 검수는 백로그에서 드롭** (사용자 결정) — 대신 **"문서 = 실제 동작"** 을 유지 기준으로 못박았다([../CLAUDE.md](../CLAUDE.md) "회원 탈퇴" 항목 하위). 트리거는 결제·광고 SDK·제3자 제공·해외 이전.
 
-#### 1-F. 접속기록 IP + 사용자 액세스 로그 — 🟠 **ⓐⓑⓒⓔⓕ 완료·배포 완료 (2026-08-18) · ⓓ 잔여(8/30 이후)**
+#### 1-F. 접속기록 IP + 사용자 액세스 로그 — ✅ **전건 종결 (2026-09-07)**
 
 > ⓐ(D2) → ⓑ(접속기록 신설) → ⓒ(문서) → ⓕ(죽은 코드)까지 같은 날 이어서 닫았다. 근거는 [decisions.md](decisions.md) ㉔ 결정 5·6, 실행 기록은 [handoff-archive.md](handoff-archive.md).
-> ✅ **ⓑⓒⓕ prod 배포 완료 (2026-08-18)** — 검증 4항목 + 외부 요청 실제 IP 확인. **남은 것은 ⓓ 하나뿐이다.**
+> ✅ **ⓑⓒⓕ prod 배포 완료 (2026-08-18)** — 검증 4항목 + 외부 요청 실제 IP 확인. 마지막으로 남아 있던 **ⓓ(ACME 실제 갱신)까지 2026-09-07 에 확인해 닫았다.**
 
 - [x] ✅ **ⓐ #28 관리자 접속기록 IP — D2 로 해결 완료 (2026-08-17).** 상수 `172.19.0.1` → **실제 공인 IP**(`223.38.225.21` 실측). privacy.html §8 은 **문구 수정 불필요**(이제 고지대로 동작한다). 실행 상세는 [handoff-archive.md](handoff-archive.md), 근거는 [decisions.md](decisions.md) ㉔, 엣지 설정의 진실의 원천은 **`reverse-proxy` 리포 README §8**.
   - ⚠️ **딸려 나온 영구 함정 2개는 [docker-deployment.md](docker-deployment.md) 에 박았다** — **§8.4 macOS 방화벽(ALF)이 도커 밖 서비스를 차단**(외부 2시간 장애의 원인, 새 맥이면 반드시 재발) · **§8.5 검증 3지점**(loopback 만 보면 §8.4 를 구조적으로 발견 못 한다).
@@ -328,12 +329,7 @@
 
 - [x] ✅ **ⓕ [AdminAudit](../tenk-backend/src/main/java/com/hjson/tenk/admin/AdminAudit.java) 죽은 코드 정리 (2026-08-17)** — XFF 분기 제거 + 주석 정정. 지우고 테스트에 `server.forward-headers-strategy=framework` 를 넣었더니 **같은 단언이 그대로 통과** — 죽은 코드였음이 실증됐고 그 테스트는 이제 **prod 와 같은 경로**를 검증한다.
 
-- [ ] **ⓓ 2026-08-30 전후 ACME 실제 갱신 확인 — ⚠️ 필수, 날짜가 정해져 있다** (D2 후속). 인증서 만료가 **tenk 9/29 · english 9/30** 이고 Let's Encrypt 는 30일 전부터 갱신하므로 **8/30~8/31 에 첫 실제 갱신**이 일어난다. **D2 에서 가장 늦게 드러나는 실패 지점**이다(ACME 는 httpChallenge / entryPoint `web`(:80) 을 쓴다).
-  ```bash
-  docker compose -f ~/Documents/projects/claude/reverse-proxy/docker-compose.yml logs traefik | grep -i acme
-  echo | openssl s_client -connect 127.0.0.1:443 -servername tenk.hjson248.com 2>/dev/null | openssl x509 -noout -enddate
-  ```
-  실패하면 **`web` 진입점의 `trustedIPs`** 와 **HAProxy 의 80 경로**부터 볼 것.
+- [x] ✅ **ⓓ ACME 실제 갱신 확인 완료 (2026-09-07)** — 예정 시점(8/30~8/31)에 **자동 갱신 성공**했고 만료는 **11/28(tenk)·11/29(english)** 이다. **D2 에서 가장 늦게 드러나는 실패 지점**이었는데(ACME 는 httpChallenge / entryPoint `web`(:80) 을 쓴다) 그대로 통과했다. ⭐ **다음 갱신(10월 말)부터는 리마인더를 따로 걸지 않는다** — 같은 경로가 한 번 성공한 이상 일회성 확인 항목이 아니라 상시 인프라다. 검증 명령·판정 기준은 [docker-deployment.md](docker-deployment.md) **§8.5**, 실행 기록은 [handoff-archive.md](handoff-archive.md).
 
 - [x] ✅ **ⓔ 공유기 DHCP 예약 완료 (2026-08-18)** — ⭐ **예약 지점이 1개가 아니라 2개였다**(홈이 **이중 공유기** — SK브로드밴드 → ipTIME. 맥만 고정하면 **ipTime 의 WAN 이 바뀌는 순간 똑같이 죽는다**). 양쪽 다 예약하고 **두 공유기를 다 재부팅**해 검증했다 — ⚠️ **리스 갱신은 증거가 안 된다.** 영구 규칙·함정은 [docker-deployment.md](docker-deployment.md) **§8.6**(이중 공유기)·**§8.7**(macOS 로컬 네트워크 권한), 실행 기록은 [handoff-archive.md](handoff-archive.md).
 
