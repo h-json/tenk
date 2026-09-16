@@ -36,7 +36,7 @@
 - **대상 클라이언트**: **Flutter 기반 모바일 앱(iOS/Android 단일 코드베이스)**. 브라우저 기반 흐름(서버 사이드 OAuth redirect, 세션 쿠키 등) 대신 모바일 친화적인 토큰 기반 흐름을 사용. 모든 백엔드 변경은 이 전제를 깔고 갈 것.
   - 카카오 로그인: 공식 `kakao_flutter_sdk`로 access token 발급 후 백엔드 `/api/auth/kakao/login`에 전달.
   - 영상 녹화: Flutter `camera` 패키지의 **`ResolutionPreset.medium` + 2초 타이머**로 처음부터 가볍게·짧게 촬영. ffmpeg 등 후처리 트랜스코딩은 사용하지 않음. export 파이프라인이 480x864 로 정규화하므로 medium 이상은 의미 없음 (파일만 커짐).
-- **현재 단계**: 백엔드 REST API 골격 1차 구현 완료. 통합테스트는 미수행. Flutter 앱은 카카오 로그인 + 챌린지 CRUD + 지출/무지출 기록 + 영상 녹화·업로드 + 배지 화면 + **영상 합본 export(클라이언트 ffmpeg 합성)** 까지 완료.
+- **현재 단계**: 백엔드·앱 모두 기능 구현 완료이고 **테스트도 전부 수행했다** — 백엔드 **259개**(단위 + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 슬라이스) · 앱 위젯 테스트 **35개** 전원 통과. 백엔드는 `https://tenk.hjson248.com` 에 **prod 배포 LIVE**, 앱은 Play Console **내부 테스트 게시 중**(최신 빌드 `1.0.0+8`). 남은 것은 **스토어 등록정보(스크린샷·그래픽 이미지) → 검토 전송**과 iOS 빌드(맥 필요, 보류)뿐이다 — 진행 상태는 [docs/handoff.md](docs/handoff.md).
 
 ## 리포 구조 (모노레포)
 
@@ -84,7 +84,7 @@ tenk/                       # 리포 루트 (CLAUDE.md/docs는 양쪽 공통)
 | 파일 저장 | 로컬 파일 시스템 (`./uploads/`, gitignore) |
 | API 문서 | springdoc-openapi (`/swagger-ui.html`) |
 | 빌드 | Gradle Wrapper |
-| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **255개** (2026-08-07 실측, 전원 통과). 구성은 단위(엔티티·서비스 Mockito) + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. 최근 증분: 문의하기 239 → **관리자 패널 16**(E2E — 인증 격리·CSRF·처리·승격 + **앱 체인 무회귀 2** + **접속기록 5** + **답장 초안 원문 인용 1**) 추가로 255. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback`·`inquiry`·`admin_user` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 해당 CREATE(+app_config INSERT) 선적용 필요. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
+| 테스트(백엔드) | JUnit5 + Mockito + AssertJ. 총 **259개** (2026-08-18 실측, 전원 통과). 구성은 단위(엔티티·서비스 Mockito) + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 인증 필터 슬라이스 4 + 컨텍스트 로드 1. 최근 증분: 문의하기 239 → **관리자 패널 16**(E2E — 인증 격리·CSRF·처리·승격 + **앱 체인 무회귀 2** + **접속기록 5** + **답장 초안 원문 인용 1**) 으로 255 → **이용자 접속기록 4**([AccessLogIntegrationTest](tenk-backend/src/test/java/com/hjson/tenk/common/logging/AccessLogIntegrationTest.java)) 추가로 259. ⚠️ **`app_config`·`withdrawal_feedback`·`feedback`·`inquiry`·`admin_user` 테이블이 있어야 돈다** — 로컬/CI 에 [schema.sql](docs/schema.sql) 의 해당 CREATE(+app_config INSERT) 선적용 필요. `@SpringBootTest` 통합은 **로컬 MariaDB의 `tenk` 스키마를 그대로 사용**하므로 매 테스트 실행 시 user/challenge/amount 등 dev 데이터가 함께 비워진다 (Flutter 재로그인으로 복구). 패턴은 [IntegrationTestBase](tenk-backend/src/test/java/com/hjson/tenk/support/IntegrationTestBase.java) 참고. WebMvc 슬라이스는 DB 없이 가볍게 돈다 ([JwtAuthenticationFilterWebMvcTest](tenk-backend/src/test/java/com/hjson/tenk/security/JwtAuthenticationFilterWebMvcTest.java)) |
 
 ## 도메인 규칙 (의사결정 합의)
 
