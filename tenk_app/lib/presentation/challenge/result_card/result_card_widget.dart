@@ -35,7 +35,7 @@ class ResultCardWidget extends StatelessWidget {
   final Challenge challenge;
   final List<Amount> amounts;
 
-  /// null 이면 헤더에서 닉네임 부분 생략 — "만원 챌린지" 만 표시.
+  /// null 이면 헤더가 닉네임 없이 "챌린지 기록" 으로 표시된다.
   final String? nickname;
 
   /// 하단 TenK 워터마크를 그릴지. **기본 true — 캡처 경로가 옳은 쪽이 기본값이다.**

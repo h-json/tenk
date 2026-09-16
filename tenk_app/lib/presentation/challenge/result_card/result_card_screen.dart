@@ -62,7 +62,7 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
         final user = await api.getMe();
         return user.nickname;
       } catch (_) {
-        // 닉네임이 못 와도 카드 표시/저장은 진행. 헤더만 "만원 챌린지" 로.
+        // 닉네임이 못 와도 카드 표시/저장은 진행. 헤더만 "챌린지 기록" 으로.
         return null;
       }
     }();
@@ -150,7 +150,7 @@ class _ResultCardScreenState extends State<ResultCardScreen> {
       final path = await _ensureCaptured();
       final params = ShareParams(
         files: [XFile(path, mimeType: 'image/png')],
-        text: '만원 챌린지 결과',
+        text: 'TenK 챌린지 결과',
       );
       await SharePlus.instance.share(params);
     } catch (_) {

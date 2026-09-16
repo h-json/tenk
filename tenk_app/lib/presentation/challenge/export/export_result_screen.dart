@@ -118,7 +118,7 @@ class _ExportResultScreenState extends State<ExportResultScreen> {
     try {
       final params = ShareParams(
         files: [XFile(widget.videoPath, mimeType: 'video/mp4')],
-        text: '만원 챌린지 결과 영상',
+        text: 'TenK 챌린지 영상',
       );
       await SharePlus.instance.share(params);
     } catch (_) {
