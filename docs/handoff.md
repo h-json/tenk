@@ -222,9 +222,9 @@
 - [x] ✅ **빌드 클론 생성 + CocoaPods 설치 (2026-09-17)** — `pod install` 이 의존성 해석 단계까지 도달한 것으로 확인.
 - [x] ✅ **Xcode 설치 확인 (2026-09-17)** — `xcodebuild -version` → **Xcode 26.6 (17F113)**.
 - [x] ✅ **Podfile 신설 + Deployment Target 14.0 (2026-09-17, 윈도우에서)** — 첫 `pod install` 이 `ffmpeg_kit_flutter_new_video/video ... required a higher minimum deployment target` 으로 실패한 것의 수정. 원인은 **Flutter 가 생성한 Podfile 의 `platform` 줄이 주석**이라 CocoaPods 가 기본값 13.0 을 가정한 것. [ios/Podfile](../tenk_app/ios/Podfile) 신규 + [project.pbxproj](../tenk_app/ios/Runner.xcodeproj/project.pbxproj) 3곳.
-- [x] ✅ **맥에서 `pod install` 성공 (2026-09-18)** — `15 total pods` + `Installing ffmpeg_kit_flutter_new_video (8.1.2)`. 도중에 밟은 함정 2개:
+- [x] ✅ **맥에서 `pod install` 성공 (2026-09-18)** — **최종 상태는 `1 total pod`(Flutter) 이고 그게 정상이다** (플러그인 15개는 전부 SPM 으로 간다 — [../CLAUDE.md](../CLAUDE.md) iOS 항목). 도중에 밟은 함정 2개:
   - ⚠️ **`flutter precache --ios` 선행 필수** — 맥에서 iOS 를 처음 빌드하면 엔진 아티팩트가 캐시에 없어 `Flutter.xcframework must exist` 로 `post_install` 훅이 죽는다. Xcode·CocoaPods 설치만으로는 부족하다.
-  - ⚠️ **`pod install` 이 `1 total pod` 만 설치하면 SPM 문제다** — 에러가 없어서 성공처럼 보인다. 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목(**SPM 필수**).
+  - ⚠️ **SPM 을 끈 상태에서 `pod install` 이 `1 total pod` 만 설치하면 그게 고장 신호다** — 에러가 없어서 성공처럼 보인다. ⚠️ **반대로 SPM 을 켠 정상 상태에서도 `1 total pod` 이 나온다** — 같은 숫자가 상태에 따라 정상이기도 고장이기도 하니 **SPM 켜짐 여부를 먼저 볼 것**. 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목(**SPM 필수**).
 - [x] ✅ **시뮬레이터 구동 성공 (2026-09-18, iPhone 17)** — **카메라 빼고 전부 정상**. 로그인·게이트·챌린지·기록·결과 카드까지 확인. ⚠️ 시뮬레이터엔 **카메라 하드웨어가 없어** 2초 녹화는 구조적으로 못 본다(결함 아님 — 실기기 전용).
   - ⚠️ **맥 `/etc/hosts` 에 `127.0.0.1 tenk.hjson248.com` 을 넣어야 백엔드에 붙는다.** 맥이 곧 서버인데 공유기 NAT 헤어핀 미지원이라 자기 도메인으로 못 돌아온다 — 증상은 **카카오 인증은 되고 마지막에 `인터넷 연결을 확인해 주세요.`**. 규칙·이유는 [../CLAUDE.md](../CLAUDE.md) iOS 항목, 뿌리는 [docker-deployment.md](docker-deployment.md) §8.2.
   - [x] ✅ **Apple Silicon 시뮬레이터 차단 해소 — ffmpeg 플러그인 2.0.0 → 2.5.2 (2026-09-17)**. 구버전은 `EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386 **arm64**` 라 **M1 맥의 시뮬레이터(=arm64)에서 빌드가 막혔다**(`pod install` 은 통과하고 빌드·링크 단계에서 터지는 유형). 2.5.2 는 vendored xcframework 에 arm64 시뮬레이터 슬라이스를 넣으면서 그 배제를 풀었다 — **구버전은 바이너리에 슬라이스 자체가 없어 Podfile 에서 배제만 풀어도 해결되지 않는다.** 근거·대안 검토는 [decisions.md](decisions.md) ㉖.
