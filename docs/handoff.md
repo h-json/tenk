@@ -222,21 +222,24 @@
 - [x] ✅ **빌드 클론 생성 + CocoaPods 설치 (2026-09-17)** — `pod install` 이 의존성 해석 단계까지 도달한 것으로 확인.
 - [x] ✅ **Xcode 설치 확인 (2026-09-17)** — `xcodebuild -version` → **Xcode 26.6 (17F113)**.
 - [x] ✅ **Podfile 신설 + Deployment Target 14.0 (2026-09-17, 윈도우에서)** — 첫 `pod install` 이 `ffmpeg_kit_flutter_new_video/video ... required a higher minimum deployment target` 으로 실패한 것의 수정. 원인은 **Flutter 가 생성한 Podfile 의 `platform` 줄이 주석**이라 CocoaPods 가 기본값 13.0 을 가정한 것. [ios/Podfile](../tenk_app/ios/Podfile) 신규 + [project.pbxproj](../tenk_app/ios/Runner.xcodeproj/project.pbxproj) 3곳.
-- [ ] **맥에서 `pod install`** — 맥이 만든 **untracked `ios/Podfile` 을 먼저 지우고**(안 지우면 pull 이 거부된다) `git pull` → `cd ios && pod install`. ⚠️ ffmpeg xcframework 8개를 내려받아 **수 분** 걸린다. 끝나면 **`ios/Podfile.lock` 을 맥에서 커밋**(유일한 맥→윈도우 방향 파일).
-- [ ] **시뮬레이터 구동** — `open -a Simulator` → `flutter run --dart-define=API_BASE_URL=https://tenk.hjson248.com`. ⚠️ 시뮬레이터엔 **카메라가 없어** 녹화 흐름은 못 본다(로그인·챌린지·기록·결과 카드까지는 OK).
+- [x] ✅ **맥에서 `pod install` 성공 (2026-09-18)** — `15 total pods` + `Installing ffmpeg_kit_flutter_new_video (8.1.2)`. 도중에 밟은 함정 2개:
+  - ⚠️ **`flutter precache --ios` 선행 필수** — 맥에서 iOS 를 처음 빌드하면 엔진 아티팩트가 캐시에 없어 `Flutter.xcframework must exist` 로 `post_install` 훅이 죽는다. Xcode·CocoaPods 설치만으로는 부족하다.
+  - ⚠️ **`pod install` 이 `1 total pod` 만 설치하면 SPM 문제다** — 에러가 없어서 성공처럼 보인다. 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목(**SPM 필수**).
+- [x] ✅ **시뮬레이터 구동 성공 (2026-09-18, iPhone 17)** — **카메라 빼고 전부 정상**. 로그인·게이트·챌린지·기록·결과 카드까지 확인. ⚠️ 시뮬레이터엔 **카메라 하드웨어가 없어** 2초 녹화는 구조적으로 못 본다(결함 아님 — 실기기 전용).
+  - ⚠️ **맥 `/etc/hosts` 에 `127.0.0.1 tenk.hjson248.com` 을 넣어야 백엔드에 붙는다.** 맥이 곧 서버인데 공유기 NAT 헤어핀 미지원이라 자기 도메인으로 못 돌아온다 — 증상은 **카카오 인증은 되고 마지막에 `인터넷 연결을 확인해 주세요.`**. 규칙·이유는 [../CLAUDE.md](../CLAUDE.md) iOS 항목, 뿌리는 [docker-deployment.md](docker-deployment.md) §8.2.
   - [x] ✅ **Apple Silicon 시뮬레이터 차단 해소 — ffmpeg 플러그인 2.0.0 → 2.5.2 (2026-09-17)**. 구버전은 `EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386 **arm64**` 라 **M1 맥의 시뮬레이터(=arm64)에서 빌드가 막혔다**(`pod install` 은 통과하고 빌드·링크 단계에서 터지는 유형). 2.5.2 는 vendored xcframework 에 arm64 시뮬레이터 슬라이스를 넣으면서 그 배제를 풀었다 — **구버전은 바이너리에 슬라이스 자체가 없어 Podfile 에서 배제만 풀어도 해결되지 않는다.** 근거·대안 검토는 [decisions.md](decisions.md) ㉖.
     - ⚠️ **되돌리지 말 것 — 내리면 시뮬레이터가 다시 막힌다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "영상".
     - ⚠️ **Rosetta 로 우회하는 길도 있었지만 쓰지 않는다** — 시뮬레이터를 x86_64 로 돌려 확인한 동작은 **실제 사용자 환경(arm64)의 증거가 못 된다.**
     - ✅ 상향 후 `flutter analyze` 0건 + `flutter test` **35개** 통과, `pubspec.lock` 은 **그 패키지 한 줄만** 변경(전이 의존성 연쇄 없음). Android 요구사항도 동일(compileSdk 35 · Java 17 · minSdk 24), iOS Deployment Target 도 14.0 그대로.
     - [ ] 🔴 **남은 것 — Android 영상 합본 재검증.** ffmpeg 엔진이 **7.1 → 8.1** 로 올라갔고 그 변화는 **Android 에도 같이 적용된다**(단일 코드베이스라 iOS 만 고를 수 없다). 단위·위젯 테스트는 ffmpeg 을 태우지 않으므로 **에뮬레이터에서 export 를 실제로 돌려봐야** 한다 — 시드는 [seed-export-test.sql](seed-export-test.sql). 볼 것: **합성 성공 여부 · 한글 자막(PNG overlay) · `mpeg4` 인코더 · xfade 이음매 · 결과 카드 마지막 3초 클립**.
-- [ ] **카카오 콘솔에 iOS 플랫폼 등록** — 번들 ID `com.hjson.tenkApp`. iOS 는 키해시 개념 없음.
-- [ ] **실기기 구동** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
-- [ ] **플랫폼 차이 검증 — 여기가 본체.** 불확실성 3종:
+- [x] ✅ **카카오 콘솔 iOS 플랫폼 등록 (2026-09-18)** — 번들 ID `com.hjson.tenkApp`(⚠️ Android 의 `com.hjson.tenk_app` 과 다르다 — iOS 는 `_` 불가). 키해시 개념 없음. **앱스토어 URL 칸은 비워도 된다** — 카카오링크(공유) 폴백용인데 TenK 은 `share_plus`(OS 공유 시트)를 쓴다.
+- [ ] **실기기 구동 — 남은 검증은 전부 여기 묶여 있다** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
+- [ ] **플랫폼 차이 검증 — 실기기에서만 가능.** 불확실성 4종:
   - 🔴 **ffmpeg 영상 합본** — [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) 가 `mpeg4` sw 인코더 **고정**인데(Android 에서 다른 후보가 전부 실격돼 남은 값), iOS 빌드에 그 인코더가 있는지·속도가 견딜 만한지는 돌려봐야 안다.
   - 🔴 **Impeller** — Android 는 `video_player` 외부 텍스처 깜빡임 때문에 매니페스트로 껐지만 **iOS 는 Impeller 가 기본이고 끌 수단이 없다.** 같은 계열 버그가 재현되면 우회로가 없다.
   - 🟡 **카메라 2초 녹화 타이밍** — `_encoderStartLag`·워밍업 dummy 녹화는 **CameraX 실측으로 잡은 상수**라 AVFoundation 에선 불필요하거나 오히려 어색할 수 있다.
   - 🟡 **로컬 알림** — #17 당시 "iOS 미검증" 으로 남겨둔 항목이 여기로 온다(§1-A #17). 권한 요청이 **iOS 는 1회뿐**이고 **채널 개념이 없으며** 대기 알림 **64건 상한** 때문에 14일치만 거는 설계라, 권한 흐름·예약·문구를 실기기에서 확인해야 한다.
-- [ ] **[안건] Flutter 버전 통일** — 윈도우 **3.41.9** / 맥 **3.44.5** (2026-09-17 확인). 당장은 *"`pubspec.lock` 은 윈도우 기준"* 으로 막아뒀지만, 두 머신이 같은 앱을 굽는 이상 정석은 버전을 맞추거나 FVM 으로 고정하는 것이다. ⚠️ **윈도우를 올리면 Android 릴리스 재검증이 딸려온다** — 어느 쪽으로 맞출지는 별도 판단.
+- [ ] **[안건] Flutter 버전 통일** — 윈도우 **3.41.9** / 맥 **3.44.5** (2026-09-17 확인). **실측 드리프트는 `meta`·`test_api` 두 줄뿐**(둘 다 Dart SDK 고정 패키지라 앱 동작 무관) — 맥에서 `pull` 이 막히면 `git checkout -- tenk_app/pubspec.lock` 로 되돌리면 된다. 당장은 *"`pubspec.lock` 은 윈도우 기준"* 으로 막아뒀지만, 두 머신이 같은 앱을 굽는 이상 정석은 버전을 맞추거나 FVM 으로 고정하는 것이다. ⚠️ **윈도우를 올리면 Android 릴리스 재검증이 딸려온다** — 어느 쪽으로 맞출지는 별도 판단.
 - [ ] **[출시 전 안건] Sign in with Apple 병행 검토** — App Store **가이드라인 4.8**: 제3자 소셜 로그인(카카오)만 제공하면 **Sign in with Apple 병행이 심사 조건이 될 수 있다.** 그러면 `AppleTokenVerifier` + `POST /api/auth/apple/login` 이 필요해 **백엔드 작업이 딸려온다.** ⚠️ **개발·시뮬레이터·실기기 단계와는 무관** — 심사에 내는 순간의 조건이라 지금 진행을 막지는 않는다. 근거는 [decisions.md](decisions.md) "iOS 심사 메모".
 - [ ] **(유료·나중) TestFlight** — Apple Developer Program 가입 → App Store Connect 앱 레코드 → `flutter build ipa --release --dart-define=...` → Transporter 업로드 → 내부 테스터 초대.
 - **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
