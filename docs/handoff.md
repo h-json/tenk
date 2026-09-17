@@ -220,10 +220,15 @@
 **맥 작업 디렉토리 = `~/Documents/projects/claude/tenk-ios-build/`** (이 리포의 git clone). 배포 스택 `~/Documents/projects/claude/tenk/` 와 **별개 폴더**이고 섞으면 안 된다 — [docker-deployment.md](docker-deployment.md) §9.5.
 
 - [x] ✅ **빌드 클론 생성 + CocoaPods 설치 (2026-09-17)** — `pod install` 이 의존성 해석 단계까지 도달한 것으로 확인.
-- [ ] ⚠️ **Xcode 설치 확인** — `pod install` 이 돌았다고 Xcode 가 있는 건 아니다. 시뮬레이터·실기기 단계에서 필수이니 `xcodebuild -version` 으로 먼저 확인할 것(App Store 에서 15GB, 설치 후 1회 실행 + `sudo xcodebuild -license accept`).
+- [x] ✅ **Xcode 설치 확인 (2026-09-17)** — `xcodebuild -version` → **Xcode 26.6 (17F113)**.
 - [x] ✅ **Podfile 신설 + Deployment Target 14.0 (2026-09-17, 윈도우에서)** — 첫 `pod install` 이 `ffmpeg_kit_flutter_new_video/video ... required a higher minimum deployment target` 으로 실패한 것의 수정. 원인은 **Flutter 가 생성한 Podfile 의 `platform` 줄이 주석**이라 CocoaPods 가 기본값 13.0 을 가정한 것. [ios/Podfile](../tenk_app/ios/Podfile) 신규 + [project.pbxproj](../tenk_app/ios/Runner.xcodeproj/project.pbxproj) 3곳.
 - [ ] **맥에서 `pod install`** — 맥이 만든 **untracked `ios/Podfile` 을 먼저 지우고**(안 지우면 pull 이 거부된다) `git pull` → `cd ios && pod install`. ⚠️ ffmpeg xcframework 8개를 내려받아 **수 분** 걸린다. 끝나면 **`ios/Podfile.lock` 을 맥에서 커밋**(유일한 맥→윈도우 방향 파일).
 - [ ] **시뮬레이터 구동** — `open -a Simulator` → `flutter run --dart-define=API_BASE_URL=https://tenk.hjson248.com`. ⚠️ 시뮬레이터엔 **카메라가 없어** 녹화 흐름은 못 본다(로그인·챌린지·기록·결과 카드까지는 OK).
+  - [x] ✅ **Apple Silicon 시뮬레이터 차단 해소 — ffmpeg 플러그인 2.0.0 → 2.5.2 (2026-09-17)**. 구버전은 `EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386 **arm64**` 라 **M1 맥의 시뮬레이터(=arm64)에서 빌드가 막혔다**(`pod install` 은 통과하고 빌드·링크 단계에서 터지는 유형). 2.5.2 는 vendored xcframework 에 arm64 시뮬레이터 슬라이스를 넣으면서 그 배제를 풀었다 — **구버전은 바이너리에 슬라이스 자체가 없어 Podfile 에서 배제만 풀어도 해결되지 않는다.** 근거·대안 검토는 [decisions.md](decisions.md) ㉖.
+    - ⚠️ **되돌리지 말 것 — 내리면 시뮬레이터가 다시 막힌다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "영상".
+    - ⚠️ **Rosetta 로 우회하는 길도 있었지만 쓰지 않는다** — 시뮬레이터를 x86_64 로 돌려 확인한 동작은 **실제 사용자 환경(arm64)의 증거가 못 된다.**
+    - ✅ 상향 후 `flutter analyze` 0건 + `flutter test` **35개** 통과, `pubspec.lock` 은 **그 패키지 한 줄만** 변경(전이 의존성 연쇄 없음). Android 요구사항도 동일(compileSdk 35 · Java 17 · minSdk 24), iOS Deployment Target 도 14.0 그대로.
+    - [ ] 🔴 **남은 것 — Android 영상 합본 재검증.** ffmpeg 엔진이 **7.1 → 8.1** 로 올라갔고 그 변화는 **Android 에도 같이 적용된다**(단일 코드베이스라 iOS 만 고를 수 없다). 단위·위젯 테스트는 ffmpeg 을 태우지 않으므로 **에뮬레이터에서 export 를 실제로 돌려봐야** 한다 — 시드는 [seed-export-test.sql](seed-export-test.sql). 볼 것: **합성 성공 여부 · 한글 자막(PNG overlay) · `mpeg4` 인코더 · xfade 이음매 · 결과 카드 마지막 3초 클립**.
 - [ ] **카카오 콘솔에 iOS 플랫폼 등록** — 번들 ID `com.hjson.tenkApp`. iOS 는 키해시 개념 없음.
 - [ ] **실기기 구동** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
 - [ ] **플랫폼 차이 검증 — 여기가 본체.** 불확실성 3종:
