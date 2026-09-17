@@ -46,7 +46,7 @@
 > **HAProxy 단은 리버스 프록시가 아니라 "발신인 스티커를 붙이는 TCP 중계기"** 다 — 인증서를 들고 있지 않고 HTTP 도 안 읽는다. Colima(Lima)의 포트 포워더가 **SSH 터널로 연결을 재생성하며 클라이언트 IP 를 지우기 때문**에, VM 바깥에서 진짜 IP 를 쪽지로 붙여 넘긴다. 근거·대안 비교는 [decisions.md](decisions.md) ㉔, 엣지 상세는 **`reverse-proxy` 리포 README §8 이 진실의 원천**이다.
 > ⚠️ **엣지는 tenk 전용이 아니다** — `english.hjson248.com`(speakeasy, 별도 리포 `speaking-english`)가 같이 붙어 있다. **엣지를 건드리는 작업은 두 사이트를 동시에 내린다.**
 
-**왜 이렇게:** 윈도우 빌드 → 맥 pull만(맥엔 소스·빌드도구 없이 clean 유지). arm64는 M1 Colima VM용 — build 단계만 `$BUILDPLATFORM`으로 윈도우 네이티브, 런타임만 arm64(QEMU 회피). 엔진은 Colima(Docker Desktop 아님, 무료·헤드리스, 내부는 동일 `dockerd`).
+**왜 이렇게:** 윈도우 빌드 → 맥 pull만(**배포 스택엔 소스·빌드도구 없이 clean 유지** — iOS 빌드 클론은 별개 폴더다, §9.5). arm64는 M1 Colima VM용 — build 단계만 `$BUILDPLATFORM`으로 윈도우 네이티브, 런타임만 arm64(QEMU 회피). 엔진은 Colima(Docker Desktop 아님, 무료·헤드리스, 내부는 동일 `dockerd`).
 
 > ⚠️ **이 구성은 흔한 패턴이 아니다 — 인프라 층에선 레퍼런스가 적다고 전제하고 갈 것** (2026-08-17 확인, 근거는 [decisions.md](decisions.md) ㉔ "서버 전제").
 > **맥을 서버로**(애플이 서버 시장에서 철수) × **그 맥에서 Docker 를**(맥 서버의 대표 사례인 iOS 빌드 CI 는 Docker 를 안 쓴다) × **공개 인터넷 서비스로**(맥 홈랩은 대개 집 안 전용) = **3중 특수 케이스**. 흔한 건 **맥 + Docker 를 로컬 개발용으로** 쓰는 것이고, 거기선 아래 함정들이 아예 안 보인다.
@@ -64,7 +64,8 @@
 | [deploy/docker-compose.yml](../deploy/docker-compose.yml) | backend + mariadb:11. `name: tenk`. DB 시크릿은 `.env` 주입, `SPRING_DATASOURCE_*` env가 prod yaml의 TODO를 덮음. `schema.sql`은 **`dbinit` named volume에 시딩**돼 첫 기동 자동적용(`~/Documents`는 TCC로 bind mount 불가 — §6·§9.6). db/uploads/dbinit named volume. |
 | [deploy/.env.example](../deploy/.env.example) | `DB_PASSWORD`/`DB_ROOT_PASSWORD` 템플릿. 실제 `.env`는 gitignore. |
 
-**맥(`~/Documents/projects/claude/tenk/`)에 두는 것 = 배포 설정 3개뿐**: `docker-compose.yml` + `schema.sql`(=`docs/schema.sql` 복사) + `.env`. **소스코드는 안 둠.**
+**맥의 배포 스택(`~/Documents/projects/claude/tenk/`)에 두는 것 = 배포 설정 3개뿐**: `docker-compose.yml` + `schema.sql`(=`docs/schema.sql` 복사) + `.env`. **소스코드는 안 둔다.**
+⚠️ 단 **맥에는 iOS 빌드용 git clone 이 따로 있다**(`tenk-ios-build/`) — 역할·이송 수단이 다른 별개 폴더이고 **배포에 관여하지 않는다**(§9.5).
 
 ---
 
@@ -423,8 +424,9 @@ curl -s "https://api.hackertarget.com/httpheaders/?q=https://tenk.hjson248.com/p
 ### 9.2 맥 로컬 레이아웃 (비-git, 머신 고유)
 ```
 ~/Documents/projects/claude/
-├─ tenk/            # 리포 deploy/ 복사본: docker-compose.yml(name:tenk) · schema.sql(=docs/schema.sql, dbinit 시드) · .env(커밋 금지)
-└─ reverse-proxy/   # 공유 엣지 (★ 별도 리포 clone — tenk 소관 아님, name:traefik)
+├─ tenk/            # [배포] 리포 deploy/ 복사본: docker-compose.yml(name:tenk) · schema.sql(=docs/schema.sql, dbinit 시드) · .env(커밋 금지)
+├─ reverse-proxy/   # [배포] 공유 엣지 (★ 별도 리포 clone — tenk 소관 아님, name:traefik)
+└─ tenk-ios-build/  # [빌드] ★ 이 리포의 git clone — iOS 빌드 전용(Xcode·CocoaPods). 배포에 관여하지 않는다(§9.5)
 ```
 - **런타임 파일은 named volume**(폴더가 `~/Documents` 밑이라 TCC bind mount 불가 — §9.6): `tenk_db-data`·`tenk_uploads`·`tenk_dbinit`·**`tenk_admin-audit`**·**`tenk_app-logs`**·`traefik_letsencrypt`. 백업은 `docker cp`.
   - ⚠️ **뒤 둘은 로그 보관 볼륨이라 성격이 다르다** — `admin-audit`(관리자 접속기록, 13개월, privacy §8) / `app-logs`(이용자 접속기록 + 오류 로그, 3개월, privacy §3). **계정 데이터와 무관하므로 DB 클린 재생성(§5.7) 때 지우지 말 것.** 볼륨이 안 붙으면 로그는 정상적으로 쓰이면서 재배포에 사라지고 **에러가 하나도 안 난다**(§5.1 ⓪).
@@ -453,13 +455,28 @@ docker compose -f ~/Documents/projects/claude/tenk/docker-compose.yml exec backe
 
 ### 9.4 자주 하는 운영 (상세는 §5·§8)
 - **설정만 바뀜**(compose/env/schema): 리포 수정 → 맥 복사 → `docker compose up -d`. 이미지 재빌드 불필요.
-- **코드 바뀜**: 윈도우 `docker buildx ... --push`(§5.1) → 맥 `docker compose pull && docker compose up -d`. (맥엔 소스 없어 빌드는 윈도우 담당.)
+- **코드 바뀜**: 윈도우 `docker buildx ... --push`(§5.1) → 맥 `docker compose pull && docker compose up -d`. (배포 스택엔 소스가 없어 **백엔드 이미지 빌드는 윈도우 담당**. 맥의 iOS 빌드 클론은 앱 전용이라 백엔드와 무관하다, §9.5.)
 - **로그/재기동**: `docker compose logs -f backend|traefik`, `docker compose restart <svc>`. 인증서/엣지는 `reverse-proxy` 리포 소관.
 
-### 9.5 맥에 둘 것 — 배포 설정만, 앱 소스는 안 둔다
-- **모노레포 통째 클론 금지** — 서버에 앱 소스가 올라가면 clean-server 원칙(§2)이 깨진다. 맥엔 배포 설정(§9.2)만.
-- 맥 Claude Code 컨텍스트용으로 **이 런북 한 파일만 복사**(예: `~/Documents/projects/claude/tenk/RUNBOOK.md`). 소스-상대 링크는 안 열려도 명령·아키텍처·함정 본문은 유효.
-- 킥오프: *"이 맥에서 tenk 를 운영해. `RUNBOOK.md` §9 읽고 §9.3 으로 배포 상태 확인 후 이어서 도와줘. 서버엔 앱 소스 없고 배포 설정만 있다."*
+### 9.5 맥의 두 프로젝트 — 배포 스택과 iOS 빌드 클론을 섞지 말 것 (2026-09-17 개정)
+
+> 예전 규칙은 *"모노레포 통째 클론 금지"* 였는데, **iOS 빌드는 맥에서만 된다**(Xcode 전용)는 이유로 그 전제가 바뀌었다.
+> **원칙의 알맹이는 그대로다** — 배포 경로는 여전히 소스를 타지 않는다(맥에서 백엔드를 빌드하지 않고 Docker Hub 이미지만 pull).
+> 달라진 건 *"맥에 소스가 없다"* 가 아니라 **"배포 스택에 소스가 없다"** 로 범위가 좁아진 것뿐이다.
+
+| | **배포 스택** | **iOS 빌드 클론** |
+|---|---|---|
+| 경로 | `~/Documents/projects/claude/tenk/` | `~/Documents/projects/claude/tenk-ios-build/` |
+| 정체 | 리포 `deploy/` 의 **복사본** (비-git) | 이 리포의 **git clone** |
+| 이송 | **FileZilla(SFTP)** — §5.0 | **`git pull`** (편집·push 는 윈도우에서) |
+| 하는 일 | 운영 (컨테이너·DB·로그) | `pod install` · `flutter build ios` |
+| 소스 | 없음 | 있음 (모노레포 전체) |
+
+- ⚠️ **빌드 클론 안에도 `deploy/docker-compose.yml` 이 있다 — 거기서 `docker compose` 를 돌리지 말 것.** 그건 리포 사본일 뿐이고 운영 스택은 FileZilla 로 옮긴 쪽이다. **`name: tenk` 가 같아 도커가 같은 프로젝트로 인식**하므로 컨테이너·볼륨이 섞인다. 운영 명령은 항상 `-f ~/Documents/projects/claude/tenk/docker-compose.yml` 로 **경로를 명시**해서 친다(§9.3 이 그렇게 돼 있는 이유).
+- ⚠️ **반대로 배포 폴더를 git 으로 관리하려 들지 말 것** — 그 안에 `.env`(커밋 금지)가 있고, 리포의 `deploy/` 가 이미 소스 오브 트루스다(§9.1).
+- **빌드 클론도 편집은 윈도우에서 한다 — 맥은 `git pull` 전용.** 맥에서 고치면 드리프트가 생겨 다음 pull 에 조용히 덮인다(배포 폴더와 같은 원칙). **역방향 예외는 `tenk_app/ios/Podfile.lock` 하나**뿐이다 — `pod install` 이 맥에서만 만드는 산출물이라 윈도우에서 생성할 수 없다. 반대로 **`pubspec.lock` 은 윈도우가 기준**이니 맥에서 바뀌면 되돌릴 것(두 머신의 Flutter 버전이 다르다 — [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목).
+- 맥 Claude Code 컨텍스트용으로 **이 런북 한 파일만 복사**(예: `~/Documents/projects/claude/tenk/RUNBOOK.md`). 소스-상대 링크는 안 열려도 명령·아키텍처·함정 본문은 유효. (빌드 클론 쪽에서 작업할 땐 리포 문서가 그대로 열리니 복사본이 필요 없다.)
+- 킥오프: *"이 맥에서 tenk 를 운영해. `RUNBOOK.md` §9 읽고 §9.3 으로 배포 상태 확인 후 이어서 도와줘. 배포 폴더엔 앱 소스가 없고, iOS 빌드 클론은 별개 폴더다."*
 - 설정 버전관리 원하면(선택): 별도 `tenk-deploy` 리포 또는 `deploy/` sparse-checkout.
 
 ### 9.6 함정·결정 — `~/Documents` TCC bind mount 실패 → named volume 전환 (2026-07-01)

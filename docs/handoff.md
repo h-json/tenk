@@ -67,7 +67,7 @@
 - ✅ **#28 ⓓ ACME 자동 갱신 확인 — 통과 (2026-09-07).** 예정대로 **8/30·8/31 에 실제 갱신**되어 만료가 **11/28·11/29** 로 밀렸다. **D2(HAProxy + PROXY protocol) 에서 가장 늦게 드러나는 실패 지점이 닫힌 것** — httpChallenge 가 HAProxy `:80` → Traefik `web` 을 그대로 통과한다는 실증이다. 이로써 **#28 전건 종결**(§1-F). 검증 방법은 [docker-deployment.md](docker-deployment.md) §8.5.
 - ✅ **Play Console 앱 콘텐츠 전 항목 완료 (2026-09-15)** — 로그인 세부정보(데모 카카오 계정 + 5종 챌린지 시딩, [seed-review-demo.sql](seed-review-demo.sql)) · 타겟층(13~15 포함 → 가족 정책) · 데이터 보안(유형 분류 정정 포함) 등 9개. 상세는 [handoff-archive.md](handoff-archive.md).
 - ✅ **§1-I '만원 챌린지' 포지셔닝 회의 종결 + 앱 `1.0.0+8` 빌드 (2026-09-16)** — **이름 유지 · '만원'은 상징 · 공유 텍스트 2곳만 수정 · 카테고리 라이프스타일.** ⭐ 결론이 *"고칠 자리는 앱이 아니라 스토어"* 라, §1-I 가 예상했던 **백엔드 재배포가 통째로 빠지고** 앱 변경도 4곳으로 줄었다. 반대로 **§0-⑧ 스크린샷·그래픽이 이 회의 결론의 실행부**가 됐다. 곁가지로 결과 카드 주석 2곳과 낡은 README(`최대 7일` → **30일**)를 정정. 회의록 [decisions.md](decisions.md) ㉕, 규칙은 [../CLAUDE.md](../CLAUDE.md) "프로젝트 개요". ⏭️ **Play 업로드는 아직.**
-- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+8` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / iOS 빌드(맥 필요, 보류 — Sign in with Apple 4.8 요건 [decisions.md](decisions.md) 참고) / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
+- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+8` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / **iOS 빌드(2026-09-17 착수 — §0)** / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -127,7 +127,7 @@
 > 릴리스 빌드 규칙·함정은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포". 완료 이력(Android 서명/키해시/스모크, Play 게시·카카오 로그인)은 [handoff-archive.md](handoff-archive.md) "§0 완료된 체크리스트".
 
 **환경 제약 (중요)**
-- **iOS 빌드는 이 Windows 머신에서 불가** — `flutter build ios/ipa`/`pod install`/Xcode 전부 macOS + Xcode 필수. iOS 작업은 전부 맥에서 (도커 배포하던 그 맥).
+- **iOS 빌드는 이 Windows 머신에서 불가** — `flutter build ios/ipa`/`pod install`/Xcode 전부 macOS + Xcode 필수. iOS 작업은 전부 맥에서 한다(도커 배포하던 그 맥). ⚠️ **단 배포 스택 폴더가 아니라 별도의 빌드 클론 `~/Documents/projects/claude/tenk-ios-build/` 에서** — 둘을 섞으면 안 되는 이유는 [docker-deployment.md](docker-deployment.md) §9.5.
 - **iOS 앱스토어/TestFlight 배포만 Apple Developer Program($99/년) 필요** — 미보유라 배포는 보류. 하지만 **빌드·실행은 공짜로 가능**(시뮬레이터=계정 불필요, 본인 아이폰=무료 Apple ID 개인팀). 아래 iOS 항목 참고.
 
 **Android (직접 서명 APK 공유) — ✅ 종결 (2026-08-18).** 빌드·전체 흐름 스모크(2026-07-13) · 앱 아이콘 교체(2026-08-02, #6) · 실기기 런처 아이콘 3종 재확인(2026-08-18) 전부 완료, `--split-per-abi` 는 **드롭**. 상세는 [handoff-archive.md](handoff-archive.md) "§0 완료된 체크리스트".
@@ -213,12 +213,27 @@
 
 ---
 
-**iOS — 맥에서. 빌드·실행은 지금 무료로 가능, TestFlight 만 유료(나중)**
-- 공통 사전: `xcode-select --install`, `sudo gem install cocoapods`(또는 brew), `cd tenk_app && flutter pub get && (cd ios && pod install)`.
-- 첫 빌드 걸림돌: **ffmpeg_kit/camera pod 의 iOS 최소버전** — `ios/Podfile` 의 `platform :ios, 'xx'` 를 14.0 정도로 올려야 pod install 될 수 있음. 카카오 iOS URL scheme·권한 usage description 은 이미 Info.plist 에 있음. **단 카카오 콘솔에 iOS 플랫폼(번들 ID) 추가 등록 필요**(현재 Android 만 등록). iOS 는 키해시 개념 없음.
-  - **(무료) 시뮬레이터**: `open -a Simulator` → `flutter run --dart-define=API_BASE_URL=https://tenk.hjson248.com`. 계정 불필요. ⚠️ 시뮬레이터엔 카메라 없어 영상 녹화 테스트 불가(로그인·챌린지·기록 흐름은 OK).
-  - **(무료) 본인 아이폰 실기기**: `open ios/Runner.xcworkspace` → Runner 타깃 → Signing & Capabilities → Team=무료 Apple ID(Personal Team), Bundle ID 유니크(예 `com.hjson.tenkApp`), automatic signing. 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → `flutter run -d <iphone>`. 무료 서명은 **7일 만료**(재실행으로 갱신).
-  - **(유료·나중) TestFlight**: Apple Developer Program 가입 → App Store Connect 앱 레코드 → `flutter build ipa --release --dart-define=...` → Transporter 업로드 → 내부 테스터 초대.
+**iOS — 맥에서 빌드. 지금 무료로 가능, TestFlight 만 유료(나중)**
+
+> ⚠️ **영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 의 iOS 항목이 진실의 원천**(맥의 두 프로젝트 분리 · 편집 방향 · Deployment Target 14.0 · Bundle ID · `.xcworkspace`). 여기엔 **어디까지 했는지**만 둔다.
+
+**맥 작업 디렉토리 = `~/Documents/projects/claude/tenk-ios-build/`** (이 리포의 git clone). 배포 스택 `~/Documents/projects/claude/tenk/` 와 **별개 폴더**이고 섞으면 안 된다 — [docker-deployment.md](docker-deployment.md) §9.5.
+
+- [x] ✅ **빌드 클론 생성 + CocoaPods 설치 (2026-09-17)** — `pod install` 이 의존성 해석 단계까지 도달한 것으로 확인.
+- [ ] ⚠️ **Xcode 설치 확인** — `pod install` 이 돌았다고 Xcode 가 있는 건 아니다. 시뮬레이터·실기기 단계에서 필수이니 `xcodebuild -version` 으로 먼저 확인할 것(App Store 에서 15GB, 설치 후 1회 실행 + `sudo xcodebuild -license accept`).
+- [x] ✅ **Podfile 신설 + Deployment Target 14.0 (2026-09-17, 윈도우에서)** — 첫 `pod install` 이 `ffmpeg_kit_flutter_new_video/video ... required a higher minimum deployment target` 으로 실패한 것의 수정. 원인은 **Flutter 가 생성한 Podfile 의 `platform` 줄이 주석**이라 CocoaPods 가 기본값 13.0 을 가정한 것. [ios/Podfile](../tenk_app/ios/Podfile) 신규 + [project.pbxproj](../tenk_app/ios/Runner.xcodeproj/project.pbxproj) 3곳.
+- [ ] **맥에서 `pod install`** — 맥이 만든 **untracked `ios/Podfile` 을 먼저 지우고**(안 지우면 pull 이 거부된다) `git pull` → `cd ios && pod install`. ⚠️ ffmpeg xcframework 8개를 내려받아 **수 분** 걸린다. 끝나면 **`ios/Podfile.lock` 을 맥에서 커밋**(유일한 맥→윈도우 방향 파일).
+- [ ] **시뮬레이터 구동** — `open -a Simulator` → `flutter run --dart-define=API_BASE_URL=https://tenk.hjson248.com`. ⚠️ 시뮬레이터엔 **카메라가 없어** 녹화 흐름은 못 본다(로그인·챌린지·기록·결과 카드까지는 OK).
+- [ ] **카카오 콘솔에 iOS 플랫폼 등록** — 번들 ID `com.hjson.tenkApp`. iOS 는 키해시 개념 없음.
+- [ ] **실기기 구동** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
+- [ ] **플랫폼 차이 검증 — 여기가 본체.** 불확실성 3종:
+  - 🔴 **ffmpeg 영상 합본** — [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) 가 `mpeg4` sw 인코더 **고정**인데(Android 에서 다른 후보가 전부 실격돼 남은 값), iOS 빌드에 그 인코더가 있는지·속도가 견딜 만한지는 돌려봐야 안다.
+  - 🔴 **Impeller** — Android 는 `video_player` 외부 텍스처 깜빡임 때문에 매니페스트로 껐지만 **iOS 는 Impeller 가 기본이고 끌 수단이 없다.** 같은 계열 버그가 재현되면 우회로가 없다.
+  - 🟡 **카메라 2초 녹화 타이밍** — `_encoderStartLag`·워밍업 dummy 녹화는 **CameraX 실측으로 잡은 상수**라 AVFoundation 에선 불필요하거나 오히려 어색할 수 있다.
+  - 🟡 **로컬 알림** — #17 당시 "iOS 미검증" 으로 남겨둔 항목이 여기로 온다(§1-A #17). 권한 요청이 **iOS 는 1회뿐**이고 **채널 개념이 없으며** 대기 알림 **64건 상한** 때문에 14일치만 거는 설계라, 권한 흐름·예약·문구를 실기기에서 확인해야 한다.
+- [ ] **[안건] Flutter 버전 통일** — 윈도우 **3.41.9** / 맥 **3.44.5** (2026-09-17 확인). 당장은 *"`pubspec.lock` 은 윈도우 기준"* 으로 막아뒀지만, 두 머신이 같은 앱을 굽는 이상 정석은 버전을 맞추거나 FVM 으로 고정하는 것이다. ⚠️ **윈도우를 올리면 Android 릴리스 재검증이 딸려온다** — 어느 쪽으로 맞출지는 별도 판단.
+- [ ] **[출시 전 안건] Sign in with Apple 병행 검토** — App Store **가이드라인 4.8**: 제3자 소셜 로그인(카카오)만 제공하면 **Sign in with Apple 병행이 심사 조건이 될 수 있다.** 그러면 `AppleTokenVerifier` + `POST /api/auth/apple/login` 이 필요해 **백엔드 작업이 딸려온다.** ⚠️ **개발·시뮬레이터·실기기 단계와는 무관** — 심사에 내는 순간의 조건이라 지금 진행을 막지는 않는다. 근거는 [decisions.md](decisions.md) "iOS 심사 메모".
+- [ ] **(유료·나중) TestFlight** — Apple Developer Program 가입 → App Store Connect 앱 레코드 → `flutter build ipa --release --dart-define=...` → Transporter 업로드 → 내부 테스터 초대.
 - **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
 
 ### 1. 앱 UX 다듬기 (백로그)
@@ -250,7 +265,7 @@
   - **로컬 알림만**(FCM 금지) / 발신 채널 **3종**(매일 리마인더·종료 임박·확정 대기) + **배지 근접은 리마인더 문구 승격** / 겹치면 **발신 1개 + 문구 우선순위** / 설정 토글 **마스터 1 + 종류별 3 + 시각 선택** / 가입 직후 프라이밍(**게이트 아님**) / 탭하면 **앱만 열기**.
   - **서버가 지표를 준다** — `ChallengeResponse.currentStreak`/`noSpendDays` 신설. 배지 지급과 **같은 계산기**([ChallengeStatsCalculator](../tenk-backend/src/main/java/com/hjson/tenk/domain/challenge/ChallengeStatsCalculator.java))를 쓰게 뽑아냈다. 백엔드 테스트 **226개**(신규 19) 통과.
   - ⚠️ **백엔드 재배포 필요** — 스키마 변경은 없고 이미지만. #7 미배포 건과 **같이 나가면 왕복이 준다** (§0).
-  - ⚠️ **iOS 미검증** — 로컬 알림이라 무료 계정으로 동작하지만 빌드가 맥에서만 되므로 확인 못 했다.
+  - ⚠️ **iOS 미검증** — 로컬 알림이라 무료 계정으로 동작하지만 빌드가 맥에서만 되므로 확인 못 했다. → **§0 iOS 의 '플랫폼 차이 검증' 목록으로 이관** (2026-09-17).
 - ~~#18 결과 카드 디자인 수정~~ → ✅ 완료 (2026-08-01). **요구사항 한 문장이 기준을 바꿨다** — "제일 큰 건 안 예쁘다는 거야, 결과 카드가 예뻐야 자랑하고 싶을텐데". 그래서 정보 위계·중복 제거는 수단이 되고 **미감이 목표**가 됐다(보통 화면과 반대. 공유 카드는 공유되지 않으면 존재 이유가 없다).
   - **총 7라운드가 걸렸고 마지막 3라운드는 실패 카드 하나 때문이었다.** ①다크+링 → ②화이트+카테고리 → ③2블록+그리드+풀블리드 → ④민트 채움 → ⑤사용자 가이드 6항목 → ⑥실패 카드 색 3안 → **⑦확정**. 되돌린 것들이 이 회의의 핵심 교훈이다:
     - **다크 폐기 → 옅은 틴트도 폐기 → 브랜드 민트 꽉 채움** — 다크는 앱과 너무 따로 놀았고, 옅은 민트 틴트(명도 94%)는 **썸네일·피드에서 그냥 흰 카드**로 읽혔다. 외부 레퍼런스(Spotify Wrapped·Strava)의 공통 항목이 **배경색을 완전히 커밋하는 것**이었다.
