@@ -67,7 +67,8 @@
 - ✅ **#28 ⓓ ACME 자동 갱신 확인 — 통과 (2026-09-07).** 예정대로 **8/30·8/31 에 실제 갱신**되어 만료가 **11/28·11/29** 로 밀렸다. **D2(HAProxy + PROXY protocol) 에서 가장 늦게 드러나는 실패 지점이 닫힌 것** — httpChallenge 가 HAProxy `:80` → Traefik `web` 을 그대로 통과한다는 실증이다. 이로써 **#28 전건 종결**(§1-F). 검증 방법은 [docker-deployment.md](docker-deployment.md) §8.5.
 - ✅ **Play Console 앱 콘텐츠 전 항목 완료 (2026-09-15)** — 로그인 세부정보(데모 카카오 계정 + 5종 챌린지 시딩, [seed-review-demo.sql](seed-review-demo.sql)) · 타겟층(13~15 포함 → 가족 정책) · 데이터 보안(유형 분류 정정 포함) 등 9개. 상세는 [handoff-archive.md](handoff-archive.md).
 - ✅ **§1-I '만원 챌린지' 포지셔닝 회의 종결 + 앱 `1.0.0+8` 빌드 (2026-09-16)** — **이름 유지 · '만원'은 상징 · 공유 텍스트 2곳만 수정 · 카테고리 라이프스타일.** ⭐ 결론이 *"고칠 자리는 앱이 아니라 스토어"* 라, §1-I 가 예상했던 **백엔드 재배포가 통째로 빠지고** 앱 변경도 4곳으로 줄었다. 반대로 **§0-⑧ 스크린샷·그래픽이 이 회의 결론의 실행부**가 됐다. 곁가지로 결과 카드 주석 2곳과 낡은 README(`최대 7일` → **30일**)를 정정. 회의록 [decisions.md](decisions.md) ㉕, 규칙은 [../CLAUDE.md](../CLAUDE.md) "프로젝트 개요". ⏭️ **Play 업로드는 아직.**
-- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+8` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / **iOS 빌드(2026-09-17 착수 — §0)** / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
+- ✅ **iOS 시뮬레이터 개통 + Android export 무회귀 확인 (2026-09-17~18)** — 맥이 원격이라 실기기를 쓸 수 없어 **시뮬레이터가 iOS 개발의 유일한 통로**였고, 그 통로를 막던 벽 5개(Deployment Target · ffmpeg arm64 슬라이스 · `flutter precache` · **SPM 필수** · NAT 헤어핀)를 전부 뚫었다. ⭐ 그 대가로 올린 **ffmpeg 7.1→8.1 이 Android 를 깨지 않았음**을 에뮬레이터 export 실행으로 확인해 닫았다. 곁가지로 **`seed-export-test.sql` 이 스키마 변경 2건을 못 따라와 실행조차 안 되던 것**을 고쳤다. 회의록 [decisions.md](decisions.md) ㉖, 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목.
+- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+8` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / **iOS 실기기 검증**(시뮬레이터는 개통됨 — §0) / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -213,26 +214,15 @@
 
 ---
 
-**iOS — 맥에서 빌드. 지금 무료로 가능, TestFlight 만 유료(나중)**
+**iOS — 시뮬레이터 개통 완료(2026-09-18) · 실기기·TestFlight 잔여**
 
-> ⚠️ **영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 의 iOS 항목이 진실의 원천**(맥의 두 프로젝트 분리 · 편집 방향 · Deployment Target 14.0 · Bundle ID · `.xcworkspace`). 여기엔 **어디까지 했는지**만 둔다.
+> ⚠️ **영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 의 iOS 항목이 진실의 원천**(맥의 두 프로젝트 분리 · 편집 방향 · **SPM 필수** · Deployment Target 14.0 · Bundle ID · **`/etc/hosts`** · `.xcworkspace`). 여기엔 **어디까지 했는지**만 둔다.
 
 **맥 작업 디렉토리 = `~/Documents/projects/claude/tenk-ios-build/`** (이 리포의 git clone). 배포 스택 `~/Documents/projects/claude/tenk/` 와 **별개 폴더**이고 섞으면 안 된다 — [docker-deployment.md](docker-deployment.md) §9.5.
 
-- [x] ✅ **빌드 클론 생성 + CocoaPods 설치 (2026-09-17)** — `pod install` 이 의존성 해석 단계까지 도달한 것으로 확인.
-- [x] ✅ **Xcode 설치 확인 (2026-09-17)** — `xcodebuild -version` → **Xcode 26.6 (17F113)**.
-- [x] ✅ **Podfile 신설 + Deployment Target 14.0 (2026-09-17, 윈도우에서)** — 첫 `pod install` 이 `ffmpeg_kit_flutter_new_video/video ... required a higher minimum deployment target` 으로 실패한 것의 수정. 원인은 **Flutter 가 생성한 Podfile 의 `platform` 줄이 주석**이라 CocoaPods 가 기본값 13.0 을 가정한 것. [ios/Podfile](../tenk_app/ios/Podfile) 신규 + [project.pbxproj](../tenk_app/ios/Runner.xcodeproj/project.pbxproj) 3곳.
-- [x] ✅ **맥에서 `pod install` 성공 (2026-09-18)** — **최종 상태는 `1 total pod`(Flutter) 이고 그게 정상이다** (플러그인 15개는 전부 SPM 으로 간다 — [../CLAUDE.md](../CLAUDE.md) iOS 항목). 도중에 밟은 함정 2개:
-  - ⚠️ **`flutter precache --ios` 선행 필수** — 맥에서 iOS 를 처음 빌드하면 엔진 아티팩트가 캐시에 없어 `Flutter.xcframework must exist` 로 `post_install` 훅이 죽는다. Xcode·CocoaPods 설치만으로는 부족하다.
-  - ⚠️ **SPM 을 끈 상태에서 `pod install` 이 `1 total pod` 만 설치하면 그게 고장 신호다** — 에러가 없어서 성공처럼 보인다. ⚠️ **반대로 SPM 을 켠 정상 상태에서도 `1 total pod` 이 나온다** — 같은 숫자가 상태에 따라 정상이기도 고장이기도 하니 **SPM 켜짐 여부를 먼저 볼 것**. 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목(**SPM 필수**).
-- [x] ✅ **시뮬레이터 구동 성공 (2026-09-18, iPhone 17)** — **카메라 빼고 전부 정상**. 로그인·게이트·챌린지·기록·결과 카드까지 확인. ⚠️ 시뮬레이터엔 **카메라 하드웨어가 없어** 2초 녹화는 구조적으로 못 본다(결함 아님 — 실기기 전용).
-  - ⚠️ **맥 `/etc/hosts` 에 `127.0.0.1 tenk.hjson248.com` 을 넣어야 백엔드에 붙는다.** 맥이 곧 서버인데 공유기 NAT 헤어핀 미지원이라 자기 도메인으로 못 돌아온다 — 증상은 **카카오 인증은 되고 마지막에 `인터넷 연결을 확인해 주세요.`**. 규칙·이유는 [../CLAUDE.md](../CLAUDE.md) iOS 항목, 뿌리는 [docker-deployment.md](docker-deployment.md) §8.2.
-  - [x] ✅ **Apple Silicon 시뮬레이터 차단 해소 — ffmpeg 플러그인 2.0.0 → 2.5.2 (2026-09-17)**. 구버전은 `EXCLUDED_ARCHS[sdk=iphonesimulator*] = i386 **arm64**` 라 **M1 맥의 시뮬레이터(=arm64)에서 빌드가 막혔다**(`pod install` 은 통과하고 빌드·링크 단계에서 터지는 유형). 2.5.2 는 vendored xcframework 에 arm64 시뮬레이터 슬라이스를 넣으면서 그 배제를 풀었다 — **구버전은 바이너리에 슬라이스 자체가 없어 Podfile 에서 배제만 풀어도 해결되지 않는다.** 근거·대안 검토는 [decisions.md](decisions.md) ㉖.
-    - ⚠️ **되돌리지 말 것 — 내리면 시뮬레이터가 다시 막힌다.** 규칙은 [../CLAUDE.md](../CLAUDE.md) "영상".
-    - ⚠️ **Rosetta 로 우회하는 길도 있었지만 쓰지 않는다** — 시뮬레이터를 x86_64 로 돌려 확인한 동작은 **실제 사용자 환경(arm64)의 증거가 못 된다.**
-    - ✅ 상향 후 `flutter analyze` 0건 + `flutter test` **35개** 통과, `pubspec.lock` 은 **그 패키지 한 줄만** 변경(전이 의존성 연쇄 없음). Android 요구사항도 동일(compileSdk 35 · Java 17 · minSdk 24), iOS Deployment Target 도 14.0 그대로.
-    - [ ] 🔴 **남은 것 — Android 영상 합본 재검증.** ffmpeg 엔진이 **7.1 → 8.1** 로 올라갔고 그 변화는 **Android 에도 같이 적용된다**(단일 코드베이스라 iOS 만 고를 수 없다). 단위·위젯 테스트는 ffmpeg 을 태우지 않으므로 **에뮬레이터에서 export 를 실제로 돌려봐야** 한다 — 시드는 [seed-export-test.sql](seed-export-test.sql). 볼 것: **합성 성공 여부 · 한글 자막(PNG overlay) · `mpeg4` 인코더 · xfade 이음매 · 결과 카드 마지막 3초 클립**.
-- [x] ✅ **카카오 콘솔 iOS 플랫폼 등록 (2026-09-18)** — 번들 ID `com.hjson.tenkApp`(⚠️ Android 의 `com.hjson.tenk_app` 과 다르다 — iOS 는 `_` 불가). 키해시 개념 없음. **앱스토어 URL 칸은 비워도 된다** — 카카오링크(공유) 폴백용인데 TenK 은 `share_plus`(OS 공유 시트)를 쓴다.
+- [x] ✅ **시뮬레이터 개통 — 카메라 빼고 전 기능 동작 (2026-09-18, iPhone 17).** Xcode 26.6 · Podfile 신설/Target 14.0 · ffmpeg 2.5.2 상향 · SPM 활성 · `pod install` · 카카오 iOS 등록(`com.hjson.tenkApp`) · `/etc/hosts` 까지 **벽 5개**를 넘었다. 각 벽의 증상·해법은 [handoff-archive.md](handoff-archive.md) 2026-09-17~18, 영구 규칙은 [../CLAUDE.md](../CLAUDE.md), 근거는 [decisions.md](decisions.md) ㉖.
+  - ⚠️ 시뮬레이터엔 **카메라 하드웨어가 없어** 2초 녹화는 구조적으로 못 본다(결함 아님 — 실기기 전용).
+- [x] ✅ **Android 영상 합본 재검증 완료 — 무회귀 (2026-09-18, 에뮬 Pixel_7 + 로컬 백엔드).** ffmpeg 상향(7.1→8.1)이 **Android 에 남긴 유일한 미확인 지점**이었다. 빌드·링크 / 합성 전 구간 / **한글 자막(PNG overlay)** / xfade 이음매 / 결과 카드 마지막 3초 / **에러 로그 0건** 전부 통과 — 즉 **상향의 대가로 우려했던 비용이 실제로는 발생하지 않았다.** 상세·시드 함정은 [handoff-archive.md](handoff-archive.md).
 - [ ] **실기기 구동 — 남은 검증은 전부 여기 묶여 있다** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
 - [ ] **플랫폼 차이 검증 — 실기기에서만 가능.** 불확실성 4종:
   - 🔴 **ffmpeg 영상 합본** — [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) 가 `mpeg4` sw 인코더 **고정**인데(Android 에서 다른 후보가 전부 실격돼 남은 값), iOS 빌드에 그 인코더가 있는지·속도가 견딜 만한지는 돌려봐야 안다.

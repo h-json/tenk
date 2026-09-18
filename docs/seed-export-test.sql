@@ -19,6 +19,13 @@
 --     (※ media_file 과 amount 가 FK CASCADE 아님 — 아래에 cleanup helper 주석 참고)
 -- ============================================================
 
+-- ⚠️ 이 스크립트는 엔티티 검증을 우회하는 네이티브 SQL 이다. 두 가지를 꼭 지킬 것
+--    (2026-09-18 에 둘 다 어긋나 있어서 실행조차 안 됐다):
+--    ① `challenge.name` 은 NOT NULL 이다 — INSERT 에서 빼면 실패한다.
+--    ② `amount.category` 는 SpendCategory enum name 이어야 한다
+--       (FOOD/TRANSPORT/SHOPPING/LEISURE/HEALTH/EDUCATION/EVENT/LIVING/ETC).
+--       한글 라벨을 넣으면 저장은 되고 **읽을 때** enum 매핑이 깨져 조회가 예외로 죽는다.
+
 USE `tenk`;
 
 -- 가장 최근에 가입한 카카오 사용자 (dev 환경엔 보통 1명)
@@ -36,19 +43,19 @@ SELECT IF(@uid IS NULL,
 ) AS seed_status;
 
 -- 챌린지: today-6 ~ today-1 (6일), 목표 10,000원, 확정 = SUCCESS
-INSERT INTO `challenge` (user_id, start_date, end_date, target_amount, result, created_dt, updated_dt)
-SELECT @uid, CURDATE() - INTERVAL 6 DAY, CURDATE() - INTERVAL 1 DAY, 10000, 'SUCCESS', NOW(), NOW()
+INSERT INTO `challenge` (user_id, name, start_date, end_date, target_amount, result, created_dt, updated_dt)
+SELECT @uid, '영상 합본 테스트', CURDATE() - INTERVAL 6 DAY, CURDATE() - INTERVAL 1 DAY, 10000, 'SUCCESS', NOW(), NOW()
 WHERE @uid IS NOT NULL;
 SET @cid := LAST_INSERT_ID();
 
 -- ============================================================
 -- 기록 6개 (시간순)
 --
--- Day 1 (today-6): 지출 2,000  카페·아메리카노   memo: "출근길 마지막 카페인" → 영상 1
+-- Day 1 (today-6): 지출 2,000  FOOD·아메리카노   memo: "출근길 마지막 카페인" → 영상 1
 -- Day 2 (today-5): 무지출                                                  → 텍스트 카드 (영상 없음)
--- Day 3 (today-4): 지출 3,000  식비·김밥 한 줄                              → 영상 2
+-- Day 3 (today-4): 지출 3,000  FOOD·김밥 한 줄                              → 영상 2
 -- Day 4 (today-3): 무지출      memo: "도시락 챙겼다"                        → 텍스트 카드
--- Day 5 (today-2): 지출 1,500  교통·버스                                    → 영상 3
+-- Day 5 (today-2): 지출 1,500  TRANSPORT·버스                               → 영상 3
 -- Day 6 (today-1): 무지출                                                  → 텍스트 카드
 --
 -- 총 지출 6,500 / 목표 10,000 → 잔액 3,500 → SUCCESS
@@ -56,7 +63,7 @@ SET @cid := LAST_INSERT_ID();
 
 -- Day 1: 지출 + 영상 1
 INSERT INTO `amount` (challenge_id, category, content, amount, is_no_spend, memo, spent_dt)
-VALUES (@cid, '카페', '아메리카노', 2000, 0, '출근길 마지막 카페인',
+VALUES (@cid, 'FOOD', '아메리카노', 2000, 0, '출근길 마지막 카페인',
         DATE_SUB(CURDATE(), INTERVAL 6 DAY) + INTERVAL 9 HOUR + INTERVAL 30 MINUTE);
 SET @a1 := LAST_INSERT_ID();
 INSERT INTO `media_file` (amount_id, file_path, original_name)
@@ -69,7 +76,7 @@ VALUES (@cid, NULL, NULL, 0, 1, NULL,
 
 -- Day 3: 지출 + 영상 2
 INSERT INTO `amount` (challenge_id, category, content, amount, is_no_spend, memo, spent_dt)
-VALUES (@cid, '식비', '김밥 한 줄', 3000, 0, NULL,
+VALUES (@cid, 'FOOD', '김밥 한 줄', 3000, 0, NULL,
         DATE_SUB(CURDATE(), INTERVAL 4 DAY) + INTERVAL 12 HOUR + INTERVAL 15 MINUTE);
 SET @a3 := LAST_INSERT_ID();
 INSERT INTO `media_file` (amount_id, file_path, original_name)
@@ -82,7 +89,7 @@ VALUES (@cid, NULL, NULL, 0, 1, '도시락 챙겼다',
 
 -- Day 5: 지출 + 영상 3
 INSERT INTO `amount` (challenge_id, category, content, amount, is_no_spend, memo, spent_dt)
-VALUES (@cid, '교통', '버스', 1500, 0, NULL,
+VALUES (@cid, 'TRANSPORT', '버스', 1500, 0, NULL,
         DATE_SUB(CURDATE(), INTERVAL 2 DAY) + INTERVAL 18 HOUR + INTERVAL 40 MINUTE);
 SET @a5 := LAST_INSERT_ID();
 INSERT INTO `media_file` (amount_id, file_path, original_name)
