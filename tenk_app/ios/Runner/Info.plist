@@ -25,6 +25,12 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 
+	<!-- 수출 규정: HTTPS 외에 자체 암호화를 구현하지 않으므로 false.
+	     없으면 업로드마다 App Store Connect 가 암호화 사용 여부를 되묻는다.
+	     암호화 기능을 직접 넣으면 이 값부터 재검토할 것 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
 	<!-- 카카오 SDK: 카카오톡 앱 실행 가능 여부 조회 + 로그인 콜백 URL scheme -->
 	<!-- 키 갱신 시 build.gradle.kts manifestPlaceholders + lib/config/kakao_config.dart 같이 교체 -->
 	<key>LSApplicationQueriesSchemes</key>
@@ -86,11 +92,13 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- 세로 고정 (main.dart 의 setPreferredOrientations 와 같은 규칙).
+	     Flutter 기본 템플릿은 가로 2개가 들어 있는데, 그러면 런타임 잠금이 걸리기 전
+	     첫 프레임이 가로로 뜰 여지가 생긴다. 가로를 지원하려면 양쪽을 같이 풀 것 -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

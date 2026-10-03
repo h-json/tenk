@@ -66,9 +66,9 @@
 - ✅ **#28 ⓔ 공유기 DHCP 예약 완료 (2026-08-18)** — ⭐ **백로그가 예약 지점을 1개로 적었는데 실제로는 2개였다**: 홈이 **이중 공유기**(SK브로드밴드 → ipTIME)라 포트포워딩이 2단이고 DHCP 주소도 2개라, 맥만 고정했으면 **ipTime 의 WAN 이 바뀌는 순간 똑같이 죽는다.** ⚠️ **검증은 리스 갱신이 아니라 두 공유기 재부팅**이어야 한다(예약이 없어도 같은 MAC 엔 쓰던 주소를 다시 준다 — 갱신 결과는 증거가 아니다). 곁가지로 **macOS '로컬 네트워크' 권한이 브라우저를 조용히 막는 함정**(§8.4 ALF 와 같은 계열)을 발견해 같이 박았다. 규칙은 [docker-deployment.md](docker-deployment.md) §8.6·§8.7, 실행 기록은 [handoff-archive.md](handoff-archive.md).
 - ✅ **#28 ⓓ ACME 자동 갱신 확인 — 통과 (2026-09-07).** 예정대로 **8/30·8/31 에 실제 갱신**되어 만료가 **11/28·11/29** 로 밀렸다. **D2(HAProxy + PROXY protocol) 에서 가장 늦게 드러나는 실패 지점이 닫힌 것** — httpChallenge 가 HAProxy `:80` → Traefik `web` 을 그대로 통과한다는 실증이다. 이로써 **#28 전건 종결**(§1-F). 검증 방법은 [docker-deployment.md](docker-deployment.md) §8.5.
 - ✅ **Play Console 앱 콘텐츠 전 항목 완료 (2026-09-15)** — 로그인 세부정보(데모 카카오 계정 + 5종 챌린지 시딩, [seed-review-demo.sql](seed-review-demo.sql)) · 타겟층(13~15 포함 → 가족 정책) · 데이터 보안(유형 분류 정정 포함) 등 9개. 상세는 [handoff-archive.md](handoff-archive.md).
-- ✅ **§1-I '만원 챌린지' 포지셔닝 회의 종결 + 앱 `1.0.0+8` 빌드 (2026-09-16)** — **이름 유지 · '만원'은 상징 · 공유 텍스트 2곳만 수정 · 카테고리 라이프스타일.** ⭐ 결론이 *"고칠 자리는 앱이 아니라 스토어"* 라, §1-I 가 예상했던 **백엔드 재배포가 통째로 빠지고** 앱 변경도 4곳으로 줄었다. 반대로 **§0-⑧ 스크린샷·그래픽이 이 회의 결론의 실행부**가 됐다. 곁가지로 결과 카드 주석 2곳과 낡은 README(`최대 7일` → **30일**)를 정정. 회의록 [decisions.md](decisions.md) ㉕, 규칙은 [../CLAUDE.md](../CLAUDE.md) "프로젝트 개요". ⏭️ **Play 업로드는 아직.**
+- ✅ **§1-I '만원 챌린지' 포지셔닝 회의 종결 + 앱 `1.0.0+8` 빌드 (2026-09-16)** — **이름 유지 · '만원'은 상징 · 공유 텍스트 2곳만 수정 · 카테고리 라이프스타일.** ⭐ 결론이 *"고칠 자리는 앱이 아니라 스토어"* 라, §1-I 가 예상했던 **백엔드 재배포가 통째로 빠지고** 앱 변경도 4곳으로 줄었다. 반대로 **§0-⑧ 스크린샷·그래픽이 이 회의 결론의 실행부**가 됐다. 곁가지로 결과 카드 주석 2곳과 낡은 README(`최대 7일` → **30일**)를 정정. 회의록 [decisions.md](decisions.md) ㉕, 규칙은 [../CLAUDE.md](../CLAUDE.md) "프로젝트 개요". ✅ **Play 업로드 완료(09-16).**
 - ✅ **iOS 시뮬레이터 개통 + Android export 무회귀 확인 (2026-09-17~18)** — 맥이 원격이라 실기기를 쓸 수 없어 **시뮬레이터가 iOS 개발의 유일한 통로**였고, 그 통로를 막던 벽 5개(Deployment Target · ffmpeg arm64 슬라이스 · `flutter precache` · **SPM 필수** · NAT 헤어핀)를 전부 뚫었다. ⭐ 그 대가로 올린 **ffmpeg 7.1→8.1 이 Android 를 깨지 않았음**을 에뮬레이터 export 실행으로 확인해 닫았다. 곁가지로 **`seed-export-test.sql` 이 스키마 변경 2건을 못 따라와 실행조차 안 되던 것**을 고쳤다. 회의록 [decisions.md](decisions.md) ㉖, 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목.
-- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+8` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / **iOS 실기기 검증**(시뮬레이터는 개통됨 — §0) / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
+- ⏭️ 다음 후보: **§0 ⑧ 스토어 설정 + 스토어 등록정보**(카테고리·설명 **확정됨** · **그래픽 이미지·스크린샷 미제작**) → **AAB `1.0.0+9` 업로드 + 검토 전송** / 프로덕션 출시 요건 확인(비공개 테스트 12명×14일) / **iOS 실기기 검증**(시뮬레이터는 개통됨 — §0) / 페이지네이션 / 업적 시스템(최후순위). **코드 백로그는 미착수 결함 0건**, **미배포 백엔드 변경도 0건**.
 ---
 
 ## 새 컴퓨터에서 시작하는 순서
@@ -129,7 +129,7 @@
 
 **환경 제약 (중요)**
 - **iOS 빌드는 이 Windows 머신에서 불가** — `flutter build ios/ipa`/`pod install`/Xcode 전부 macOS + Xcode 필수. iOS 작업은 전부 맥에서 한다(도커 배포하던 그 맥). ⚠️ **단 배포 스택 폴더가 아니라 별도의 빌드 클론 `~/Documents/projects/claude/tenk-ios-build/` 에서** — 둘을 섞으면 안 되는 이유는 [docker-deployment.md](docker-deployment.md) §9.5.
-- **iOS 앱스토어/TestFlight 배포만 Apple Developer Program($99/년) 필요** — 미보유라 배포는 보류. 하지만 **빌드·실행은 공짜로 가능**(시뮬레이터=계정 불필요, 본인 아이폰=무료 Apple ID 개인팀). 아래 iOS 항목 참고.
+- **Apple Developer Program — ✅ 가입·활성 (2026-10-03).** ₩129,000/년, 계정은 Play Console 과 같은 Gmail, 팀 `HUIJUN SON - R99XM7V9DV`. 이제 **TestFlight 배포가 열렸고 무료 서명의 7일 만료도 안 걸린다**. ⚠️ **만료(2027-10) 한 달 전 알림을 걸어둘 것** — 놓치면 TestFlight 가 끊기고 앱이 내려간다. 가입이 8일 멈췄던 경위는 [handoff-archive.md](handoff-archive.md) 2026-10-03.
 
 **Android (직접 서명 APK 공유) — ✅ 종결 (2026-08-18).** 빌드·전체 흐름 스모크(2026-07-13) · 앱 아이콘 교체(2026-08-02, #6) · 실기기 런처 아이콘 3종 재확인(2026-08-18) 전부 완료, `--split-per-abi` 는 **드롭**. 상세는 [handoff-archive.md](handoff-archive.md) "§0 완료된 체크리스트".
 
@@ -200,21 +200,23 @@
   - ⚠️ **이제부터 기존 `1.2.1+6` 설치본은 게이트 밖이다** — 앞으로 낼 어떤 버전보다 높은 값을 보고하므로 **강제·권장 업데이트가 안 걸리고 Play 자동 업데이트만 닿는다.** 재번호의 대가로 알고 감수한 것이며, 규칙은 [../CLAUDE.md](../CLAUDE.md) "앱 버전" 의 *"버전을 내릴 때는 순서가 뒤집힌다"*.
 
 - [x] ✅ **⑨ `1.0.0+8` 빌드 완료 (2026-09-16)** — 실린 변경은 **㉕ 회의의 공유 텍스트 2곳**(`TenK 챌린지 결과`/`TenK 챌린지 영상`) + 낡은 주석 2곳뿐이다. 게이트를 걸 이유가 없는 문구 수정이라 [../CLAUDE.md](../CLAUDE.md) "앱 버전" 규칙대로 **`+N` 만** 올렸다. `flutter analyze` 0건 + `flutter test` **35개** 통과 → AAB **100.5MB**. 병합 매니페스트 실측 **`versionCode=8`/`versionName=1.0.0`**, 권한은 `1.0.0+7` 과 동일하고 `SCHEDULE_EXACT_ALARM`·`USE_EXACT_ALARM` 없음(⚠️ 주석이 grep 에 걸리는 오탐이 있으니 `<uses-permission>` **실선언으로만** 볼 것).
-  - ⏭️ **Play 업로드는 아직** — 산출물은 `tenk_app/build/app/outputs/bundle/release/app-release.aab`.
+  - ✅ **Play 업로드는 09-16 에 이미 됐다** (콘솔 기준 13:05). 이 문서가 "업로드는 아직" 으로 남아 있어 09-18 에 착각했다 — **업로드하면 그 자리에서 여기를 갱신할 것.**
+- [x] ✅ **⑩ `1.0.0+9` 빌드 완료 (2026-09-18)** — `+8` 은 **ffmpeg 플러그인 상향(`2.0.0` → `2.5.2`, 09-17) 이전**에 구운 것이라 `main` 과 바이너리가 갈라져 있었다. 그래서 이 빌드에 실리는 변경은 **ffmpeg 7.1 → 8.1 하나**다(Android export 무회귀는 09-18 에뮬 재검증으로 확인됨). 게이트를 걸 이유가 없어 `+N` 만 올렸다. `flutter analyze` 0건 + `flutter test` 35개 통과 → AAB **100.8MB**, 병합 매니페스트 **`versionCode=9`/`versionName=1.0.0`**, `<uses-permission>` 에 정확한 알람 없음. `app_config` 는 갱신할 값이 없다(이미 `1.0.0`).
+  - ⏭️ **Play 업로드는 아직** — 산출물은 `tenk_app/build/app/outputs/bundle/release/app-release.aab` (09-18 23:05).
   - ⚠️ **`app_config` 는 건드리지 않는다 — 갱신할 값이 없다.** `latest_version`/`min_supported_version` 이 이미 `1.0.0` 이고 `versionName` 도 그대로다. 그 대가로 **이 빌드엔 강제·권장 업데이트를 걸 수 없고 Play 자동 업데이트에만 기댄다** — 내부 테스트 트랙이라 감수한 선택이고, 게이트가 필요한 빌드였다면 `versionName` 을 올려야 했다.
 
 - **DB 3306 포트 노출 — 열어둔 채로 간다 (2026-08-08 사용자 결정).** 상세·지켜야 할 선은 [docker-deployment.md](docker-deployment.md) §5.6. **매 세션 다시 지적하지 말 것.**
 - [x] ✅ **④ Play Console 앱 콘텐츠 — 전 항목 완료 (2026-09-15)** — 개인정보처리방침 · 로그인 세부정보 · 광고 · 콘텐츠 등급 · 타겟층 · 데이터 보안 · 정부 앱 · 금융 기능 · 건강. 입력값은 [play-console-app-content.md](play-console-app-content.md), 진행 경위는 [handoff-archive.md](handoff-archive.md).
   - ⚠️ **데모 계정은 영구 유지하고, 검토를 요청할 때마다 재시딩한다** — Play 는 업데이트마다 재심사한다. 요청 직전에 [seed-review-demo.sql](seed-review-demo.sql) 을 DBeaver 에서 다시 돌릴 것(5종이 전부 보이는 건 2일). 그 계정으로 **연령 확인을 넘기지 말 것** — 넘겼으면 게이트 3컬럼 NULL UPDATE([play-console-app-content.md](play-console-app-content.md) §2-1). 카카오 회원번호 `5006994690`.
 - [ ] **⑧ Play 스토어 설정 + 스토어 등록정보** — 콘솔 대시보드 **'앱이 분류 및 표시되는 방식 관리'** 의 2건. 입력값·초안은 [play-console-app-content.md](play-console-app-content.md) §9.
-  - [ ] **스토어 설정** — 앱 / 카테고리(⚠️ **§1-I 회의에 걸린다** — 결론 전엔 라이프스타일 권장) / 연락처 이메일 `support.tenk@gmail.com`(**스토어에 공개된다**) / 전화·웹사이트 비움(루트가 404)
+  - [ ] **스토어 설정** — 앱 / 카테고리 **라이프스타일**(㉕ 회의로 확정) / 연락처 이메일 `support.tenk@gmail.com`(**스토어에 공개된다**) / 전화·웹사이트 비움(루트가 404)
   - [ ] **스토어 등록정보** — 간단한·자세한 설명(**초안 있음**) · 앱 아이콘 512(`tenk_app/assets_src/icon/play_store_512.png`) · **그래픽 이미지 1024×500(미제작)** · **휴대전화 스크린샷 2장 이상(미제작)**. ⚠️ 스크린샷은 **긴 변이 짧은 변의 2배 이하**여야 받는다 — 요즘 폰(20:9) 캡처는 2.22배라 거부. 에뮬을 `adb shell wm size 1080x1920` 으로 바꿔 찍으면 규격이 맞는다(끝나면 `wm size reset`).
   - [ ] 그 뒤 **게시 개요 → 검토를 위해 변경사항 전송**. 직전에 데모 계정 재시딩.
 - [ ] ⚠️ **프로덕션 출시 요건 확인** — 2023-11 이후 만든 **개인 개발자 계정은 비공개 테스트(테스터 12명 이상 × 14일 연속)** 를 거쳐야 프로덕션 액세스를 신청할 수 있다. 해당 여부는 콘솔 대시보드에서 확인. 공개 출시가 목표면 이게 다음 큰 일정이다.
 
 ---
 
-**iOS — 시뮬레이터 개통 완료(2026-09-18) · 실기기·TestFlight 잔여**
+**iOS — 시뮬레이터 개통(2026-09-18) · App Store Connect 준비 완료(2026-10-03) · 실기기·업로드 잔여**
 
 > ⚠️ **영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" 의 iOS 항목이 진실의 원천**(맥의 두 프로젝트 분리 · 편집 방향 · **SPM 필수** · Deployment Target 14.0 · Bundle ID · **`/etc/hosts`** · `.xcworkspace`). 여기엔 **어디까지 했는지**만 둔다.
 
@@ -223,7 +225,8 @@
 - [x] ✅ **시뮬레이터 개통 — 카메라 빼고 전 기능 동작 (2026-09-18, iPhone 17).** Xcode 26.6 · Podfile 신설/Target 14.0 · ffmpeg 2.5.2 상향 · SPM 활성 · `pod install` · 카카오 iOS 등록(`com.hjson.tenkApp`) · `/etc/hosts` 까지 **벽 5개**를 넘었다. 각 벽의 증상·해법은 [handoff-archive.md](handoff-archive.md) 2026-09-17~18, 영구 규칙은 [../CLAUDE.md](../CLAUDE.md), 근거는 [decisions.md](decisions.md) ㉖.
   - ⚠️ 시뮬레이터엔 **카메라 하드웨어가 없어** 2초 녹화는 구조적으로 못 본다(결함 아님 — 실기기 전용).
 - [x] ✅ **Android 영상 합본 재검증 완료 — 무회귀 (2026-09-18, 에뮬 Pixel_7 + 로컬 백엔드).** ffmpeg 상향(7.1→8.1)이 **Android 에 남긴 유일한 미확인 지점**이었다. 빌드·링크 / 합성 전 구간 / **한글 자막(PNG overlay)** / xfade 이음매 / 결과 카드 마지막 3초 / **에러 로그 0건** 전부 통과 — 즉 **상향의 대가로 우려했던 비용이 실제로는 발생하지 않았다.** 상세·시드 함정은 [handoff-archive.md](handoff-archive.md).
-- [ ] **실기기 구동 — 남은 검증은 전부 여기 묶여 있다** (⚠️ 아이폰 USB 연결 = **맥 앞에 앉아야 한다**) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=무료 Apple ID(Personal Team) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**. 무료 서명은 **7일 만료**(재실행으로 갱신).
+- [ ] **실기기 구동 — 남은 검증은 전부 여기 묶여 있다** (⚠️ 아이폰 **첫 페어링은 맥 앞에 앉아야 한다** — 한 번 페어링하면 이후엔 같은 네트워크에서 무선으로도 된다) — `open ios/Runner.xcworkspace` → Runner → Signing & Capabilities → Team=**유료 개발자 계정**(2026-10-03부터) → 아이폰 개발자 모드 ON + "이 컴퓨터 신뢰" → 첫 실행 후 폰에서 **설정 → 일반 → VPN 및 기기 관리 → 신뢰**.
+  - ✅ **유료 가입으로 무료 서명의 7일 만료는 더 이상 해당 없다** — 아래 TestFlight 로 설치하면 기기 신뢰·케이블조차 필요 없어서, **실기기 검증을 TestFlight 로 돌리는 쪽이 원격 맥 환경에 더 맞다**(USB 직결은 맥 앞에 가야 하므로).
 - [ ] **플랫폼 차이 검증 — 실기기에서만 가능.** 불확실성 4종:
   - 🔴 **ffmpeg 영상 합본** — [video_composer.dart](../tenk_app/lib/data/export/video_composer.dart) 가 `mpeg4` sw 인코더 **고정**인데(Android 에서 다른 후보가 전부 실격돼 남은 값), iOS 빌드에 그 인코더가 있는지·속도가 견딜 만한지는 돌려봐야 안다.
   - 🔴 **Impeller** — Android 는 `video_player` 외부 텍스처 깜빡임 때문에 매니페스트로 껐지만 **iOS 는 Impeller 가 기본이고 끌 수단이 없다.** 같은 계열 버그가 재현되면 우회로가 없다.
@@ -231,7 +234,13 @@
   - 🟡 **로컬 알림** — #17 당시 "iOS 미검증" 으로 남겨둔 항목이 여기로 온다(§1-A #17). 권한 요청이 **iOS 는 1회뿐**이고 **채널 개념이 없으며** 대기 알림 **64건 상한** 때문에 14일치만 거는 설계라, 권한 흐름·예약·문구를 실기기에서 확인해야 한다.
 - [ ] **[안건] Flutter 버전 통일** — 윈도우 **3.41.9** / 맥 **3.44.5** (2026-09-17 확인). **실측 드리프트는 `meta`·`test_api` 두 줄뿐**(둘 다 Dart SDK 고정 패키지라 앱 동작 무관) — 맥에서 `pull` 이 막히면 `git checkout -- tenk_app/pubspec.lock` 로 되돌리면 된다. 당장은 *"`pubspec.lock` 은 윈도우 기준"* 으로 막아뒀지만, 두 머신이 같은 앱을 굽는 이상 정석은 버전을 맞추거나 FVM 으로 고정하는 것이다. ⚠️ **윈도우를 올리면 Android 릴리스 재검증이 딸려온다** — 어느 쪽으로 맞출지는 별도 판단.
 - [ ] **[출시 전 안건] Sign in with Apple 병행 검토** — App Store **가이드라인 4.8**: 제3자 소셜 로그인(카카오)만 제공하면 **Sign in with Apple 병행이 심사 조건이 될 수 있다.** 그러면 `AppleTokenVerifier` + `POST /api/auth/apple/login` 이 필요해 **백엔드 작업이 딸려온다.** ⚠️ **개발·시뮬레이터·실기기 단계와는 무관** — 심사에 내는 순간의 조건이라 지금 진행을 막지는 않는다. 근거는 [decisions.md](decisions.md) "iOS 심사 메모".
-- [ ] **(유료·나중) TestFlight** — Apple Developer Program 가입 → App Store Connect 앱 레코드 → `flutter build ipa --release --dart-define=...` → Transporter 업로드 → 내부 테스터 초대.
+- [ ] **TestFlight 내부 테스트 — 콘솔 준비는 끝났고(2026-10-03) 맥 작업만 남았다.** 완료분(멤버십 활성 · Bundle ID · 앱 레코드 `6818692207` · 무료 앱 계약 활성 · 전자상거래법 규정 준수)의 상세·함정은 [handoff-archive.md](handoff-archive.md) 2026-10-03.
+  1. **(맥 GUI — 화면공유 필수)** Xcode → Settings → Accounts 에 개발 계정 로그인 → Runner 타깃 Team=**`HUIJUN SON - R99XM7V9DV`** (**키체인 때문에 SSH 로는 안 된다** — 아래 "SSH 로 원격 빌드 가능 범위")
+  2. **(맥)** `flutter build ipa --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → Xcode Organizer 또는 Transporter 업로드 → 처리 10~30분
+  3. App Store Connect → 사용자 및 액세스에 **개인 Apple ID 추가** → 내부 테스트 그룹 (**내부 테스트는 심사 없음**, 외부는 베타 심사 ~1일)
+  - ⚠️ **빌드 번호(`+N`)는 App Store Connect 안에서 재사용 불가** — 업로드가 실패해 다시 올릴 땐 `pubspec.yaml` 의 `+N` 을 올릴 것(판정 기준은 [../CLAUDE.md](../CLAUDE.md) "버전 문자열" 절).
+  - ⚠️ **게시되면 `app_config.ios_store_url` = `https://apps.apple.com/app/id6818692207`** 을 관리자 패널에서 채울 것 — 비어 있으면 iOS 강제 업데이트 게이트에 **출구가 없다**.
+- [ ] **[출시 전] EU DSA 거래자 자격** — EU 배포 시에만 필요하고 미제공 시 **EU App Store 에서만** 앱이 내려간다(한국 배포 무관). App Store Connect → 비즈니스.
 - **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
 
 ### 1. 앱 UX 다듬기 (백로그)
