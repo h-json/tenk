@@ -36,7 +36,7 @@
 - **대상 클라이언트**: **Flutter 기반 모바일 앱(iOS/Android 단일 코드베이스)**. 브라우저 기반 흐름(서버 사이드 OAuth redirect, 세션 쿠키 등) 대신 모바일 친화적인 토큰 기반 흐름을 사용. 모든 백엔드 변경은 이 전제를 깔고 갈 것.
   - 카카오 로그인: 공식 `kakao_flutter_sdk`로 access token 발급 후 백엔드 `/api/auth/kakao/login`에 전달.
   - 영상 녹화: Flutter `camera` 패키지의 **`ResolutionPreset.medium` + 2초 타이머**로 처음부터 가볍게·짧게 촬영. ffmpeg 등 후처리 트랜스코딩은 사용하지 않음. export 파이프라인이 480x864 로 정규화하므로 medium 이상은 의미 없음 (파일만 커짐).
-- **현재 단계**: 백엔드·앱 모두 기능 구현 완료이고 **테스트도 전부 수행했다** — 백엔드 **259개**(단위 + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 슬라이스) · 앱 위젯 테스트 **35개** 전원 통과. 백엔드는 `https://tenk.hjson248.com` 에 **prod 배포 LIVE**, 앱은 Play Console **내부 테스트 게시 중**(게시된 최신 빌드 `1.0.0+8`, 다음 업로드 `1.0.0+9` — ffmpeg 8.1). 남은 것은 **스토어 등록정보(스크린샷·그래픽 이미지) → 검토 전송**과 **iOS(시뮬레이터 개통 2026-09-18 · Apple Developer Program 가입·App Store Connect 준비 완료 2026-10-03 → TestFlight 업로드가 다음)**뿐이다 — 진행 상태는 [docs/handoff.md](docs/handoff.md).
+- **현재 단계**: 백엔드·앱 모두 기능 구현 완료이고 **테스트도 전부 수행했다** — 백엔드 **259개**(단위 + `@SpringBootTest` 통합 E2E + `@WebMvcTest` 슬라이스) · 앱 위젯 테스트 **35개** 전원 통과. 백엔드는 `https://tenk.hjson248.com` 에 **prod 배포 LIVE**, 앱은 Play Console **내부 테스트 게시 중**(게시된 최신 빌드 `1.0.0+8`, 다음 업로드 `1.0.0+9` — ffmpeg 8.1). 남은 것은 **스토어 등록정보(스크린샷·그래픽 이미지) → 검토 전송**과 **iOS(시뮬레이터 개통 2026-09-18 · Apple Developer Program 가입·App Store Connect 준비 완료 2026-10-03 · 첫 TestFlight 업로드가 `90683` 로 처리 실패 → 수정 커밋 완료, `1.0.0+10` 재업로드가 다음)**뿐이다 — 진행 상태는 [docs/handoff.md](docs/handoff.md).
 
 ## 리포 구조 (모노레포)
 
@@ -945,6 +945,18 @@ flutter test   # 위젯 테스트 35개 (로그인 스모크 1 + 하단 액션·
   - **Bundle ID = `com.hjson.tenkApp`** — Android `applicationId`(`com.hjson.tenk_app`)와 **다르다**(iOS 번들 ID 는 `_` 를 못 쓴다). **카카오 콘솔의 iOS 플랫폼에도 이 값**을 등록한다(현재 Android 만 등록돼 있음). **iOS 는 키해시 개념이 없고**, URL scheme·권한 usage description 3종은 [Info.plist](tenk_app/ios/Runner/Info.plist) 에 이미 있다.
   - **Apple Developer Program 멤버십 = 활성 (2026-10-03).** 결제(₩129,000, Apple Online Store 경유)가 계정에 자동 연결되지 않아 **8일간 멈춰 있었고 고객센터 통화로 풀었다** — 다음 갱신 때 같은 증상이면 기다리지 말고 바로 문의할 것. ⚠️ **만료 한 달 전 알림을 걸어둘 것**(갱신을 놓치면 TestFlight 배포가 끊기고 앱이 스토어에서 내려간다).
   - **`ITSAppUsesNonExemptEncryption = false`** ([Info.plist](tenk_app/ios/Runner/Info.plist)) — 없으면 **업로드마다** App Store Connect 가 수출 규정(암호화 사용 여부)을 되묻는다. HTTPS 외에 자체 암호화가 없어서 이 값이 사실이고, **암호화 기능을 직접 넣으면 여기부터 재검토**할 것.
+  - ⚠️ **아카이브는 `flutter build ipa` 로 만든다 — Xcode GUI 의 Product → Archive 를 쓰지 말 것** (2026-10-03). GUI 경로는 Flutter 가 생성하는 SPM 래퍼(`FlutterGeneratedPluginSwiftPackage`)의 플랫폼을 **13.0 으로 써서** `ffmpeg-kit-flutter-new-video`(14.0 요구)와 충돌해 빌드가 죽는다. CLI 는 같은 파일을 **14.0 으로 생성**해 그냥 통과한다(둘 다 실측).
+    - ⭐ **그래서 Deployment Target 의 자리는 두 곳이 아니라 세 곳이다** — `Podfile` · `project.pbxproj`(3개) · **생성된 `Package.swift`**. 셋째는 `ephemeral` 경로의 **생성물이라 손으로 고치면 다음 빌드에 덮인다**(Flutter 가 프로젝트 설정을 *읽어서* 쓴다 — 툴 소스의 `deploymentTarget` 파라미터). 즉 **고칠 지점은 언제나 앞의 두 곳**이다.
+    - CLI 산출물은 `build/ios/ipa/` 에 생기고 **Xcode Organizer 의 보관함(`~/Library/Developer/Xcode/Archives`) 밖**이라 Organizer 로 업로드할 수 없다. 업로드는 **Transporter 앱** 또는 **`xcrun altool`**(Xcode 에 이미 들어 있어 추가 설치 불필요)로 한다.
+  - ⚠️ **"업로드 성공"은 "처리 통과"가 아니다** (2026-10-03, 빌드 9 가 이걸로 죽었다). Transporter 가 `UPLOAD SUCCEEDED` 를 찍어도 App Store Connect 의 **처리(processing)** 단계에서 실패할 수 있고, 그러면 **TestFlight 목록에 아무것도 안 뜬다.** 확인 자리는 **TestFlight → '빌드 업로드' 표의 상태 열**이고, 거기서 '실패'를 눌러야 사유가 보인다 — **메일만 기다리지 말 것.**
+    - 그때 죽은 사유가 **`90683 Missing purpose string`** 이었다. ⚠️ **업로드 단계에서 경고처럼 보이던 항목이 처리 단계에서 오류로 확정된다** — 업로드 로그의 경고 개수를 안심의 근거로 삼지 말 것.
+  - ⚠️ **빌드 번호(`+N`)는 실패해도 소모된다** — 처리 실패한 9 를 다시 올릴 수 없어 10 으로 올렸다. 재시도는 **항상 `pubspec.yaml` 의 `+N` 을 올려서** 한다.
+  - **개발 프로파일(iOS App Development)에는 등록된 기기가 최소 1대 필요하다** — 기기 0대인 새 팀은 자동 서명이 프로파일을 못 만들어 `Your team has no devices...` + `No profiles for 'com.hjson.tenkApp' were found` 로 막힌다(Apple 설계다). **TestFlight 배포 프로파일은 기기가 필요 없지만**, 자동 서명이 빌드 준비 단계에서 개발 프로파일을 먼저 요구하므로 **기기 1대는 등록해 두는 게 맞다**(UDID 는 아이폰을 **윈도우 PC** 에 꽂아 Apple Devices/iTunes 에서 읽을 수 있다 — 맥이 없어도 된다).
+  - ⚠️ **맥 키체인에 `codesign` 접근을 영구 허용해 둘 것.** 암호 창에서 `허용`(1회)만 누르면 **framework 마다 다시 묻고**(ffmpeg 이 10개 가까이 온다) 놓치는 순간 `errSecInternalComponent` 로 서명이 깨진다. `항상 허용` 또는 아래 한 줄이 정답이고, **이게 SSH 빌드가 멈추지 않게 하는 조건**이기도 하다.
+    ```bash
+    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k '<맥 계정 암호>' ~/Library/Keychains/login.keychain-db
+    ```
+  - **2027년 4월부터 iOS 15.0 이상 타깃만 업로드된다**(경고 90068). 지금은 14.0 으로 통과하지만, **iOS 15 는 지원 기기가 iOS 14 와 같아서 올려도 잃는 사용자가 사실상 없다** — 올릴 땐 위 "세 곳" 중 앞의 두 곳을 고친다.
   - **App Store Connect 앱의 Apple ID = `6818692207`** (2026-10-03 생성, 팀 `HUIJUN SON - R99XM7V9DV`). 게시 후 스토어 URL 은 `https://apps.apple.com/app/id6818692207`.
   - ⚠️ **앱스토어 URL 이 생기면 `app_config.ios_store_url` 을 관리자 패널에서 채울 것** — 비어 있는 상태로 iOS 에 강제 업데이트를 걸면 **출구가 없어 사용자가 게이트에 갇힌다**(위 "앱 버전 / 강제·권장 업데이트" 의 "언제나 스토어로 나갈 길이 있어야 한다" 와 같은 함정).
   - ⚠️ **Xcode 로 여는 것은 `Runner.xcworkspace` 다 — `Runner.xcodeproj` 가 아니다.** CocoaPods 를 쓰면 pod 들이 workspace 에만 붙어서, 프로젝트 파일을 열면 라이브러리를 못 찾는다.

@@ -234,12 +234,22 @@
   - 🟡 **로컬 알림** — #17 당시 "iOS 미검증" 으로 남겨둔 항목이 여기로 온다(§1-A #17). 권한 요청이 **iOS 는 1회뿐**이고 **채널 개념이 없으며** 대기 알림 **64건 상한** 때문에 14일치만 거는 설계라, 권한 흐름·예약·문구를 실기기에서 확인해야 한다.
 - [ ] **[안건] Flutter 버전 통일** — 윈도우 **3.41.9** / 맥 **3.44.5** (2026-09-17 확인). **실측 드리프트는 `meta`·`test_api` 두 줄뿐**(둘 다 Dart SDK 고정 패키지라 앱 동작 무관) — 맥에서 `pull` 이 막히면 `git checkout -- tenk_app/pubspec.lock` 로 되돌리면 된다. 당장은 *"`pubspec.lock` 은 윈도우 기준"* 으로 막아뒀지만, 두 머신이 같은 앱을 굽는 이상 정석은 버전을 맞추거나 FVM 으로 고정하는 것이다. ⚠️ **윈도우를 올리면 Android 릴리스 재검증이 딸려온다** — 어느 쪽으로 맞출지는 별도 판단.
 - [ ] **[출시 전 안건] Sign in with Apple 병행 검토** — App Store **가이드라인 4.8**: 제3자 소셜 로그인(카카오)만 제공하면 **Sign in with Apple 병행이 심사 조건이 될 수 있다.** 그러면 `AppleTokenVerifier` + `POST /api/auth/apple/login` 이 필요해 **백엔드 작업이 딸려온다.** ⚠️ **개발·시뮬레이터·실기기 단계와는 무관** — 심사에 내는 순간의 조건이라 지금 진행을 막지는 않는다. 근거는 [decisions.md](decisions.md) "iOS 심사 메모".
-- [ ] **TestFlight 내부 테스트 — 콘솔 준비는 끝났고(2026-10-03) 맥 작업만 남았다.** 완료분(멤버십 활성 · Bundle ID · 앱 레코드 `6818692207` · 무료 앱 계약 활성 · 전자상거래법 규정 준수)의 상세·함정은 [handoff-archive.md](handoff-archive.md) 2026-10-03.
-  1. **(맥 GUI — 화면공유 필수)** Xcode → Settings → Accounts 에 개발 계정 로그인 → Runner 타깃 Team=**`HUIJUN SON - R99XM7V9DV`** (**키체인 때문에 SSH 로는 안 된다** — 아래 "SSH 로 원격 빌드 가능 범위")
-  2. **(맥)** `flutter build ipa --release --dart-define=API_BASE_URL=https://tenk.hjson248.com` → Xcode Organizer 또는 Transporter 업로드 → 처리 10~30분
-  3. App Store Connect → 사용자 및 액세스에 **개인 Apple ID 추가** → 내부 테스트 그룹 (**내부 테스트는 심사 없음**, 외부는 베타 심사 ~1일)
-  - ⚠️ **빌드 번호(`+N`)는 App Store Connect 안에서 재사용 불가** — 업로드가 실패해 다시 올릴 땐 `pubspec.yaml` 의 `+N` 을 올릴 것(판정 기준은 [../CLAUDE.md](../CLAUDE.md) "버전 문자열" 절).
+- [ ] **TestFlight 내부 테스트 — ⭐ 여기서 멈춰 있다. 다음 세션의 시작점.** 2026-10-03 에 **서명·아카이브·`.ipa`·업로드까지 전부 통과**했고, **빌드 9 가 App Store Connect '처리' 단계에서 오류 `90683`(사진 purpose string 누락)로 실패**했다. 원인은 **같은 날 코드로 고쳐 커밋했다** — 즉 남은 건 재빌드·재업로드뿐이다. 경위·함정 전체는 [handoff-archive.md](handoff-archive.md) 2026-10-03, 영구 규칙은 [../CLAUDE.md](../CLAUDE.md).
+  - **맥에서 이 순서로 재개한다** (⚠️ 전부 **터미널**이다 — Xcode GUI Archive 는 SPM 13.0 문제로 쓰지 않는다):
+    ```bash
+    cd ~/Documents/projects/claude/tenk-ios-build
+    git checkout -- tenk_app/pubspec.lock   # 맥 Flutter 가 건드려 pull 이 막히면
+    git pull                                 # 90683 수정 + 1.0.0+10 을 받는다
+    cd tenk_app
+    flutter build ipa --release --dart-define=API_BASE_URL=https://tenk.hjson248.com
+    ```
+    → `build/ios/ipa/*.ipa` 를 **Transporter** 에 끌어다 놓기 → ⚠️ **TestFlight → '빌드 업로드' 표의 상태 열**에서 **처리 통과**까지 확인(업로드 성공 메시지만으로 판단하지 말 것)
+  - 그 뒤 **사용자 및 액세스에 테스터 Apple ID 추가 → 내부 테스트 그룹** (내부는 심사 없음, 외부는 베타 심사 ~1일). 초대 메일이 발송되니 주소를 먼저 정할 것.
+  - ⚠️ **맥 작업 트리에 `project.pbxproj` 변경(Xcode 가 넣은 서명 설정)이 커밋되지 않은 채 남아 있다** — 맥에서만 생기는 역방향 파일이라 **다음 세션에 커밋**할 것(`git diff` 로 서명 관련 키만 들어갔는지 확인 후).
   - ⚠️ **게시되면 `app_config.ios_store_url` = `https://apps.apple.com/app/id6818692207`** 을 관리자 패널에서 채울 것 — 비어 있으면 iOS 강제 업데이트 게이트에 **출구가 없다**.
+- [ ] **[안건] iOS CocoaPods 걷어내기 (SPM 전면 이행)** — Flutter 가 빌드마다 *"플러그인이 전부 Swift Package 인데 CocoaPods 통합이 남아 있고 **Podfile 이 비표준**이다"* 라고 경고한다(그 Podfile 은 9월에 Deployment Target 때문에 손으로 만든 것). 생성된 패키지 목록에 **`FlutterFramework` 까지 SPM 으로** 들어가 있어, **CLAUDE.md 의 *"Flutter 엔진 pod 이 CocoaPods 경로로 들어온다"* 가 이미 사실이 아닐 가능성**이 높다.
+  - 기대 효과: Deployment Target 의 **진실의 원천이 `pbxproj` 하나로 줄어** 오늘의 13.0/14.0 불일치가 구조적으로 사라지고, **Xcode GUI Archive 가 복구될 수 있다**(= Organizer 업로드 복귀) + 빌드 시간 단축.
+  - ⚠️ **TestFlight 설치까지 끝낸 뒤에 착수할 것** — 지금 손대면 문제가 생겼을 때 "구조 변경 탓인지 원래 안 되는 건지"를 가를 수 없다. 검증은 **① `flutter build ipa` ② Xcode GUI Archive(13.0 재발 여부) ③ 시뮬레이터 + Android 빌드** 3종.
 - [ ] **[출시 전] EU DSA 거래자 자격** — EU 배포 시에만 필요하고 미제공 시 **EU App Store 에서만** 앱이 내려간다(한국 배포 무관). App Store Connect → 비즈니스.
 - **SSH 로 원격 빌드 가능 범위**: 컴파일·`flutter build`·`xcodebuild`·`xcrun simctl`(시뮬레이터 부팅/설치/실행/스크린샷)은 SSH OK → **시뮬레이터 목표면 SSH로 거의 다 됨**. 단 **코드 서명 키체인**(codesign 이 GUI 팝업 → `security unlock-keychain` + `set-key-partition-list` 로 사전 인가 필요), **무료 개인팀 자동 프로비저닝**(Xcode GUI 한 번 필수), **실기기 신뢰·개발자 모드**(아이폰 화면 탭)는 순수 SSH 불가. 권장: **첫 서명·기기신뢰 세팅은 화면공유(VNC)로 한 번, 이후 반복 빌드만 SSH**.
 

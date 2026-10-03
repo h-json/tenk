@@ -9,7 +9,7 @@
 
 > 상세는 git log / [handoff.md](handoff.md) "완료된 것" 섹션 / [decisions.md](decisions.md) 회의록 참고.
 
-- **2026-10-03**: ✅ **Apple Developer Program 가입 + App Store Connect 준비 완료** — 영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목. 코드 변경은 **Info.plist 2줄**뿐이고 나머지는 전부 콘솔 작업이다.
+- **2026-10-03**: ✅ **Apple Developer Program 가입 + App Store Connect 준비 완료** · ⏸️ **첫 TestFlight 업로드는 처리 단계에서 실패(90683)** — 영구 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목. 코드 변경은 **Info.plist 2줄**뿐이고 나머지는 전부 콘솔 작업이다.
   - **멤버십 — 결제는 됐는데 8일간 활성화가 안 됐다.** ₩129,000 결제(Apple Online Store 경유, 2026-09-22) 후 계정에 자동 연결되지 않았고 **고객센터 통화로 풀었다**. ⚠️ 영수증이 *"소프트웨어를 다운로드하십시오"* 라고 안내하는데 실제로 받을 파일은 없다 — 그 문구를 믿고 기다리면 무한정 기다리게 된다. **다음 갱신 때 같은 증상이면 기다리지 말고 바로 문의할 것** + **만료 한 달 전 알림**(놓치면 TestFlight 가 끊기고 앱이 내려간다).
   - ⭐ **가입 계정은 Play Console 과 같은 Gmail 로 통일했다.** 개발자 계정은 *앱 단위가 아니라 개발자 단위*라 앞으로의 앱이 전부 여기 들어오므로, TenK 전용 주소(`system/support/admin.tenk@`)를 쓰면 안 되는 자리다. 개인 Apple ID 와 분리한 이유는 **정지 위험이 iCloud·구매 내역으로 번지지 않게** + 나중에 법인 이관 시 개인 데이터가 안 딸려가게. ⚠️ Gmail 은 점을 무시하지만 **Apple ID 는 문자열 그대로**라 `h.json248@` ≠ `hjson248@` 이다(영수증은 후자).
   - **Bundle ID `com.hjson.tenkApp`** (Description `TenK`, Explicit). Capabilities 는 **하나도 추가하지 않았다** — `In-App Purchase` 만 Apple 이 기본으로 켜두고 **끌 수 없게** 해둔 항목이라 체크된 게 정상이다. Platform 은 iOS 만 고를 수 없고 **전 플랫폼으로 고정**(어디에 올릴지는 App Store Connect 가 정한다).
@@ -21,6 +21,17 @@
   - ⏭️ **EU DSA 거래자 자격만 남겼다** — EU 배포 시에만 필요하고, 미제공 시 **EU App Store 에서만** 내려간다. 한국 배포에는 영향 없음.
   - 🐞 **곁가지 — iOS plist 가 "가로를 지원한다"고 선언하고 있었다.** `UISupportedInterfaceOrientations` 가 Flutter 기본 템플릿 값(가로 2개 포함) 그대로여서, **코드(`setPreferredOrientations`)만 세로로 잠근 반쪽 상태**였다(런타임 잠금 전 첫 프레임이 가로로 뜰 여지). iPhone 쪽만 세로 2개로 줄이고 **`~ipad` 는 일부러 유지**(iPad 는 타깃이 아니고 방향을 좁히면 멀티태스킹 요건과 부딪힌다). ⭐ 이건 *"세로 고정"* 규칙을 **한 곳에만 적용해둔 탓**이라, CLAUDE.md 에 **"잠금은 코드 + plist 두 겹"** 으로 정정해 박았다.
   - **`ITSAppUsesNonExemptEncryption = false` 추가** — 없으면 **업로드마다** 수출 규정(암호화 사용 여부)을 되묻는다. HTTPS 외에 자체 암호화가 없어 이 값이 사실이다.
+  - **같은 날 오후: 서명 → 아카이브 → `.ipa` → 업로드까지 전부 통과했고, 마지막 '처리'에서 빌드 9 가 죽었다.** 넘은 벽이 네 개고 **전부 "원래 그런 것"이라 다음에도 만난다** — 영구 규칙은 CLAUDE.md iOS 절에 박았다.
+    1. **개발 프로파일 발급 거부** (`Your team has no devices...` → `No profiles for 'com.hjson.tenkApp' were found`). ⭐ 개발 프로파일은 **기기 목록을 품는 구조**라 기기 0대면 Apple 이 발급을 거부한다(설계). **보통은 "아이폰 꽂고 내 폰에서 실행"이 기기를 자동 등록해 이 에러를 못 보고 지나가는데**, 맥이 멀리 있고 TestFlight 우선 전략이라 그 자가치유 경로가 둘 다 막혀 있었다 — **즉 우리 환경 선택의 필연적 부산물**이다. 해결은 UDID 1대 등록(윈도우 PC 에 꽂아서 읽음).
+       - 🕳️ **오판**: `Communication with Apple failed` 를 일시적 통신 장애로 읽어 "재시도·재시작"을 권했다. **진짜 이유는 그 다음 문장**이었고 재시도로는 안 풀린다. 또 *"Archive 는 기기가 필요 없다"* 고 단언했는데, **배포 프로파일은 기기가 필요 없다**는 건 맞지만 **자동 서명이 빌드 준비에서 개발 프로파일을 먼저 요구**하는 걸 빼먹었다.
+    2. **`errSecInternalComponent`** — 키체인 암호 창에서 `허용`(1회)을 눌렀더니 **framework 마다 다시 묻고** 그중 하나를 놓치며 서명이 깨졌다. ⭐ **ffmpeg 이 framework 를 10개 가까이 끌고 와서** 평범한 앱이면 안 드러날 문제가 정면으로 터진 것. `set-key-partition-list` 로 영구 허용.
+    3. **SPM 13.0 vs ffmpeg 14.0** — Xcode GUI Archive 가 `FlutterGeneratedPluginSwiftPackage` 를 **13.0 으로 생성**해 충돌. `Podfile`·`pbxproj` 는 둘 다 14.0 이었다. ⭐ **Deployment Target 의 자리가 두 곳이 아니라 세 곳**(생성된 `Package.swift`)이라는 게 핵심이고, 셋째는 생성물이라 **손으로 못 고친다**. 판정은 실측으로 갈랐다 — **Debug CLI 빌드는 통과**(`✓ Built ...Runner.app`)하고 **Flutter 툴 소스가 `deploymentTarget` 을 파라미터로 받는다**(= 하드코딩 아님)는 두 사실이 *"CLI 는 제대로 읽고 GUI 경로가 못 읽는다"* 로 수렴했다 → **`flutter build ipa` 로 우회**(14.0 으로 생성됨을 확인).
+       - 🕳️ 그 전에 세워둔 가설 2개가 **둘 다 틀렸다** — **Flutter 업그레이드**(상수가 아니니 무의미) · **`app_settings` 치우고 SPM 끄기**(방향이 반대. Flutter 는 CocoaPods 를 **걷어내라**고 권한다). **13.0 의 출처를 확인하기 전에 해법을 고르려 한 탓**이다.
+    4. **처리 실패 `90683 Missing purpose string`** — `NSPhotoLibraryAddUsageDescription`(저장 전용)만 있고 **`NSPhotoLibraryUsageDescription`** 이 없었다(`gal` 이 사진 접근 API 를 참조). ⚠️ **업로드는 `UPLOAD SUCCEEDED with no errors, 1 warning` 으로 끝났는데 1시간 뒤에도 TestFlight 에 아무것도 없었다** — 사유는 메일이 아니라 **TestFlight → '빌드 업로드' 표의 '실패' 상태를 눌러야** 보였고, 거기서 **'오류'로 분류**돼 있었다.
+       - 🕳️ **오판**: 업로드 단계에서 경고처럼 보인 걸 근거로 *"업로드를 막지 않았으니 다음 빌드에서 고치면 된다"* 고 했다. **업로드 통과 ≠ 처리 통과**이고, 그 판단 때문에 1시간을 헛기다렸다.
+    - 같이 받은 **경고 90068** 은 *2027년 4월부터 iOS 15.0 이상만 업로드 가능*이라는 **예고**다. 지금은 14.0 으로 통과하고, **iOS 15 는 지원 기기가 14 와 같아** 올려도 잃는 사용자가 사실상 없다 → 별도 안건.
+    - **빌드 9 는 실패했어도 번호가 소모**돼 `1.0.0+10` 으로 올렸다. 90683 수정과 함께 커밋 — **다음 세션은 맥에서 `git pull` → `flutter build ipa` → Transporter 로 재개**한다.
+  - 🧰 **도구 메모**: Xcode 는 **CLI 와 GUI 가 같은 앱**이다(`xcodebuild` 가 Xcode.app 내부 실행 파일) — 오늘 "GUI 를 설치"한 게 아니라 **처음 GUI 로 열어 최초 실행 창을 본 것**이고, 그 창의 선택 항목(tvOS/watchOS/visionOS 런타임·Predictive Code Completion)은 **전부 받지 않았다**(⚠️ 그 맥이 운영 백엔드 서버라 디스크를 지켜야 한다). GUI 가 꼭 필요한 건 **Apple ID 로그인 + 키체인 인증서 생성** 한 번뿐이다.
 - **2026-09-18**: ✅ **iOS 시뮬레이터 개통 + Android 영상 export 재검증(무회귀)** — 규칙은 [../CLAUDE.md](../CLAUDE.md) "릴리스 빌드 / 배포" iOS 항목, 회의록 [decisions.md](decisions.md) ㉖.
   - ⭐ **제약이 설계를 정했다** — 맥이 물리적으로 먼 곳에 있어 실기기 USB 페어링이 불가능했다. 즉 *"시뮬레이터가 없으면 iOS 작업이 0"* 이라, 평소라면 미뤘을 의존성 상향을 **감수하고 진행**하는 게 옳은 판단이 됐다.
   - **막고 있던 벽 5개** (순서대로 드러났다):
